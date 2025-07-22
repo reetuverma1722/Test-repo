@@ -84,39 +84,27 @@ const apiPut = async (endpoint, data, token = null) => {
   }
 };
 
-// Get all keywords
-export const getKeywords = async (accountId = null, token = null) => {
-  let endpoint = '/keywords';
-  if (accountId) {
-    endpoint += `?accountId=${accountId}`;
-  }
-  return await apiGet(endpoint, token);
+// Get all social media accounts
+export const getAllAccounts = async (token = null) => {
+  return await apiGet('/accounts', token);
 };
 
-// Add a new keyword
-export const addKeyword = async (keywordData, token = null) => {
-  return await apiPost('/keywords', keywordData, token);
+// Get accounts by platform
+export const getAccountsByPlatform = async (platform, token = null) => {
+  return await apiGet(`/accounts/${platform}`, token);
 };
 
-// Update a keyword
-export const updateKeyword = async (id, keywordData, token = null) => {
-  return await apiPut(`/keywords/${id}`, keywordData, token);
+// Add a new social media account
+export const addAccount = async (accountData, token = null) => {
+  return await apiPost('/accounts', accountData, token);
 };
 
-// Delete a keyword (soft delete)
-export const deleteKeyword = async (id, token = null) => {
-  return await apiDelete(`/keywords/${id}`, token);
+// Update a social media account
+export const updateAccount = async (id, accountData, token = null) => {
+  return await apiPut(`/accounts/${id}`, accountData, token);
 };
 
-// Get filtered keywords
-export const getFilteredKeywords = async (filters, token = null) => {
-  const queryParams = new URLSearchParams();
-  
-  if (filters.text) queryParams.append('text', filters.text);
-  if (filters.minLikes) queryParams.append('minLikes', filters.minLikes);
-  if (filters.minRetweets) queryParams.append('minRetweets', filters.minRetweets);
-  if (filters.minFollowers) queryParams.append('minFollowers', filters.minFollowers);
-  if (filters.accountId) queryParams.append('accountId', filters.accountId);
-  
-  return await apiGet(`/keywords/filter?${queryParams.toString()}`, token);
+// Delete a social media account (soft delete)
+export const deleteAccount = async (id, token = null) => {
+  return await apiDelete(`/accounts/${id}`, token);
 };

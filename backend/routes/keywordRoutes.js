@@ -36,15 +36,28 @@ const checkAuth = (req, res, next) => {
 router.get('/keywords', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const accountId = req.query.accountId;
     
-    const result = await pool.query(
-      `SELECT id, text, min_likes AS "minLikes", min_retweets AS "minRetweets",
-       min_followers AS "minFollowers", created_at AS "createdAt", updated_at AS "updatedAt"
-       FROM twitter_keywords
-       WHERE user_id = $1 AND deleted_at IS NULL
-       ORDER BY created_at DESC`,
-      [userId]
-    );
+    let query = `
+      SELECT k.id, k.text, k.min_likes AS "minLikes", k.min_retweets AS "minRetweets",
+      k.min_followers AS "minFollowers", k.created_at AS "createdAt", k.updated_at AS "updatedAt",
+      k.account_id AS "accountId",
+      CASE WHEN a.id IS NOT NULL THEN a.account_name ELSE 'Default' END AS "accountName"
+      FROM twitter_keywords k
+      LEFT JOIN social_media_accounts a ON k.account_id = a.id
+      WHERE k.user_id = $1 AND k.deleted_at IS NULL
+    `;
+    
+    const params = [userId];
+    
+    if (accountId) {
+      query += ` AND (k.account_id = $2 OR k.account_id IS NULL)`;
+      params.push(accountId);
+    }
+    
+    query += ` ORDER BY k.created_at DESC`;
+    
+    const result = await pool.query(query, params);
     
     res.json({ success: true, data: result.rows });
   } catch (error) {
@@ -57,13 +70,16 @@ router.get('/keywords', checkAuth, async (req, res) => {
 router.get('/keywords/filter', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { text, minLikes, minRetweets, minFollowers } = req.query;
+    const { text, minLikes, minRetweets, minFollowers, accountId } = req.query;
     
     let query = `
-      SELECT id, text, min_likes AS "minLikes", min_retweets AS "minRetweets", 
-      min_followers AS "minFollowers", created_at AS "createdAt", updated_at AS "updatedAt"
-      FROM twitter_keywords 
-      WHERE user_id = $1 AND deleted_at IS NULL
+      SELECT k.id, k.text, k.min_likes AS "minLikes", k.min_retweets AS "minRetweets",
+      k.min_followers AS "minFollowers", k.created_at AS "createdAt", k.updated_at AS "updatedAt",
+      k.account_id AS "accountId",
+      CASE WHEN a.id IS NOT NULL THEN a.account_name ELSE 'Default' END AS "accountName"
+      FROM twitter_keywords k
+      LEFT JOIN social_media_accounts a ON k.account_id = a.id
+      WHERE k.user_id = $1 AND k.deleted_at IS NULL
     `;
     
     const params = [userId];
@@ -88,12 +104,18 @@ router.get('/keywords/filter', checkAuth, async (req, res) => {
     }
     
     if (minFollowers) {
-      query += ` AND min_followers >= $${paramIndex}`;
+      query += ` AND k.min_followers >= $${paramIndex}`;
       params.push(parseInt(minFollowers));
       paramIndex++;
     }
     
-    query += ` ORDER BY created_at DESC`;
+    if (accountId) {
+      query += ` AND (k.account_id = $${paramIndex} OR k.account_id IS NULL)`;
+      params.push(accountId);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY k.created_at DESC`;
     
     const result = await pool.query(query, params);
     
@@ -108,18 +130,30 @@ router.get('/keywords/filter', checkAuth, async (req, res) => {
 router.post('/keywords', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { text, minLikes, minRetweets, minFollowers } = req.body;
+    const { text, minLikes, minRetweets, minFollowers, accountId } = req.body;
     
     if (!text || text.trim() === '') {
       return res.status(400).json({ success: false, message: 'Keyword text is required' });
     }
     
+    // If accountId is provided, verify it belongs to the user
+    if (accountId) {
+      const accountCheck = await pool.query(
+        'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+        [accountId, userId]
+      );
+      
+      if (accountCheck.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Invalid account ID' });
+      }
+    }
+    
     const result = await pool.query(
-      `INSERT INTO twitter_keywords (text, min_likes, min_retweets, min_followers, user_id)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, text, min_likes AS "minLikes", min_retweets AS "minRetweets", 
-       min_followers AS "minFollowers", created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [text, minLikes || 0, minRetweets || 0, minFollowers || 0, userId]
+      `INSERT INTO twitter_keywords (text, min_likes, min_retweets, min_followers, user_id, account_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, text, min_likes AS "minLikes", min_retweets AS "minRetweets",
+       min_followers AS "minFollowers", account_id AS "accountId", created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [text, minLikes || 0, minRetweets || 0, minFollowers || 0, userId, accountId || null]
     );
     
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -134,7 +168,7 @@ router.put('/keywords/:id', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const keywordId = req.params.id;
-    const { text, minLikes, minRetweets, minFollowers } = req.body;
+    const { text, minLikes, minRetweets, minFollowers, accountId } = req.body;
     
     if (!text || text.trim() === '') {
       return res.status(400).json({ success: false, message: 'Keyword text is required' });
@@ -150,13 +184,25 @@ router.put('/keywords/:id', checkAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Keyword not found' });
     }
     
+    // If accountId is provided, verify it belongs to the user
+    if (accountId) {
+      const accountCheck = await pool.query(
+        'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+        [accountId, userId]
+      );
+      
+      if (accountCheck.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Invalid account ID' });
+      }
+    }
+    
     const result = await pool.query(
-      `UPDATE twitter_keywords 
-       SET text = $1, min_likes = $2, min_retweets = $3, min_followers = $4, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5 AND user_id = $6
-       RETURNING id, text, min_likes AS "minLikes", min_retweets AS "minRetweets", 
-       min_followers AS "minFollowers", created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [text, minLikes || 0, minRetweets || 0, minFollowers || 0, keywordId, userId]
+      `UPDATE twitter_keywords
+       SET text = $1, min_likes = $2, min_retweets = $3, min_followers = $4, account_id = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6 AND user_id = $7
+       RETURNING id, text, min_likes AS "minLikes", min_retweets AS "minRetweets",
+       min_followers AS "minFollowers", account_id AS "accountId", created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [text, minLikes || 0, minRetweets || 0, minFollowers || 0, accountId || null, keywordId, userId]
     );
     
     res.json({ success: true, data: result.rows[0] });
