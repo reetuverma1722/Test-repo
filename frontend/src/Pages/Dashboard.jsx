@@ -20,6 +20,16 @@ import {
   Chip,
   Divider,
   Paper,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Fade,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
 } from "@mui/material";
 import {
   CloseOutlined,
@@ -32,6 +42,10 @@ import {
   Tag as TagIcon,
   FindInPage as FindInPageIcon,
   ManageSearch as ManageSearchIcon,
+  VpnKey as VpnKeyIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Check as CheckIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -49,6 +63,18 @@ const Dashboard = () => {
   const [active, setActive] = useState("");
   const [loading, setLoading] = useState(false);
   const [keywords, setKeywords] = useState([]);
+  const [userEmail, setUserEmail] = useState("user@example.com");
+  const [anchorEl, setAnchorEl] = useState(null);
+  const menuOpen = Boolean(anchorEl);
+  
+  // Password change state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,6 +137,128 @@ const Dashboard = () => {
     }
   };
   // Dashboard.jsx
+  // Handle menu open/close
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  // Handle password change dialog
+  const handlePasswordChange = () => {
+    setPasswordDialogOpen(true);
+    handleMenuClose();
+    // Reset form fields and states
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    setPasswordSuccess(false);
+  };
+
+  const handlePasswordDialogClose = () => {
+    setPasswordDialogOpen(false);
+  };
+
+  // Validate password
+  const validatePassword = () => {
+    // Reset error
+    setPasswordError("");
+    
+    // Check if all fields are filled
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All fields are required");
+      return false;
+    }
+    
+    // Check if new password is at least 8 characters
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters long");
+      return false;
+    }
+    
+    // Check if new password contains at least one number and one letter
+    const hasNumber = /\d/.test(newPassword);
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    if (!hasNumber || !hasLetter) {
+      setPasswordError("New password must contain at least one letter and one number");
+      return false;
+    }
+    
+    // Check if passwords match
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Submit password change
+  const handlePasswordSubmit = async () => {
+    // Validate form
+    if (!validatePassword()) {
+      return;
+    }
+    
+    setPasswordLoading(true);
+    
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem("token");
+      
+      // Make API call to change password
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/change-password",
+        {
+          currentPassword,
+          newPassword
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      // Handle success
+      setPasswordSuccess(true);
+      setPasswordError("");
+      
+      // Close dialog after 2 seconds
+      setTimeout(() => {
+        setPasswordDialogOpen(false);
+      }, 2000);
+      
+    } catch (error) {
+      // Handle error
+      if (error.response && error.response.data && error.response.data.message) {
+        setPasswordError(error.response.data.message);
+      } else {
+        setPasswordError("Failed to change password. Please try again.");
+      }
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Get user email from localStorage
+  useEffect(() => {
+    try {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        if (user.email) {
+          setUserEmail(user.email);
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving user data:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const twitterToken = new URLSearchParams(window.location.search).get(
       "accessToken"
@@ -170,6 +318,145 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ display: "flex" }}>
+      {/* Password Change Dialog */}
+      <Dialog
+        open={passwordDialogOpen}
+        onClose={handlePasswordDialogClose}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxWidth: 400,
+            width: '100%',
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          fontWeight: 600,
+          pb: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <VpnKeyIcon sx={{ color: '#f44336' }} />
+          Change Password
+        </DialogTitle>
+        <IconButton
+          aria-label="close"
+          onClick={handlePasswordDialogClose}
+          sx={{
+            position: 'absolute',
+            right: 12,
+            top: 12,
+            color: 'text.secondary',
+          }}
+        >
+          <CloseOutlined />
+        </IconButton>
+        <DialogContent sx={{ pt: 1 }}>
+          {passwordSuccess ? (
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              py: 2
+            }}>
+              <Avatar sx={{
+                bgcolor: '#4caf50',
+                mb: 2,
+                width: 60,
+                height: 60
+              }}>
+                <CheckIcon sx={{ fontSize: 36 }} />
+              </Avatar>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Password Changed!
+              </Typography>
+              <Typography variant="body2" color="text.secondary" align="center">
+                Your password has been successfully updated.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              {passwordError && (
+                <Alert
+                  severity="error"
+                  sx={{
+                    mb: 2,
+                    borderRadius: 2,
+                    '& .MuiAlert-icon': {
+                      color: '#f44336'
+                    }
+                  }}
+                >
+                  {passwordError}
+                </Alert>
+              )}
+              <TextField
+                margin="dense"
+                label="Current Password"
+                type="password"
+                fullWidth
+                variant="outlined"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="dense"
+                label="New Password"
+                type="password"
+                fullWidth
+                variant="outlined"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                sx={{ mb: 2 }}
+                helperText="Password must be at least 8 characters with letters and numbers"
+              />
+              <TextField
+                margin="dense"
+                label="Confirm New Password"
+                type="password"
+                fullWidth
+                variant="outlined"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </>
+          )}
+        </DialogContent>
+        {!passwordSuccess && (
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button
+              onClick={handlePasswordDialogClose}
+              sx={{
+                borderRadius: 2,
+                color: 'text.secondary'
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePasswordSubmit}
+              variant="contained"
+              color="error"
+              disabled={passwordLoading}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                position: 'relative'
+              }}
+            >
+              {passwordLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Change Password'
+              )}
+            </Button>
+          </DialogActions>
+        )}
+      </Dialog>
+
       <LogoutDialog
         open={logoutOpen}
         onClose={() => setLogoutOpen(false)}
@@ -389,27 +676,83 @@ const Dashboard = () => {
                 gap: { xs: 1, sm: 2 },
               }}
             >
-              <Avatar
-                alt="User"
-                src="/profile.jpg"
-                sx={{
-                  width: 32,
-                  height: 32,
-                  border: "2px solid rgba(0,0,0,0.1)",
-                }}
-              />
-              <IconButton
-                onClick={() => setLogoutOpen(true)}
-                sx={{
-                  color: "text.primary",
-                  backgroundColor: "rgba(0,0,0,0.05)",
-                  "&:hover": {
-                    backgroundColor: "rgba(0,0,0,0.1)",
+              <Tooltip
+                title="Account settings"
+                arrow
+                TransitionComponent={Fade}
+                TransitionProps={{ timeout: 600 }}
+              >
+                <Avatar
+                  onClick={handleMenuOpen}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    bgcolor: '#ff5858a1',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    border: "2px solid rgba(255,255,255,0.8)",
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    }
+                  }}
+                >
+                  {userEmail.charAt(0).toUpperCase()}
+                </Avatar>
+              </Tooltip>
+              
+              {/* User Profile Menu */}
+              <Menu
+                anchorEl={anchorEl}
+                open={menuOpen}
+                onClose={handleMenuClose}
+                TransitionComponent={Fade}
+                PaperProps={{
+                  elevation: 3,
+                  sx: {
+                    borderRadius: 2,
+                    minWidth: 250,
+                    overflow: 'visible',
+                    mt: 1.5,
+                    '&:before': {
+                      content: '""',
+                      display: 'block',
+                      position: 'absolute',
+                      top: 0,
+                      right: 14,
+                      width: 10,
+                      height: 10,
+                      bgcolor: 'background.paper',
+                      transform: 'translateY(-50%) rotate(45deg)',
+                      zIndex: 0,
+                    },
                   },
                 }}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
               >
-                <Logout fontSize="small" />
-              </IconButton>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: '#f5f5f5' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    User Profile
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <EmailIcon fontSize="small" sx={{ color: '#FF0000' }} />
+                    {userEmail}
+                  </Typography>
+                </Box>
+                <Divider />
+                <MenuItem onClick={handlePasswordChange} sx={{ py: 1.5 }}>
+                  <VpnKeyIcon sx={{ mr: 2, color: '#FF0000' }} />
+                  <Typography variant="body2">Change Password</Typography>
+                </MenuItem>
+                <MenuItem onClick={() => setLogoutOpen(true)} sx={{ py: 1.5 }}>
+                  <Logout sx={{ mr: 2, color: '#FF0000' }} />
+                  <Typography variant="body2">Logout</Typography>
+                </MenuItem>
+              </Menu>
             </Box>
           </Toolbar>
         </AppBar>
