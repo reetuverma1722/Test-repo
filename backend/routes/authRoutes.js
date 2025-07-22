@@ -288,6 +288,30 @@ router.post("/twitter-to-jwt", async (req, res) => {
       user = userResult.rows[0];
     }
     
+    // Check if this Twitter account is already in social_media_accounts table
+    const accountResult = await pool.query(
+      'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
+      [user.id, 'twitter', twitterUser.id]
+    );
+    
+    // If account doesn't exist, add it
+    if (accountResult.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO social_media_accounts
+         (user_id, platform, account_id, account_name, access_token, refresh_token)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [user.id, 'twitter', twitterUser.id, twitterUser.name, accessToken, null]
+      );
+    } else {
+      // Update the access token if account exists
+      await pool.query(
+        `UPDATE social_media_accounts
+         SET access_token = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2 AND platform = $3 AND account_id = $4`,
+        [accessToken, user.id, 'twitter', twitterUser.id]
+      );
+    }
+    
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, twitter_id: twitterUser.id },

@@ -225,13 +225,28 @@ router.delete("/search/delete/:id", async (req, res) => {
 });
 // POST /api/post-reply
 router.post("/postReply", async (req, res) => {
- const { tweetId, reply } = req.body;
+  const { tweetId, reply, accountId } = req.body;
   const authHeader = req.headers.authorization;
+  
   if (!authHeader || !tweetId || !reply) {
     return res.status(400).json({ message: 'Missing token, tweetId or reply' });
   }
- const accessToken = authHeader.replace("Bearer ", "");
-    try {
+  
+  try {
+    let accessToken = authHeader.replace("Bearer ", "");
+    
+    // If accountId is provided, get the access token for that account
+    if (accountId) {
+      const accountResult = await db.query(
+        'SELECT access_token FROM social_media_accounts WHERE id = $1 AND deleted_at IS NULL',
+        [accountId]
+      );
+      
+      if (accountResult.rows.length > 0 && accountResult.rows[0].access_token) {
+        accessToken = accountResult.rows[0].access_token;
+      }
+    }
+    
     // Call Twitter API here to post the reply
     const twitterResponse = await axios.post(
       `https://api.twitter.com/2/tweets`,
@@ -246,12 +261,37 @@ router.post("/postReply", async (req, res) => {
         },
       }
     );
- res.json({ message: "Reply posted successfully", data: twitterResponse.data });
-    // res.status(200).json({ message: "Reply posted!", data: response.data });
     
+    res.json({
+      message: "Reply posted successfully",
+      data: twitterResponse.data,
+      accountId: accountId || null
+    });
   } catch (err) {
     console.error("Tweet post error", err?.response?.data || err);
     res.status(500).json({ error: "Failed to post tweet" });
+  }
+});
+
+// PUT /api/search/update/:id - Update reply for a tweet
+router.put("/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { reply } = req.body;
+  
+  if (!reply) {
+    return res.status(400).json({ message: 'Reply content is required' });
+  }
+  
+  try {
+    await db.query(
+      `UPDATE tweets SET reply = $1 WHERE id = $2`,
+      [reply, id]
+    );
+    
+    res.json({ success: true, message: 'Reply updated successfully' });
+  } catch (err) {
+    console.error("Update error:", err.message);
+    res.status(500).json({ error: "Update failed" });
   }
 });
 
