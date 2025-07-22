@@ -36,7 +36,7 @@ import Keyword_Management from "./Keyword_Management";
 import GoalsTable from "./Post_Manager";
 import SocialMediaSettings from "./SocialMediaSettings";
 
-const drawerWidth = 200;
+const drawerWidth = 260;
 
 const Dashboard = () => {
   const [keyword, setKeyword] = useState("");
@@ -161,7 +161,7 @@ const Dashboard = () => {
         }}
       >
         <Toolbar sx={{ minHeight: '48px !important' }} />
-        <Box sx={{ overflow: "auto", py: 2 }}>
+        <Box sx={{ overflow: "auto", overflowX:"hidden", marginTop:4, py: 2 }}>
           <List component="nav" disablePadding>
             <ListItem
               button
@@ -177,17 +177,18 @@ const Dashboard = () => {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 height: '44px',
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  color: 'primary.main',
-                  borderLeft: '3px solid #1976d2',
-                  paddingLeft: '13px', // Compensate for the border
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.main',
-                  },
-                },
+               '&.Mui-selected': {
+  backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
+  color: '#f44336',
+  borderLeft: '3px solid #f44336',
+  paddingLeft: '13px',
+  '& .MuiListItemIcon-root': {
+    color: '#f44336',
+  },
+},
+
                 '&:hover': {
-                  backgroundColor: location.pathname.includes("/dashboard") ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: location.pathname.includes("/dashboard") ? 'rgba(210, 25, 87, 0.29)' : 'rgba(210, 25, 87, 0.29)',
                   transform: 'translateX(3px)',
                 }
               }}
@@ -222,17 +223,18 @@ const Dashboard = () => {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 height: '44px',
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  color: 'primary.main',
-                  borderLeft: '3px solid #1976d2',
-                  paddingLeft: '13px', // Compensate for the border
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.main',
-                  },
-                },
+               '&.Mui-selected': {
+  backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
+  color: '#f44336',
+  borderLeft: '3px solid #f44336',
+  paddingLeft: '13px',
+  '& .MuiListItemIcon-root': {
+    color: '#f44336',
+  },
+},
+
                 '&:hover': {
-                  backgroundColor: location.pathname.includes("/keyword-management") ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: location.pathname.includes("/keyword-management") ? 'rgba(210, 25, 87, 0.29)' : 'rgba(210, 25, 87, 0.29)',
                   transform: 'translateX(3px)',
                 }
               }}
@@ -268,16 +270,17 @@ const Dashboard = () => {
                 transition: 'all 0.2s ease',
                 height: '44px',
                 '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  color: 'primary.main',
-                  borderLeft: '3px solid #1976d2',
-                  paddingLeft: '13px', // Compensate for the border
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.main',
-                  },
-                },
+  backgroundColor: 'rgba(244, 67, 54, 0.7)', // Light red
+  color: '#f44336',
+  borderLeft: '3px solid #f44336',
+  paddingLeft: '13px',
+  '& .MuiListItemIcon-root': {
+    color: '#f44336',
+  },
+},
+
                 '&:hover': {
-                  backgroundColor: location.pathname.includes("/history") ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: location.pathname.includes("/history") ? 'rgba(210, 25, 87, 0.29)' : 'rgba(210, 25, 87, 0.29)',
                   transform: 'translateX(3px)',
                 }
               }}
@@ -313,16 +316,17 @@ const Dashboard = () => {
                 transition: 'all 0.2s ease',
                 height: '44px',
                 '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  color: 'primary.main',
-                  borderLeft: '3px solid #1976d2',
-                  paddingLeft: '13px', // Compensate for the border
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.main',
-                  },
-                },
+  backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
+  color: '#f44336',
+  borderLeft: '3px solid #f44336',
+  paddingLeft: '13px',
+  '& .MuiListItemIcon-root': {
+    color: '#f44336',
+  },
+},
+
                 '&:hover': {
-                  backgroundColor: location.pathname.includes("/social-media-settings") ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: location.pathname.includes("/social-media-settings") ? 'rgba(210, 25, 87, 0.29)' : 'rgba(119, 76, 76, 0.04)',
                   transform: 'translateX(3px)',
                 }
               }}
