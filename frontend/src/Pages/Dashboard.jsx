@@ -28,6 +28,7 @@ import {
   Dashboard as DashboardIcon,
   History as HistoryIcon,
   Settings as SettingsIcon,
+  
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -566,7 +567,7 @@ const Dashboard = () => {
                           boxShadow: "0 4px 10px rgba(46, 125, 50, 0.3)",
                         }}
                       >
-                        <KeywordIcon />
+                     
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography
