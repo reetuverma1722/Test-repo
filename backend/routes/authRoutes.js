@@ -190,6 +190,9 @@ const {
   TWITTER_CLIENT_ID,
   TWITTER_CLIENT_SECRET,
   TWITTER_CALLBACK_URL,
+  LINKEDIN_CLIENT_ID,
+  LINKEDIN_CLIENT_SECRET,
+  LINKEDIN_CALLBACK_URL
 } = process.env;
 
 router.get("/twitter/callback", async (req, res) => {
@@ -402,68 +405,126 @@ router.post("/twitter-to-jwt", async (req, res) => {
 
 // The Twitter connect callback is now handled in the main Twitter callback route
 
-// Route for handling LinkedIn OAuth callback specifically for connecting additional accounts
-router.get("/linkedin/connect/callback", async (req, res) => {
+// Route for handling LinkedIn OAuth callback
+router.get("/linkedin/callback", async (req, res) => {
   const { code, state } = req.query;
   
-  // Extract userId from state parameter
-  // Format: connect_account_userId
-  const stateParts = state ? state.split('_') : [];
-  
-  if (stateParts.length < 2 || stateParts[0] !== "connect" || stateParts[1] !== "account") {
-    return res.status(400).send("Invalid state parameter");
-  }
-  
-  const userId = stateParts[2];
-  
-  if (!userId) {
-    return res.status(400).send("User ID is required");
-  }
-
   try {
-    // This would need to be implemented with actual LinkedIn OAuth credentials
-    // For now, we'll just simulate a successful connection
+    // Check if this is a connect account flow
+    const isConnectFlow = state && state.startsWith("connect_account");
     
-    // In a real implementation, you would:
-    // 1. Exchange the code for an access token
-    // 2. Get the user's LinkedIn profile
-    // 3. Add the account to the social_media_accounts table
-    
-    // Simulate adding a LinkedIn account
-    const linkedinUser = {
-      id: `linkedin-${Date.now()}`, // Simulated LinkedIn user ID
-      name: "LinkedIn User" // Simulated LinkedIn user name
-    };
-    
-    // Check if this LinkedIn account is already connected to this user
-    const existingAccount = await pool.query(
-      'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
-      [userId, 'linkedin', linkedinUser.id]
+    // Extract userId from state if this is a connect flow
+    let userId = null;
+    if (isConnectFlow) {
+      const stateParts = state.split('_');
+      if (stateParts.length >= 3) {
+        userId = stateParts[2];
+      }
+    }
+
+    if (isConnectFlow && !userId) {
+      return res.status(400).send("User ID is required for connecting accounts");
+    }
+
+    // Exchange the authorization code for an access token
+    const tokenParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: LINKEDIN_CALLBACK_URL,
+      client_id: LINKEDIN_CLIENT_ID,
+      client_secret: LINKEDIN_CLIENT_SECRET
+    });
+
+    const tokenResponse = await axios.post(
+      'https://www.linkedin.com/oauth/v2/accessToken',
+      tokenParams.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
     );
-    
-    if (existingAccount.rows.length > 0) {
-      // Update the existing account
-      await pool.query(
-        `UPDATE social_media_accounts
-         SET access_token = $1, refresh_token = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = $3 AND platform = $4 AND account_id = $5`,
-        ["simulated_access_token", "simulated_refresh_token", userId, 'linkedin', linkedinUser.id]
+
+    const accessToken = tokenResponse.data.access_token;
+    const refreshToken = tokenResponse.data.refresh_token || null;
+
+    // Get user profile information from LinkedIn API
+    const profileResponse = await axios.get(
+      'https://api.linkedin.com/v2/me',
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    const linkedinUser = profileResponse.data;
+    const linkedinId = linkedinUser.id;
+    const linkedinName = `${linkedinUser.localizedFirstName} ${linkedinUser.localizedLastName}`;
+
+    // Get email address if available
+    let email = null;
+    try {
+      const emailResponse = await axios.get(
+        'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
       );
-    } else {
-      // Add the new account
-      await pool.query(
-        `INSERT INTO social_media_accounts
-         (user_id, platform, account_id, account_name, access_token, refresh_token)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, 'linkedin', linkedinUser.id, linkedinUser.name, "simulated_access_token", "simulated_refresh_token"]
+      
+      if (emailResponse.data &&
+          emailResponse.data.elements &&
+          emailResponse.data.elements.length > 0) {
+        email = emailResponse.data.elements[0]['handle~'].emailAddress;
+      }
+    } catch (emailErr) {
+      console.error("Failed to fetch LinkedIn email:", emailErr.message);
+      // Continue without email if we can't get it
+    }
+
+    // If this is a connect flow, add the account to the user's social media accounts
+    if (isConnectFlow && userId) {
+      // Check if this LinkedIn account is already connected to this user
+      const existingAccount = await pool.query(
+        'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
+        [userId, 'linkedin', linkedinId]
       );
+      
+      if (existingAccount.rows.length > 0) {
+        // Update the existing account
+        await pool.query(
+          `UPDATE social_media_accounts
+           SET access_token = $1, refresh_token = $2, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $3 AND platform = $4 AND account_id = $5`,
+          [accessToken, refreshToken, userId, 'linkedin', linkedinId]
+        );
+      } else {
+        // Add the new account
+        await pool.query(
+          `INSERT INTO social_media_accounts
+           (user_id, platform, account_id, account_name, access_token, refresh_token)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, 'linkedin', linkedinId, linkedinName, accessToken, refreshToken]
+        );
+      }
+      
+      // Redirect back to the social media settings page
+      return res.redirect(`http://localhost:3000/social-media-settings?accountConnected=true&platform=linkedin&name=${encodeURIComponent(linkedinName)}`);
     }
     
-    // Redirect back to the social media settings page
-    res.redirect(`http://localhost:3000/social-media-settings?accountConnected=true&platform=linkedin&name=${encodeURIComponent(linkedinUser.name)}`);
+    // If this is a login flow, create or update user and generate JWT
+    // This part would be similar to the Twitter login flow
+    // For now, just redirect to the dashboard with a message
+    res.redirect(`http://localhost:3000/dashboard?message=LinkedIn login not fully implemented yet`);
+    
   } catch (err) {
-    console.error("❌ LinkedIn account connection failed:", err.response?.data || err.message);
-    res.status(500).send("Failed to connect LinkedIn account");
+    console.error("❌ LinkedIn OAuth failed:", err.response?.data || err.message);
+    console.error("Error details:", err.response?.data || err.message);
+    console.error("Error stack:", err.stack);
+    
+    res.status(500).send(`LinkedIn authentication failed: ${err.message}. Please check server logs for more details.`);
   }
 });
 

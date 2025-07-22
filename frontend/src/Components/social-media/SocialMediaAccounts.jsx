@@ -51,8 +51,8 @@ const TWITTER_STATE = "connect_account"; // To differentiate from login flow
 const TWITTER_CODE_CHALLENGE = "challenge";
 const TWITTER_CALLBACK_URL = "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
 
-// LinkedIn OAuth configuration (placeholder - would need actual credentials)
-const LINKEDIN_CLIENT_ID = "your-linkedin-client-id";
+// LinkedIn OAuth configuration
+const LINKEDIN_CLIENT_ID = process.env.REACT_APP_LINKEDIN_CLIENT_ID || "77xwl5eh9xmq0s";
 const LINKEDIN_REDIRECT_URI = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
 const LINKEDIN_SCOPE = encodeURIComponent('r_liteprofile r_emailaddress w_member_social');
 const LINKEDIN_STATE = "connect_account";
@@ -107,58 +107,17 @@ const SocialMediaAccounts = () => {
     }
     
     // Use the connect callback endpoint instead of the login callback
-    const connectRedirectUri = encodeURIComponent("http://localhost:5000/api/auth/linkedin/connect/callback");
+    const connectRedirectUri = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
     
     // Include the userId in the state parameter instead of the redirect URI
     const stateWithUserId = `${LINKEDIN_STATE}_${userId}`;
     
-    // This would need to be implemented with actual LinkedIn OAuth credentials
-    const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${connectRedirectUri}&scope=${LINKEDIN_SCOPE}&state=${stateWithUserId}`;
+    // Create the LinkedIn OAuth URL with actual credentials
+    const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=77fqvi8nw1opj1&redirect_uri=http://localhost:5000/api/auth/linkedin/callback
+&scope=${LINKEDIN_SCOPE}&state=${stateWithUserId}`;
     
-    // Since we don't have actual LinkedIn credentials, let's simulate a successful connection
-    setLoading(true);
-    
-    try {
-      // Simulate API call to connect LinkedIn account
-      setTimeout(async () => {
-        // Generate a random LinkedIn ID and name for demonstration
-        const linkedinId = `linkedin-${Date.now()}`;
-        const linkedinName = "LinkedIn Demo Account";
-        
-        // Add the simulated account to the database
-        const token = localStorage.getItem("token");
-        await addAccount({
-          platform: "linkedin",
-          accountId: linkedinId,
-          accountName: linkedinName,
-          accessToken: "simulated_access_token",
-          refreshToken: "simulated_refresh_token"
-        }, token);
-        
-        // Refresh the accounts list
-        await fetchAccounts();
-        
-        setNotification({
-          open: true,
-          message: "LinkedIn account connected successfully (simulated)",
-          severity: "success"
-        });
-        
-        setLoading(false);
-        setFormOpen(false);
-      }, 1500);
-    } catch (error) {
-      console.error("Error simulating LinkedIn connection:", error);
-      setNotification({
-        open: true,
-        message: "Failed to simulate LinkedIn connection",
-        severity: "error"
-      });
-      setLoading(false);
-    }
-    
-    // In a real implementation with actual credentials, we would use:
-    // window.location.href = linkedinAuthUrl;
+    // Redirect to LinkedIn OAuth authorization page
+    window.location.href = linkedinAuthUrl;
   };
   // State for accounts data
   const [accounts, setAccounts] = useState([]);
