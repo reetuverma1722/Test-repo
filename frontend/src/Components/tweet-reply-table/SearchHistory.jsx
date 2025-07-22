@@ -616,286 +616,310 @@ const SearchHistory = () => {
         </Table>
       </TableContainer>
       <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
+  open={open}
+  onClose={() => setOpen(false)}
+  fullWidth
+  maxWidth="sm"
+  sx={{
+    '& .MuiDialog-paper': {
+      borderRadius: '12px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+      overflow: 'hidden',
+    }
+  }}
+  TransitionProps={{
+    timeout: 400,
+    style: { transition: 'all 0.4s ease' }
+  }}
+>
+  <DialogTitle
+    sx={{
+      fontFamily: "var(--brand-font)",
+      fontSize: "1.3rem",
+      fontWeight: 600,
+      backgroundColor: '#f8f8f8',
+      borderBottom: '1px solid #eaeaea',
+      padding: '16px 24px',
+      position: 'relative',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        left: '24px',
+        bottom: '-1px',
+        width: '40px',
+        height: '3px',
+        backgroundColor: isEditing ? '#FF0000' : '#4caf50',
+        borderRadius: '2px'
+      }
+    }}
+  >
+    {isEditing ? "Edit Reply" : "Retweet Confirmation"}
+  </DialogTitle>
+
+  <DialogContent
+    dividers
+    sx={{
+      padding: '24px',
+      backgroundColor: '#ffffff'
+    }}
+  >
+    {/* Original Tweet Title */}
+    <Typography
+      variant="subtitle1"
+      gutterBottom
+      sx={{
+        fontFamily: "var(--brand-font)",
+        fontSize: "1.05rem",
+        fontWeight: 600,
+        color: '#333',
+        display: 'flex',
+        alignItems: 'center',
+        '&::before': {
+          content: '""',
+          display: 'inline-block',
+          width: '4px',
+          height: '16px',
+          backgroundColor: '#FF0000',
+          marginRight: '8px',
+          borderRadius: '2px'
+        }
+      }}
+    >
+      Original Tweet
+    </Typography>
+
+    {/* Original Tweet Content */}
+    <Typography
+      variant="body1"
+      sx={{
+        mb: 3,
+        p: 2,
+        backgroundColor: '#f5f5f5',
+        borderRadius: '8px',
+        border: '1px solid #e0e0e0',
+        fontSize: '0.95rem',
+        lineHeight: 1.6,
+        fontStyle: 'italic',
+        position: 'relative',
+        '&::before': {
+          content: '"“"',
+          position: 'absolute',
+          top: '8px',
+          left: '12px',
+          fontSize: '24px',
+          color: '#bdbdbd',
+          fontFamily: 'Georgia, serif'
+        },
+        '&::after': {
+          content: '"”"',
+          position: 'absolute',
+          bottom: '8px',
+          right: '12px',
+          fontSize: '24px',
+          color: '#bdbdbd',
+          fontFamily: 'Georgia, serif'
+        }
+      }}
+    >
+      {selectedTweet?.text || "No tweet content available."}
+    </Typography>
+
+    {/* Your Reply */}
+    <Typography
+      variant="subtitle1"
+      gutterBottom
+      sx={{
+        fontFamily: "var(--brand-font)",
+        fontSize: "1.05rem",
+        fontWeight: 600,
+        color: '#333',
+        display: 'flex',
+        alignItems: 'center',
+        mt: 2,
+        '&::before': {
+          content: '""',
+          display: 'inline-block',
+          width: '4px',
+          height: '16px',
+          backgroundColor: isEditing ? '#FF0000' : '#4caf50',
+          marginRight: '8px',
+          borderRadius: '2px'
+        }
+      }}
+    >
+      {isEditing ? "Edit Your Reply" : "Your Reply"}
+    </Typography>
+
+    {/* Reply Input or Preview */}
+    {isEditing ? (
+      <TextField
         fullWidth
-        maxWidth="sm"
+        multiline
+        minRows={4}
+        value={editedReply}
+        onChange={(e) => setEditedReply(e.target.value)}
+        placeholder="Enter your reply here..."
+        variant="outlined"
         sx={{
-          '& .MuiDialog-paper': {
-            borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            overflow: 'hidden',
+          mb: 2,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+            transition: 'all 0.3s',
+            fontSize: '0.95rem',
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#FF0000'
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#FF0000',
+              borderWidth: '2px'
+            }
           }
         }}
-        TransitionProps={{
-          timeout: 400,
-          style: {
-            transition: 'all 0.4s ease'
+      />
+    ) : (
+      <Typography
+        variant="body1"
+        sx={{
+          mb: 2,
+          p: 3,
+          border: '1px solid #e0e0e0',
+          borderRadius: 2,
+          backgroundColor: '#f9f9f9',
+          minHeight: '120px',
+          fontSize: '0.95rem',
+          lineHeight: 1.6,
+          position: 'relative',
+          '&::before': {
+            content: '"“"',
+            position: 'absolute',
+            top: '8px',
+            left: '12px',
+            fontSize: '24px',
+            color: '#bdbdbd',
+            fontFamily: 'Georgia, serif'
+          },
+          '&::after': {
+            content: '"”"',
+            position: 'absolute',
+            bottom: '8px',
+            right: '12px',
+            fontSize: '24px',
+            color: '#bdbdbd',
+            fontFamily: 'Georgia, serif'
           }
         }}
       >
-        <DialogTitle
+        {editedReply || "No reply content yet."}
+      </Typography>
+    )}
+
+    {/* Select Account (only if not editing) */}
+    {!isEditing && (
+      <>
+        <Typography
+          variant="subtitle1"
+          gutterBottom
           sx={{
             fontFamily: "var(--brand-font)",
-            fontSize: "1.3rem",
-            fontWeight: 600,
-            backgroundColor: '#f8f8f8',
-            borderBottom: '1px solid #eaeaea',
-            padding: '16px 24px',
-            position: 'relative',
-            '&::after': {
+            fontSize: "1rem",
+            mt: 2,
+            display: 'flex',
+            alignItems: 'center',
+            '&::before': {
               content: '""',
-              position: 'absolute',
-              left: '24px',
-              bottom: '-1px',
-              width: '40px',
-              height: '3px',
-              backgroundColor: isEditing ? '#FF0000' : '#4caf50',
+              display: 'inline-block',
+              width: '4px',
+              height: '16px',
+              backgroundColor: '#4caf50',
+              marginRight: '8px',
               borderRadius: '2px'
             }
           }}
         >
-          {isEditing ? "Edit Reply" : "Retweet Confirmation"}
-        </DialogTitle>
-        <DialogContent
-          dividers
-          sx={{
-            padding: '24px',
-            backgroundColor: '#ffffff'
-          }}
-        >
-          <Typography
-            variant="subtitle1"
-            gutterBottom
+          <strong>Select Account:</strong>
+        </Typography>
+        <FormControl fullWidth>
+          <Select
+            value={selectedAccountId}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
+            displayEmpty
+            disabled={loadingAccounts}
             sx={{
-              fontFamily: "var(--brand-font)",
-              fontSize: "1.05rem",
-              fontWeight: 600,
-              color: '#333',
-              display: 'flex',
-              alignItems: 'center',
-              '&::before': {
-                content: '""',
-                display: 'inline-block',
-                width: '4px',
-                height: '16px',
-                backgroundColor: '#FF0000',
-                marginRight: '8px',
-                borderRadius: '2px'
-              }
-            }}
-          >
-            Original Tweet
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              mb: 3,
-              p: 2,
-              backgroundColor: '#f5f5f5',
               borderRadius: '8px',
-              border: '1px solid #e0e0e0',
-              fontSize: '0.95rem',
-              lineHeight: 1.6,
-              fontStyle: 'italic',
-              position: 'relative',
-              '&::before': {
-                content: '"""',
-                position: 'absolute',
-                top: '8px',
-                left: '12px',
-                fontSize: '24px',
-                color: '#bdbdbd',
-                fontFamily: 'Georgia, serif'
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#e0e0e0'
               },
-              '&::after': {
-                content: '"""',
-                position: 'absolute',
-                bottom: '0',
-                right: '12px',
-                fontSize: '24px',
-                color: '#bdbdbd',
-                fontFamily: 'Georgia, serif'
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#4caf50'
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#4caf50'
               }
             }}
+            renderValue={(value) =>
+              value ? value : <em>Default Account</em>
+            }
           >
-            {selectedTweet?.text || "No tweet content available."}
-          </Typography>
+            <MenuItem value="">
+              <em>Default Account</em>
+            </MenuItem>
+            {accounts?.length ? (
+              accounts.map((account) => (
+                <MenuItem key={account.id} value={account.id}>
+                  {account.accountName} (@{account.accountId})
+                </MenuItem>
+              ))
+            ) : (
+              <MenuItem disabled>No accounts available</MenuItem>
+            )}
+          </Select>
+        </FormControl>
+      </>
+    )}
+  </DialogContent>
 
-          <Typography
-            variant="subtitle1"
-            gutterBottom
-            sx={{
-              fontFamily: "var(--brand-font)",
-              fontSize: "1.05rem",
-              fontWeight: 600,
-              color: '#333',
-              display: 'flex',
-              alignItems: 'center',
-              mt: 2,
-              '&::before': {
-                content: '""',
-                display: 'inline-block',
-                width: '4px',
-                height: '16px',
-                backgroundColor: isEditing ? '#FF0000' : '#4caf50',
-                marginRight: '8px',
-                borderRadius: '2px'
-              }
-            }}
-          >
-            {isEditing ? "Edit Your Reply" : "Your Reply"}
-          </Typography>
-          {isEditing ? (
-            <TextField
-              fullWidth
-              multiline
-              minRows={4}
-              value={editedReply}
-              onChange={(e) => setEditedReply(e.target.value)}
-              placeholder="Enter your reply here..."
-              variant="outlined"
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  transition: 'all 0.3s',
-                  fontSize: '0.95rem',
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#FF0000'
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#FF0000',
-                    borderWidth: '2px'
-                  }
-                }
-              }}
-            />
-          ) : (
-            <Typography
-              variant="body1"
-              sx={{
-                mb: 2,
-                p: 3,
-                border: '1px solid #e0e0e0',
-                borderRadius: 2,
-                backgroundColor: '#f9f9f9',
-                minHeight: '120px',
-                fontSize: '0.95rem',
-                lineHeight: 1.6,
-                position: 'relative',
-                '&::before': {
-                  content: '"""',
-                  position: 'absolute',
-                  top: '8px',
-                  left: '12px',
-                  fontSize: '24px',
-                  color: '#bdbdbd',
-                  fontFamily: 'Georgia, serif'
-                }
-              }}
-            >
-              {editedReply || "No reply content yet."}
-            </Typography>
-          )}
-          
-          {!isEditing && (
-            <>
-              <Typography
-                variant="subtitle1"
-                gutterBottom
-                sx={{
-                  fontFamily: "var(--brand-font)",
-                  fontSize: "1rem",
-                  mt: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  '&::before': {
-                    content: '""',
-                    display: 'inline-block',
-                    width: '4px',
-                    height: '16px',
-                    backgroundColor: '#4caf50',
-                    marginRight: '8px',
-                    borderRadius: '2px'
-                  }
-                }}
-              >
-                <strong>Select Account:</strong>
-              </Typography>
-              <FormControl fullWidth>
-                <Select
-                  value={selectedAccountId}
-                  onChange={(e) => setSelectedAccountId(e.target.value)}
-                  displayEmpty
-                  disabled={loadingAccounts}
-                  sx={{
-                    borderRadius: '8px',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#e0e0e0'
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#4caf50'
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#4caf50'
-                    }
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>Default Account</em>
-                  </MenuItem>
-                  {accounts.map((account) => (
-                    <MenuItem key={account.id} value={account.id}>
-                      {account.accountName} (@{account.accountId})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px', backgroundColor: '#f8f8f8' }}>
-          <Button
-            onClick={() => setOpen(false)}
-            variant="outlined"
-            sx={{
-              borderColor: '#9e9e9e',
-              color: '#757575',
-              borderRadius: '8px',
-              fontWeight: 600,
-              padding: '6px 16px',
-              transition: 'all 0.2s',
-              '&:hover': {
-                borderColor: '#757575',
-                backgroundColor: 'rgba(0,0,0,0.04)'
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={isEditing ? handleSaveEdit : handleRetweet}
-            variant="contained"
-            startIcon={isEditing ? <EditIcon /> : <Search />}
-            sx={{
-              backgroundColor: isEditing ? "#FF0000" : "#4caf50",
-              padding: "6px 20px",
-              borderRadius: "8px",
-              fontWeight: 600,
-              boxShadow: isEditing ? '0 4px 12px rgba(255, 0, 0, 0.2)' : '0 4px 12px rgba(76, 175, 80, 0.2)',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                backgroundColor: isEditing ? "#E00000" : "#43a047",
-                boxShadow: isEditing ? '0 6px 16px rgba(255, 0, 0, 0.3)' : '0 6px 16px rgba(76, 175, 80, 0.3)',
-                transform: 'translateY(-2px)'
-              }
-            }}
-          >
-            {isEditing ? "Save Changes" : "Post Reply"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+  <DialogActions sx={{ padding: '16px 24px', backgroundColor: '#f8f8f8' }}>
+    <Button
+      onClick={() => setOpen(false)}
+      variant="outlined"
+      sx={{
+        borderColor: '#9e9e9e',
+        color: '#757575',
+        borderRadius: '8px',
+        fontWeight: 600,
+        padding: '6px 16px',
+        transition: 'all 0.2s',
+        '&:hover': {
+          borderColor: '#757575',
+          backgroundColor: 'rgba(0,0,0,0.04)'
+        }
+      }}
+    >
+      Cancel
+    </Button>
+    <Button
+      onClick={isEditing ? handleSaveEdit : handleRetweet}
+      variant="contained"
+      startIcon={isEditing ? <EditIcon /> : <Search />}
+      sx={{
+        backgroundColor: isEditing ? "#FF0000" : "#4caf50",
+        padding: "6px 20px",
+        borderRadius: "8px",
+        fontWeight: 600,
+        boxShadow: isEditing ? '0 4px 12px rgba(255, 0, 0, 0.2)' : '0 4px 12px rgba(76, 175, 80, 0.2)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          backgroundColor: isEditing ? "#E00000" : "#43a047",
+          boxShadow: isEditing ? '0 6px 16px rgba(255, 0, 0, 0.3)' : '0 6px 16px rgba(76, 175, 80, 0.3)',
+          transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      {isEditing ? "Save Changes" : "Post Reply"}
+    </Button>
+  </DialogActions>
+</Dialog>
+
     </Paper>
   );
 };
