@@ -20,7 +20,7 @@ import { useNavigate } from "react-router";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 
-const Login = () => {
+const Login = ({ isPopup = false }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,58 +117,85 @@ const Login = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {/* Header */}
-      <AppBar
-        position="fixed"
-        elevation={2}
-        sx={{
-          backgroundColor: 'white',
-          color: 'text.primary',
-        }}
-      >
-        <Toolbar sx={{ justifyContent: "space-between", height: 48 }}>
-          <Typography
-            variant="h6"
-            noWrap
+    <Box sx={{
+      display: "flex",
+      flexDirection: "column",
+      minHeight: isPopup ? "auto" : "100vh",
+      background: "transparent"
+    }}>
+      {/* Header - Only show when not in popup mode */}
+      {!isPopup && (
+        <>
+          <AppBar
+            position="fixed"
+            elevation={2}
             sx={{
-              fontWeight: 600,
-              letterSpacing: "0.5px",
-              fontSize: { xs: "1.1rem", sm: "1.2rem" },
-              color: 'text.primary'
+              backgroundColor: 'white',
+              color: 'text.primary',
             }}
           >
-            Buzzly
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      
-      <Toolbar /> {/* Spacer */}
+            <Toolbar sx={{ justifyContent: "space-between", height: 48 }}>
+              <Typography
+                variant="h6"
+                noWrap
+                sx={{
+                  fontWeight: 600,
+                  letterSpacing: "0.5px",
+                  fontSize: { xs: "1.1rem", sm: "1.2rem" },
+                  color: 'text.primary'
+                }}
+              >
+                Buzzly
+              </Typography>
+            </Toolbar>
+          </AppBar>
+          
+          <Toolbar /> {/* Spacer */}
+        </>
+      )}
       
       {/* Main Content */}
-      <Container component="main" maxWidth="xs" sx={{ mt: 8, mb: 4 }}>
-        <Card elevation={3} sx={{ borderRadius: 2, overflow: 'visible', maxWidth: 360, mx: 'auto' }}>
-          <CardContent sx={{ p: 4 }}>
+      <Container component="main" maxWidth={isPopup ? "sm" : "xs"} sx={{
+        mt: isPopup ? 0 : 8,
+        mb: isPopup ? 0 : 4,
+        p: isPopup ? 0 : undefined,
+        width: isPopup ? '100%' : undefined
+      }}>
+        <Card elevation={isPopup ? 0 : 3} sx={{
+          borderRadius: 2,
+          overflow: 'visible',
+          maxWidth: isPopup ? '95%' : 360,
+          width: isPopup ? '95%' : 'auto',
+          mx: 'auto',
+          backgroundColor: 'transparent',
+          boxShadow: isPopup ? 'none' : undefined
+        }}>
+          <CardContent sx={{ p: 4, backgroundColor: 'transparent' }}>
             <Typography variant="h5" component="h1" align="center" gutterBottom sx={{ mb: 3 }}>
               {isRegister ? "Create Your Account" : "Choose Sign In Method"}
             </Typography>
             
             {!isRegister && (
               <>
-                <Grid sx={{display:"flex", gap:3, flexDirection:"column"}}>
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => setError("Google Sign In Failed")}
-                    fullWidth
-                    variant="contained"
-                    startIcon={<MailOutlineIcon />}
-                    sx={{ mb: 2 }}
-                  >
-                    Sign in with Google
-                  </GoogleLogin>
+                <Grid sx={{display:"flex", gap:3, flexDirection:"column", width: "100%"}}>
+                  <div style={{ width: '100%' }}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setError("Google Sign In Failed")}
+                      fullWidth
+                      variant="contained"
+                      startIcon={<MailOutlineIcon />}
+                      sx={{ mb: 2, width: '100%', height: '48px' }}
+                      size="large"
+                    >
+                      Sign in with Google
+                    </GoogleLogin>
+                  </div>
                   <Button
                     onClick={redirectToTwitter}
                     variant="contained"
+                    fullWidth
+                    size="large"
                   >
                     Sign In with Twitter
                   </Button>
@@ -177,13 +204,13 @@ const Login = () => {
               </>
             )}
 
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="flex" flexDirection="column" gap={2} width="100%">
               <TextField
                 label="Email Address"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                size="small"
+                size="medium"
                 fullWidth
               />
               <TextField
@@ -191,7 +218,7 @@ const Login = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                size="small"
+                size="medium"
                 fullWidth
               />
               {isRegister && (
@@ -200,7 +227,7 @@ const Login = () => {
                   type="password"
                   value={confirmPass}
                   onChange={(e) => setConfirmPass(e.target.value)}
-                  size="small"
+                  size="medium"
                   fullWidth
                 />
               )}
@@ -208,6 +235,7 @@ const Login = () => {
                 variant="contained"
                 fullWidth
                 onClick={handleSubmit}
+                size="large"
               >
                 {isRegister ? "Register" : "Sign in with Password"}
               </Button>

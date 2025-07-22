@@ -1,15 +1,28 @@
 .oask-container {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #e1f0ff;
+  font-family: 'Source Sans Pro', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  background-color: #fef2f2;
   padding: 40px;
-  color: #1a1a1a;
+  color: #212121;
   text-align: center;
+  min-height: 100vh;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.qss-logo {
+  height: 50px;
+  margin-right: 15px;
 }
 
 .header h1 {
   font-size: 32px;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .header p {
@@ -20,20 +33,127 @@
 }
 
 .cta-button {
-  background-color: #1976d2;
+  background-color: #BE1212;
   color: white;
   padding: 12px 24px;
   font-size: 14px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  text-transform: uppercase;
+  font-weight: 500;
+  box-shadow: 0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12);
 }
 
 .cta-button:hover {
-  background-color: #1976d2;
+  background-color: #8e0000;
+  box-shadow: 0px 2px 4px -1px rgba(0,0,0,0.2), 0px 4px 5px 0px rgba(0,0,0,0.14), 0px 1px 10px 0px rgba(0,0,0,0.12);
 }
 
 .methodology {
+  background-color: #ffffff;
+  margin-top: 48px;
+  padding: 60px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.methodology-header {
+  text-align: center;
+  margin-bottom: 50px;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.methodology-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #BE1212;
+}
+
+.methodology-header p {
+  max-width: 700px;
+  margin: 0 auto;
+  font-size: 16px;
+  color: #444;
+  line-height: 1.6;
+}
+
+.methodology-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.methodology-step {
+  display: flex;
+  gap: 20px;
+  padding: 10px;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+  animation: fadeInUp 1s ease-out;
+}
+
+.methodology-step:hover {
+  transform: translateX(10px);
+}
+
+.step-number {
+  font-size: 36px;
+  font-weight: 800;
+  color: #fef2f2;
+  background-color: #BE1212;
+  height: 70px;
+  width: 70px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(190, 18, 18, 0.2);
+  flex-shrink: 0;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 15px;
+  background-color: #f9f0f0;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  flex-grow: 1;
+}
+
+.step-icon {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.methodology-step h3 {
+  font-size: 20px;
+  color: #BE1212;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.methodology-step p {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.card {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
+}
+
+/* Features Section */
+.features-section {
   background-color: #ffffff;
   margin-top: 48px;
   padding: 40px 20px;
@@ -41,30 +161,286 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.methodology h2 {
+.features-section h2 {
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 8px;
+  animation: fadeInUp 0.8s ease-out;
 }
 
-.methodology p {
+.features-section p {
   max-width: 600px;
   margin: 0 auto 32px;
   font-size: 15px;
   color: #444;
+  animation: fadeInUp 1s ease-out;
 }
 
-.methodology-grid {
+.features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
 }
 
-.card {
-  background-color: #fff5f5;
+.feature-card {
+  background-color: #ffffff;
   padding: 20px;
   border-radius: 8px;
   text-align: center;
+  box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: fadeInUp 1.2s ease-out;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 5px 15px rgba(0,0,0,0.1);
+}
+
+.feature-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.feature-card h3 {
+  font-size: 18px;
+  color: #BE1212;
+  margin-bottom: 8px;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+}
+
+/* Testimonials Section */
+.testimonials-section {
+  margin-top: 48px;
+  padding: 40px 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.testimonials-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.testimonials-section p {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  font-size: 15px;
+  color: #444;
+  animation: fadeInUp 1s ease-out;
+}
+
+.testimonials-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.testimonial-card {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  border-left: 4px solid #BE1212;
+  box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+  animation: fadeInUp 1.2s ease-out;
+  transition: transform 0.3s ease;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-5px);
+}
+
+.testimonial-text {
+  font-style: italic;
+  margin-bottom: 16px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.testimonial-author {
+  display: flex;
+  flex-direction: column;
+}
+
+.testimonial-author strong {
+  color: #BE1212;
+  margin-bottom: 4px;
+}
+
+.testimonial-author span {
+  font-size: 14px;
+  color: #666;
+}
+
+/* CTA Section */
+.cta-section {
+  margin-top: 48px;
+  padding: 48px 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  animation: fadeInUp 1s ease-out;
+}
+
+.cta-section h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #BE1212;
+}
+
+.cta-section p {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  font-size: 16px;
+  color: #444;
+}
+
+/* Footer */
+.footer {
+  background-color: rgb(31, 41, 55);
+  color: #fff;
+  margin-top: 60px;
+  padding: 0;
+  border-radius: 8px 8px 0 0;
+  animation: fadeInUp 1s ease-out;
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-logo {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 20px;
+}
+
+.footer-logo-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.qss-logo-footer {
+  height: 40px;
+  margin-right: 10px;
+}
+
+.footer-logo h3 {
+  font-size: 24px;
+  margin-bottom: 0;
+  color: #fff;
+}
+
+.footer-logo p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 2;
+  justify-content: space-around;
+}
+
+.footer-links-column {
+  min-width: 150px;
+  margin-bottom: 20px;
+}
+
+.footer-links-column h4 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: #fff;
+}
+
+.footer-links-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-links-column ul li {
+  margin-bottom: 8px;
+}
+
+.footer-links-column ul li a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.footer-links-column ul li a:hover {
+  color: #fff;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  text-align: center;
+}
+
+.footer-bottom p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header h1 {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.header p {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.cta-button {
+  animation: fadeInUp 1s ease-out;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.cta-button:hover {
+  transform: translateY(-3px);
+}
+
+/* Methodology animations are now included in the methodology styles above */
+
+.card {
+  animation: fadeInUp 1.2s ease-out;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
 }
 
 .card .icon {
@@ -74,7 +450,7 @@
 
 .card h3 {
   font-size: 18px;
-  color: #1976d2;
+  color: #BE1212;
   margin-bottom: 8px;
 }
 
