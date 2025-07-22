@@ -1,0 +1,85 @@
+.oask-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #e1f0ff;
+  padding: 40px;
+  color: #1a1a1a;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.header p {
+  max-width: 700px;
+  margin: 0 auto 24px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.cta-button {
+  background-color: #1976d2;
+  color: white;
+  padding: 12px 24px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cta-button:hover {
+  background-color: #1976d2;
+}
+
+.methodology {
+  background-color: #ffffff;
+  margin-top: 48px;
+  padding: 40px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.methodology h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.methodology p {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  font-size: 15px;
+  color: #444;
+}
+
+.methodology-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background-color: #fff5f5;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.card .icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.card h3 {
+  font-size: 18px;
+  color: #1976d2;
+  margin-bottom: 8px;
+}
+
+.card p {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+}

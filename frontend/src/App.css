@@ -1,0 +1,50 @@
+/* App-specific styles that aren't covered by the Material UI theme */
+
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.App-main {
+  flex-grow: 1;
+  padding: 1rem;
+}
+
+.App-footer {
+  padding: 1rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .App-main {
+    padding: 0.5rem;
+  }
+}
+
+/* Legacy support for any components still using CSS variables */
+:root {
+  --brand-color: #BE1212;
+  --brand-font: 'Source Sans Pro', sans-serif;
+}
+
+/* Animation for logo if needed */
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
