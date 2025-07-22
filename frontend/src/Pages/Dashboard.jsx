@@ -24,7 +24,6 @@ import {
   Search,
   Dashboard as DashboardIcon,
   History as HistoryIcon,
-  ManageSearch as KeywordIcon,
   Settings as SettingsIcon
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -32,7 +31,6 @@ import axios from "axios";
 import LogoutDialog from "../Components/logoutDialog/LogoutDialog";
 import authService from "../services/authService";
 import TweetReplyTable from "../Components/tweet-reply-table/SearchHistory";
-import Keyword_Management from "./Keyword_Management";
 import GoalsTable from "./Post_Manager";
 import SocialMediaSettings from "./SocialMediaSettings";
 
@@ -126,8 +124,6 @@ const Dashboard = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) {
       setActive("");
-    } else if (path.includes('/keyword-management')) {
-      setActive("keyword-management");
     } else if (path.includes('/history')) {
       setActive("search-history");
     } else if (path.includes('/postmanager')) {
@@ -206,52 +202,6 @@ const Dashboard = () => {
                 primaryTypographyProps={{
                   fontSize: "0.9rem",
                   fontWeight: location.pathname.includes("/dashboard") ? 600 : 500
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/keyword-management")}
-              onClick={() => {
-                setActive("keyword-management");
-                navigate("/keyword-management");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                height: '44px',
-               '&.Mui-selected': {
-  backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
-  color: '#f44336',
-  borderLeft: '3px solid #f44336',
-  paddingLeft: '13px',
-  '& .MuiListItemIcon-root': {
-    color: '#f44336',
-  },
-},
-
-                '&:hover': {
-                  backgroundColor: location.pathname.includes("/keyword-management") ? 'rgba(210, 25, 87, 0.29)' : 'rgba(210, 25, 87, 0.29)',
-                  transform: 'translateX(3px)',
-                }
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/keyword-management") ? 'inherit' : 'text.secondary'
-                }}
-              >
-                <KeywordIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Keyword Management"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/keyword-management") ? 600 : 500
                 }}
               />
             </ListItem>
@@ -410,8 +360,6 @@ const Dashboard = () => {
           {/* Always render content within Dashboard component */}
           {location.pathname.includes("/history") ? (
             <TweetReplyTable />
-          ) : location.pathname.includes("/keyword-management") ? (
-            <Keyword_Management />
           ) : location.pathname.includes("/postmanager") ? (
             <GoalsTable />
           ) : location.pathname.includes("/social-media-settings") ? (
