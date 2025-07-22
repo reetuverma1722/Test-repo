@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 // Middleware to check authentication
 const checkAuth = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1] || localStorage.getItem('token');
+    // Get token from Authorization header
+    const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
       // For development purposes, allow requests without a token
@@ -19,6 +20,7 @@ const checkAuth = (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'buzzly-secret-key');
       req.user = decoded;
+      console.log('Authenticated user:', req.user);
     } catch (err) {
       console.log('Invalid token, using default user ID');
       req.user = { id: 1 }; // Default user ID for testing
@@ -36,9 +38,10 @@ const checkAuth = (req, res, next) => {
 router.get('/accounts', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log('Fetching accounts for user ID:', userId);
     
     const result = await pool.query(
-      `SELECT id, platform, account_id AS "accountId", account_name AS "accountName", 
+      `SELECT id, platform, account_id AS "accountId", account_name AS "accountName",
        created_at AS "createdAt", updated_at AS "updatedAt"
        FROM social_media_accounts
        WHERE user_id = $1 AND deleted_at IS NULL
@@ -46,6 +49,7 @@ router.get('/accounts', checkAuth, async (req, res) => {
       [userId]
     );
     
+    console.log('Found accounts:', result.rows.length);
     res.json({ success: true, data: result.rows });
   } catch (error) {
     console.error('Error fetching social media accounts:', error);

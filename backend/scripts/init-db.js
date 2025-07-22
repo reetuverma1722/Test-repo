@@ -7,12 +7,15 @@ async function initializeDatabase() {
   try {
     console.log('Initializing database...');
     
-    // Read the SQL file
-    const sqlFilePath = path.join(__dirname, '../sql/create_twitter_keywords_table.sql');
-    const sql = fs.readFileSync(sqlFilePath, 'utf8');
+    // Read and execute the Twitter keywords table SQL file
+    const keywordsSqlFilePath = path.join(__dirname, '../sql/create_twitter_keywords_table.sql');
+    const keywordsSql = fs.readFileSync(keywordsSqlFilePath, 'utf8');
+    await pool.query(keywordsSql);
     
-    // Execute the SQL
-    await pool.query(sql);
+    // Read and execute the social media accounts table SQL file
+    const accountsSqlFilePath = path.join(__dirname, '../sql/create_social_media_accounts_table.sql');
+    const accountsSql = fs.readFileSync(accountsSqlFilePath, 'utf8');
+    await pool.query(accountsSql);
     
     console.log('Database initialization completed successfully.');
   } catch (error) {

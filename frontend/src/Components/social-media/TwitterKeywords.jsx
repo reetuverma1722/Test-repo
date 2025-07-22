@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -28,7 +27,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip
+  Chip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -37,9 +36,15 @@ import {
   Search as SearchIcon,
   FilterList as FilterIcon,
   Clear as ClearIcon,
-  AccountCircle as AccountCircleIcon
+  AccountCircle as AccountCircleIcon,
 } from "@mui/icons-material";
-import { getKeywords, addKeyword, updateKeyword, deleteKeyword, getFilteredKeywords } from "../../services/keywordService";
+import {
+  getKeywords,
+  addKeyword,
+  updateKeyword,
+  deleteKeyword,
+  getFilteredKeywords,
+} from "../../services/keywordService";
 import { getAccountsByPlatform } from "../../services/socialMediaAccountsService";
 
 const TwitterKeywords = () => {
@@ -47,12 +52,12 @@ const TwitterKeywords = () => {
   const [keywords, setKeywords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // State for Twitter accounts
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
-  
+
   // State for form
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -62,27 +67,27 @@ const TwitterKeywords = () => {
     minLikes: 0,
     minRetweets: 0,
     minFollowers: 0,
-    accountId: null
+    accountId: null,
   });
-  
+
   // State for delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [keywordToDelete, setKeywordToDelete] = useState(null);
-  
+
   // State for filtering
   const [filters, setFilters] = useState({
     text: "",
     minLikes: "",
     minRetweets: "",
     minFollowers: "",
-    accountId: ""
+    accountId: "",
   });
-  
+
   // State for notifications
   const [notification, setNotification] = useState({
     open: false,
     message: "",
-    severity: "success"
+    severity: "success",
   });
 
   // We'll no longer use mock data as we have real API endpoints
@@ -92,7 +97,7 @@ const TwitterKeywords = () => {
     fetchKeywords();
     fetchTwitterAccounts();
   }, []);
-  
+
   // Fetch Twitter accounts
   const fetchTwitterAccounts = async () => {
     setLoadingAccounts(true);
@@ -148,21 +153,21 @@ const TwitterKeywords = () => {
       minLikes: "",
       minRetweets: "",
       minFollowers: "",
-      accountId: ""
+      accountId: "",
     });
     fetchKeywords();
   };
-  
+
   // Handle account change
   const handleAccountChange = (accountId) => {
     setSelectedAccount(accountId);
     // Refresh keywords for the selected account
     const token = localStorage.getItem("token");
     getKeywords(accountId, token)
-      .then(response => {
+      .then((response) => {
         setKeywords(response.data || []);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Error fetching keywords for account:", err);
       });
   };
@@ -172,7 +177,7 @@ const TwitterKeywords = () => {
     const { name, value } = e.target;
     setCurrentKeyword({
       ...currentKeyword,
-      [name]: name === "text" ? value : Number(value)
+      [name]: name === "text" ? value : Number(value),
     });
   };
 
@@ -181,7 +186,7 @@ const TwitterKeywords = () => {
     const { name, value } = e.target;
     setFilters({
       ...filters,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -193,7 +198,7 @@ const TwitterKeywords = () => {
       minLikes: 0,
       minRetweets: 0,
       minFollowers: 0,
-      accountId: selectedAccount
+      accountId: selectedAccount,
     });
     setIsEditing(false);
     setFormOpen(true);
@@ -207,7 +212,7 @@ const TwitterKeywords = () => {
       minLikes: keyword.minLikes,
       minRetweets: keyword.minRetweets,
       minFollowers: keyword.minFollowers,
-      accountId: keyword.accountId
+      accountId: keyword.accountId,
     });
     setIsEditing(true);
     setFormOpen(true);
@@ -225,7 +230,7 @@ const TwitterKeywords = () => {
       setNotification({
         open: true,
         message: "Keyword text is required",
-        severity: "error"
+        severity: "error",
       });
       return;
     }
@@ -233,27 +238,29 @@ const TwitterKeywords = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      
+
       if (isEditing) {
         await updateKeyword(currentKeyword.id, currentKeyword, token);
       } else {
         await addKeyword(currentKeyword, token);
       }
-      
+
       // Refresh the keywords list
       await fetchKeywords();
-      
+
       setNotification({
         open: true,
         message: `Keyword ${isEditing ? "updated" : "added"} successfully`,
-        severity: "success"
+        severity: "success",
       });
       setFormOpen(false);
     } catch (err) {
       setNotification({
         open: true,
-        message: `Failed to ${isEditing ? "update" : "add"} keyword. Please try again.`,
-        severity: "error"
+        message: `Failed to ${
+          isEditing ? "update" : "add"
+        } keyword. Please try again.`,
+        severity: "error",
       });
       console.error(`Error ${isEditing ? "updating" : "adding"} keyword:`, err);
     } finally {
@@ -267,20 +274,20 @@ const TwitterKeywords = () => {
     try {
       const token = localStorage.getItem("token");
       await deleteKeyword(keywordToDelete, token);
-      
+
       // Refresh the keywords list
       await fetchKeywords();
-      
+
       setNotification({
         open: true,
         message: "Keyword deleted successfully",
-        severity: "success"
+        severity: "success",
       });
     } catch (err) {
       setNotification({
         open: true,
         message: "Failed to delete keyword. Please try again.",
-        severity: "error"
+        severity: "error",
       });
       console.error("Error deleting keyword:", err);
     } finally {
@@ -293,14 +300,21 @@ const TwitterKeywords = () => {
   const handleCloseNotification = () => {
     setNotification({
       ...notification,
-      open: false
+      open: false,
     });
   };
 
   return (
     <Box>
       {/* Header and Actions */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h6">Twitter Keywords Management</Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
           <FormControl sx={{ minWidth: 200 }}>
@@ -358,10 +372,10 @@ const TwitterKeywords = () => {
                     <SearchIcon fontSize="small" />
                   </InputAdornment>
                 ),
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
               InputLabelProps={{
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
             />
           </Grid>
@@ -377,10 +391,10 @@ const TwitterKeywords = () => {
               margin="dense"
               InputProps={{
                 inputProps: { min: 0 },
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
               InputLabelProps={{
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
             />
           </Grid>
@@ -396,10 +410,10 @@ const TwitterKeywords = () => {
               margin="dense"
               InputProps={{
                 inputProps: { min: 0 },
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
               InputLabelProps={{
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
             />
           </Grid>
@@ -415,10 +429,10 @@ const TwitterKeywords = () => {
               margin="dense"
               InputProps={{
                 inputProps: { min: 0 },
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
               InputLabelProps={{
-                style: { fontSize: '0.8rem' }
+                style: { fontSize: "0.8rem" },
               }}
             />
           </Grid>
@@ -428,9 +442,9 @@ const TwitterKeywords = () => {
                 onClick={clearFilters}
                 size="small"
                 sx={{
-                  width: '28px',
-                  height: '28px',
-                  ml: 0.5
+                  width: "28px",
+                  height: "28px",
+                  ml: 0.5,
                 }}
               >
                 <ClearIcon fontSize="small" />
@@ -442,14 +456,14 @@ const TwitterKeywords = () => {
               onClick={applyFilters}
               variant="contained"
               disabled={loading}
-              startIcon={<FilterIcon sx={{ fontSize: '0.8rem' }} />}
+              startIcon={<FilterIcon sx={{ fontSize: "0.8rem" }} />}
               size="small"
               sx={{
-                minWidth: '28px',
-                height: '28px',
-                fontSize: '0.7rem',
+                minWidth: "28px",
+                height: "28px",
+                fontSize: "0.7rem",
                 py: 0,
-                px: 1
+                px: 1,
               }}
             >
               Apply
@@ -474,7 +488,6 @@ const TwitterKeywords = () => {
               <TableCell align="right">Min Likes</TableCell>
               <TableCell align="right">Min Retweets</TableCell>
               <TableCell align="right">Min Followers</TableCell>
-              <TableCell>Account</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -488,7 +501,11 @@ const TwitterKeywords = () => {
             ) : keywords.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ py: 2 }}
+                  >
                     No keywords found. Add a new keyword to get started.
                   </Typography>
                 </TableCell>
@@ -500,19 +517,6 @@ const TwitterKeywords = () => {
                   <TableCell align="right">{keyword.minLikes}</TableCell>
                   <TableCell align="right">{keyword.minRetweets}</TableCell>
                   <TableCell align="right">{keyword.minFollowers}</TableCell>
-                  <TableCell>
-                    {keyword.accountName ? (
-                      <Chip
-                        size="small"
-                        label={keyword.accountName}
-                        color="primary"
-                        variant="outlined"
-                        icon={<AccountCircleIcon />}
-                      />
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">Default</Typography>
-                    )}
-                  </TableCell>
                   <TableCell align="center">
                     <Tooltip title="Edit">
                       <IconButton
@@ -539,7 +543,12 @@ const TwitterKeywords = () => {
       </TableContainer>
 
       {/* Add/Edit Keyword Form Dialog */}
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
           {isEditing ? "Edit Keyword" : "Add New Keyword"}
         </DialogTitle>
@@ -556,31 +565,6 @@ const TwitterKeywords = () => {
                 required
               />
             </Grid>
-            
-            {/* Account Selection Row */}
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel id="account-label">Twitter Account</InputLabel>
-                <Select
-                  labelId="account-label"
-                  name="accountId"
-                  value={currentKeyword.accountId || ""}
-                  onChange={handleInputChange}
-                  label="Twitter Account"
-                >
-                  <MenuItem value="">
-                    <em>Default (All Accounts)</em>
-                  </MenuItem>
-                  {twitterAccounts.map((account) => (
-                    <MenuItem key={account.id} value={account.id}>
-                      {account.accountName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            {/* Second Row - Always 3 in one row */}
             <Grid item xs={4}>
               <TextField
                 name="minLikes"
@@ -618,12 +602,14 @@ const TwitterKeywords = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : isEditing ? "Update" : "Add"}
+          <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+            {loading ? (
+              <CircularProgress size={24} />
+            ) : isEditing ? (
+              "Update"
+            ) : (
+              "Add"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
@@ -636,16 +622,13 @@ const TwitterKeywords = () => {
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete this keyword? This action will soft delete the keyword.
+            Are you sure you want to delete this keyword? This action will soft
+            delete the keyword.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={confirmDelete}
-            color="error"
-            disabled={loading}
-          >
+          <Button onClick={confirmDelete} color="error" disabled={loading}>
             {loading ? <CircularProgress size={24} /> : "Delete"}
           </Button>
         </DialogActions>

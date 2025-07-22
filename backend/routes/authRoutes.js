@@ -193,9 +193,21 @@ const {
 } = process.env;
 
 router.get("/twitter/callback", async (req, res) => {
-  const { code } = req.query;
-
+  const { code, state } = req.query;
+  
   try {
+    // Check if this is a connect account flow or a login flow
+    const isConnectFlow = state && state.startsWith("connect_account");
+    
+    // Extract userId from state if this is a connect flow
+    let userId = null;
+    if (isConnectFlow) {
+      const stateParts = state.split('_');
+      if (stateParts.length >= 3) {
+        userId = stateParts[2];
+      }
+    }
+
     const params = new URLSearchParams({
       code,
       grant_type: "authorization_code",
@@ -220,11 +232,58 @@ router.get("/twitter/callback", async (req, res) => {
     const access_token = tokenRes.data.access_token;
     const refresh_token = tokenRes.data.refresh_token;
 
-    // redirect with token to frontend
+    // If this is a connect flow, handle it differently
+    if (isConnectFlow && userId) {
+      // Get user info from Twitter API
+      const userResponse = await axios.get("https://api.twitter.com/2/users/me", {
+        headers: {
+          Authorization: `Bearer ${access_token}`
+        }
+      });
+      
+      const twitterUser = userResponse.data.data;
+      
+      if (!twitterUser || !twitterUser.id) {
+        return res.status(400).send("Invalid Twitter token");
+      }
+      
+      // Check if this Twitter account is already connected to this user
+      const existingAccount = await pool.query(
+        'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
+        [userId, 'twitter', twitterUser.id]
+      );
+      
+      if (existingAccount.rows.length > 0) {
+        // Update the existing account
+        await pool.query(
+          `UPDATE social_media_accounts
+           SET access_token = $1, refresh_token = $2, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $3 AND platform = $4 AND account_id = $5`,
+          [access_token, refresh_token, userId, 'twitter', twitterUser.id]
+        );
+      } else {
+        // Add the new account
+        await pool.query(
+          `INSERT INTO social_media_accounts
+           (user_id, platform, account_id, account_name, access_token, refresh_token)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, 'twitter', twitterUser.id, twitterUser.name, access_token, refresh_token]
+        );
+      }
+      
+      // Redirect back to the social media settings page
+      return res.redirect(`http://localhost:3000/social-media-settings?accountConnected=true&platform=twitter&name=${encodeURIComponent(twitterUser.name)}`);
+    }
+
+    // Regular login flow - redirect with token to frontend
     res.redirect(`http://localhost:3000/dashboard?accessToken=${access_token}&refreshToken=${refresh_token}`);
   } catch (err) {
     console.error("❌ Token exchange failed:", err.response?.data || err.message);
-    res.status(500).send("Twitter login failed");
+    console.error("Error details:", err.response?.data || err.message);
+    console.error("Error stack:", err.stack);
+    
+    // Send a more detailed error response
+    res.status(500).send(`Twitter login failed: ${err.message}. Please check server logs for more details.`);
   }
 });
 
@@ -330,7 +389,81 @@ router.post("/twitter-to-jwt", async (req, res) => {
     });
   } catch (error) {
     console.error("Error converting Twitter token to JWT:", error);
-    res.status(500).json({ success: false, message: "Failed to authenticate with Twitter" });
+    console.error("Error details:", error.response?.data || error.message);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({
+      success: false,
+      message: "Failed to authenticate with Twitter",
+      error: error.message,
+      details: error.response?.data || "No additional details"
+    });
+  }
+});
+
+// The Twitter connect callback is now handled in the main Twitter callback route
+
+// Route for handling LinkedIn OAuth callback specifically for connecting additional accounts
+router.get("/linkedin/connect/callback", async (req, res) => {
+  const { code, state } = req.query;
+  
+  // Extract userId from state parameter
+  // Format: connect_account_userId
+  const stateParts = state ? state.split('_') : [];
+  
+  if (stateParts.length < 2 || stateParts[0] !== "connect" || stateParts[1] !== "account") {
+    return res.status(400).send("Invalid state parameter");
+  }
+  
+  const userId = stateParts[2];
+  
+  if (!userId) {
+    return res.status(400).send("User ID is required");
+  }
+
+  try {
+    // This would need to be implemented with actual LinkedIn OAuth credentials
+    // For now, we'll just simulate a successful connection
+    
+    // In a real implementation, you would:
+    // 1. Exchange the code for an access token
+    // 2. Get the user's LinkedIn profile
+    // 3. Add the account to the social_media_accounts table
+    
+    // Simulate adding a LinkedIn account
+    const linkedinUser = {
+      id: `linkedin-${Date.now()}`, // Simulated LinkedIn user ID
+      name: "LinkedIn User" // Simulated LinkedIn user name
+    };
+    
+    // Check if this LinkedIn account is already connected to this user
+    const existingAccount = await pool.query(
+      'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
+      [userId, 'linkedin', linkedinUser.id]
+    );
+    
+    if (existingAccount.rows.length > 0) {
+      // Update the existing account
+      await pool.query(
+        `UPDATE social_media_accounts
+         SET access_token = $1, refresh_token = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $3 AND platform = $4 AND account_id = $5`,
+        ["simulated_access_token", "simulated_refresh_token", userId, 'linkedin', linkedinUser.id]
+      );
+    } else {
+      // Add the new account
+      await pool.query(
+        `INSERT INTO social_media_accounts
+         (user_id, platform, account_id, account_name, access_token, refresh_token)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, 'linkedin', linkedinUser.id, linkedinUser.name, "simulated_access_token", "simulated_refresh_token"]
+      );
+    }
+    
+    // Redirect back to the social media settings page
+    res.redirect(`http://localhost:3000/social-media-settings?accountConnected=true&platform=linkedin&name=${encodeURIComponent(linkedinUser.name)}`);
+  } catch (err) {
+    console.error("❌ LinkedIn account connection failed:", err.response?.data || err.message);
+    res.status(500).send("Failed to connect LinkedIn account");
   }
 });
 
