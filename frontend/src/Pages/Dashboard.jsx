@@ -27,19 +27,21 @@ import {
   Search,
   Dashboard as DashboardIcon,
   History as HistoryIcon,
-  ManageSearch as KeywordIcon,
   Settings as SettingsIcon,
+  Twitter as TwitterIcon,
+  Tag as TagIcon,
+  FindInPage as FindInPageIcon,
+  ManageSearch as ManageSearchIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import LogoutDialog from "../Components/logoutDialog/LogoutDialog";
 import authService from "../services/authService";
 import TweetReplyTable from "../Components/tweet-reply-table/SearchHistory";
-import Keyword_Management from "./Keyword_Management";
 import GoalsTable from "./Post_Manager";
 import SocialMediaSettings from "./SocialMediaSettings";
 
-const drawerWidth = 200;
+const drawerWidth = 260;
 
 const Dashboard = () => {
   const [tweets, setTweets] = useState([]);
@@ -157,8 +159,6 @@ const Dashboard = () => {
     const path = location.pathname;
     if (path.includes("/dashboard")) {
       setActive("");
-    } else if (path.includes("/keyword-management")) {
-      setActive("keyword-management");
     } else if (path.includes("/history")) {
       setActive("search-history");
     } else if (path.includes("/postmanager")) {
@@ -192,7 +192,9 @@ const Dashboard = () => {
         }}
       >
         <Toolbar sx={{ minHeight: "48px !important" }} />
-        <Box sx={{ overflow: "auto", py: 2 }}>
+        <Box
+          sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, py: 2 }}
+        >
           <List component="nav" disablePadding>
             <ListItem
               button
@@ -206,22 +208,17 @@ const Dashboard = () => {
                 mx: 1.5,
                 borderRadius: 1,
                 cursor: "pointer",
-                transition: "all 0.2s ease",
+                // transition: 'all 0.2s ease',
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "rgba(25, 118, 210, 0.08)",
-                  color: "primary.main",
-                  borderLeft: "3px solid #1976d2",
-                  paddingLeft: "13px", // Compensate for the border
+                  backgroundColor: "#fef2f2",
+                  // backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
+                  color: "#fef2f2",
+                  borderLeft: "3px",
+                  paddingLeft: "13px",
                   "& .MuiListItemIcon-root": {
-                    color: "primary.main",
+                    color: "#fef2f2",
                   },
-                },
-                "&:hover": {
-                  backgroundColor: location.pathname.includes("/dashboard")
-                    ? "rgba(25, 118, 210, 0.12)"
-                    : "rgba(0, 0, 0, 0.04)",
-                  transform: "translateX(3px)",
                 },
               }}
             >
@@ -247,59 +244,6 @@ const Dashboard = () => {
             </ListItem>
             <ListItem
               button
-              selected={location.pathname.includes("/keyword-management")}
-              onClick={() => {
-                setActive("keyword-management");
-                navigate("/keyword-management");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "rgba(25, 118, 210, 0.08)",
-                  color: "primary.main",
-                  borderLeft: "3px solid #1976d2",
-                  paddingLeft: "13px", // Compensate for the border
-                  "& .MuiListItemIcon-root": {
-                    color: "primary.main",
-                  },
-                },
-                "&:hover": {
-                  backgroundColor: location.pathname.includes(
-                    "/keyword-management"
-                  )
-                    ? "rgba(25, 118, 210, 0.12)"
-                    : "rgba(0, 0, 0, 0.04)",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/keyword-management")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <KeywordIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Keyword Management"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/keyword-management")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
               selected={location.pathname.includes("/history")}
               onClick={() => {
                 setActive("search-history");
@@ -313,18 +257,19 @@ const Dashboard = () => {
                 transition: "all 0.2s ease",
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "rgba(25, 118, 210, 0.08)",
-                  color: "primary.main",
-                  borderLeft: "3px solid #1976d2",
-                  paddingLeft: "13px", // Compensate for the border
+                  backgroundColor: "rgba(244, 67, 54, 0.7)", // Light red
+                  color: "#f44336",
+                  borderLeft: "3px solid #f44336",
+                  paddingLeft: "13px",
                   "& .MuiListItemIcon-root": {
-                    color: "primary.main",
+                    color: "#f44336",
                   },
                 },
+
                 "&:hover": {
                   backgroundColor: location.pathname.includes("/history")
-                    ? "rgba(25, 118, 210, 0.12)"
-                    : "rgba(0, 0, 0, 0.04)",
+                    ? "rgba(210, 25, 87, 0.29)"
+                    : "rgba(210, 25, 87, 0.29)",
                   transform: "translateX(3px)",
                 },
               }}
@@ -364,20 +309,21 @@ const Dashboard = () => {
                 transition: "all 0.2s ease",
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "rgba(25, 118, 210, 0.08)",
-                  color: "primary.main",
-                  borderLeft: "3px solid #1976d2",
-                  paddingLeft: "13px", // Compensate for the border
+                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
+                  color: "#f44336",
+                  borderLeft: "3px solid #f44336",
+                  paddingLeft: "13px",
                   "& .MuiListItemIcon-root": {
-                    color: "primary.main",
+                    color: "#f44336",
                   },
                 },
+
                 "&:hover": {
                   backgroundColor: location.pathname.includes(
                     "/social-media-settings"
                   )
-                    ? "rgba(25, 118, 210, 0.12)"
-                    : "rgba(0, 0, 0, 0.04)",
+                    ? "rgba(210, 25, 87, 0.29)"
+                    : "rgba(119, 76, 76, 0.04)",
                   transform: "translateX(3px)",
                 },
               }}
@@ -473,8 +419,6 @@ const Dashboard = () => {
           {/* Always render content within Dashboard component */}
           {location.pathname.includes("/history") ? (
             <TweetReplyTable />
-          ) : location.pathname.includes("/keyword-management") ? (
-            <Keyword_Management />
           ) : location.pathname.includes("/postmanager") ? (
             <GoalsTable />
           ) : location.pathname.includes("/social-media-settings") ? (
@@ -498,8 +442,7 @@ const Dashboard = () => {
                     sx={{
                       fontWeight: 700,
                       mb: 0.5,
-                      color:"#a71900ff",
-                  
+                      color: "#a71900ff",
                     }}
                   >
                     Social Media Dashboard
@@ -540,13 +483,10 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background:
-                        "linear-gradient(135deg, #f5f9ff 0%, #e8f4ff 100%)",
-                      border: "1px solid #e0e9fd",
-                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                      background: "#fef2f2",
+                      transition: "all 0.3s ease",
                       "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.1)",
+                        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
                       },
                     }}
                   >
@@ -555,7 +495,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "primary.main",
+                          bgcolor: "#f44336",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -563,10 +503,13 @@ const Dashboard = () => {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          boxShadow: "0 4px 10px rgba(25, 118, 210, 0.3)",
+                          boxShadow: "0 4px 10px rgba(244, 67, 54, 0.3)",
+                          transition: "all 0.3s ease",
                         }}
                       >
-                        <Search />
+                        <FindInPageIcon
+                          sx={{ fontSize: "1.5rem", color: "#ffffff" }}
+                        />
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography
@@ -584,12 +527,18 @@ const Dashboard = () => {
                           media posts matching your keywords.
                         </Typography>
                         <Button
-                          variant="outlined"
-                          color="primary"
+                          variant="contained"
+                          color="error"
                           size="small"
                           onClick={fetchAllPosts}
                           disabled={loading}
-                          sx={{ borderRadius: 2 }}
+                          sx={{
+                            borderRadius: 2,
+                            transition: "all 0.3s ease",
+                            "&:hover": {
+                              transform: "scale(1.05)",
+                            },
+                          }}
                         >
                           Fetch Now
                         </Button>
@@ -604,13 +553,10 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background:
-                        "linear-gradient(135deg, #f5fff8 0%, #e8fff0 100%)",
-                      border: "1px solid #e0fde9",
-                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                      background: "#fef2f2",
+                      transition: "all 0.3s ease",
                       "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.1)",
+                        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
                       },
                     }}
                   >
@@ -619,7 +565,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#2e7d32",
+                          bgcolor: "#f44336",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -627,10 +573,13 @@ const Dashboard = () => {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          boxShadow: "0 4px 10px rgba(46, 125, 50, 0.3)",
+                          boxShadow: "0 4px 10px rgba(244, 67, 54, 0.3)",
+                          transition: "all 0.3s ease",
                         }}
                       >
-                        <KeywordIcon />
+                        <ManageSearchIcon
+                          sx={{ fontSize: "1.5rem", color: "#ffffff" }}
+                        />
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography
@@ -648,11 +597,17 @@ const Dashboard = () => {
                           search results.
                         </Typography>
                         <Button
-                          variant="outlined"
-                          color="success"
+                          variant="contained"
+                          color="error"
                           size="small"
                           onClick={() => navigate("/social-media-settings")}
-                          sx={{ borderRadius: 2 }}
+                          sx={{
+                            borderRadius: 2,
+                            transition: "all 0.3s ease",
+                            "&:hover": {
+                              transform: "scale(1.05)",
+                            },
+                          }}
                         >
                           Manage Keywords
                         </Button>
@@ -744,7 +699,13 @@ const Dashboard = () => {
                   </Typography>
                   <Grid container spacing={3}>
                     {tweets.map((tweet, i) => (
-                      <Grid item xs={12} sm={6} key={i} sx={{ maxWidth: "400px" }}>
+                      <Grid
+                        item
+                        xs={12}
+                        sm={6}
+                        key={i}
+                        sx={{ maxWidth: "400px" }}
+                      >
                         <Card
                           elevation={0}
                           sx={{
@@ -839,7 +800,7 @@ const Dashboard = () => {
                   </Grid>
                 </Box>
               ) : (
-               <></>
+                <></>
               )}
             </>
           )}

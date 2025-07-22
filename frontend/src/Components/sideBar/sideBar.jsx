@@ -87,7 +87,7 @@ const Sidebar = () => {
       >
         <Typography
           variant="h6"
-          color="primary"
+          color="#FF0000" // Changed from primary to red
           sx={{
             fontWeight: 600,
             letterSpacing: '0.5px',
@@ -99,7 +99,16 @@ const Sidebar = () => {
         </Typography>
       </Toolbar>
       
-      <Box sx={{ overflow: "auto", py: 2 }}>
+      <Box sx={{
+        overflow: "auto",
+        overflowX: "hidden", // Prevent horizontal scrolling
+        py: 2,
+        '&::-webkit-scrollbar': {
+          display: 'none'
+        },
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
         <List component="nav" disablePadding>
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -118,18 +127,18 @@ const Sidebar = () => {
                   transition: 'all 0.2s ease',
                   height: '44px',
                   '&.Mui-selected': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                    color: 'primary.main',
-                    borderLeft: `3px solid ${theme.palette.primary.main}`,
+                    backgroundColor: 'rgba(255, 0, 0, 0.08)', // Light red background
+                    color: '#FF0000', // Red text
+                    borderLeft: `3px solid #FF0000`, // Red left border
                     paddingLeft: '13px', // Compensate for the border
                     '& .MuiListItemIcon-root': {
-                      color: 'primary.main',
+                      color: '#FF0000', // Red icon
                     },
                   },
                   '&:hover': {
                     backgroundColor: isActive
-                      ? 'rgba(25, 118, 210, 0.12)'
-                      : 'rgba(0, 0, 0, 0.04)',
+                      ? 'rgba(255, 0, 0, 0.12)' // Light red for active items
+                      : 'rgba(0, 0, 0, 0.04)',  // Default hover for inactive items
                     transform: 'translateX(3px)',
                   }
                 }}
@@ -182,7 +191,7 @@ const Sidebar = () => {
               '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.04)',
                 '& .MuiTypography-root': {
-                  color: theme.palette.primary.main,
+                  color: '#FF0000', // Changed from theme.palette.primary.main to red
                 }
               }
             }}
@@ -190,7 +199,7 @@ const Sidebar = () => {
           >
             <Typography
               variant="body2"
-              color="primary"
+              color="#FF0000" // Changed from primary to red
               sx={{
                 fontWeight: 500,
                 fontSize: '0.85rem',
@@ -206,3 +215,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+

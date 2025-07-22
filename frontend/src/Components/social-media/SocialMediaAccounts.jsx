@@ -35,19 +35,135 @@ import {
   Twitter as TwitterIcon,
   LinkedIn as LinkedInIcon
 } from "@mui/icons-material";
-import { 
-  getAllAccounts, 
-  getAccountsByPlatform, 
-  addAccount, 
-  updateAccount, 
-  deleteAccount 
+import {
+  getAllAccounts,
+  getAccountsByPlatform,
+  addAccount,
+  updateAccount,
+  deleteAccount
 } from "../../services/socialMediaAccountsService";
 
+// Twitter OAuth configuration
+const TWITTER_CLIENT_ID = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
+// We'll set the redirect URI dynamically in the redirectToTwitterAuth function
+const TWITTER_SCOPE = encodeURIComponent('tweet.read tweet.write users.read offline.access');
+const TWITTER_STATE = "connect_account"; // To differentiate from login flow
+const TWITTER_CODE_CHALLENGE = "challenge";
+const TWITTER_CALLBACK_URL = "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
+
+// LinkedIn OAuth configuration (placeholder - would need actual credentials)
+const LINKEDIN_CLIENT_ID = "your-linkedin-client-id";
+const LINKEDIN_REDIRECT_URI = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
+const LINKEDIN_SCOPE = encodeURIComponent('r_liteprofile r_emailaddress w_member_social');
+const LINKEDIN_STATE = "connect_account";
+
 const SocialMediaAccounts = () => {
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Get user information when component mounts
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUser(user);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
+  
+  // Function to redirect to Twitter OAuth
+  const redirectToTwitterAuth = () => {
+    // Use the state variable instead of reading from localStorage again
+    const userId = currentUser?.id;
+    
+    if (!userId) {
+      // Show a more helpful error message
+      setError("You must be logged in to connect a Twitter account. Please log out and log back in if you're seeing this message.");
+      return;
+    }
+    
+    // Use the same callback URL that's registered with Twitter
+    // We'll differentiate the flow using the state parameter
+    const redirectUri = encodeURIComponent(TWITTER_CALLBACK_URL);
+    
+    // Include the userId in the state parameter
+    const stateWithUserId = `${TWITTER_STATE}_${userId}`;
+    
+    const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${TWITTER_SCOPE}&state=${stateWithUserId}&code_challenge=${TWITTER_CODE_CHALLENGE}&code_challenge_method=plain`;
+    window.location.href = twitterAuthUrl;
+  };
+  
+  // Function to redirect to LinkedIn OAuth
+  const redirectToLinkedInAuth = () => {
+    // Use the state variable instead of reading from localStorage again
+    const userId = currentUser?.id;
+    
+    if (!userId) {
+      // Show a more helpful error message
+      setError("You must be logged in to connect a LinkedIn account. Please log out and log back in if you're seeing this message.");
+      return;
+    }
+    
+    // Use the connect callback endpoint instead of the login callback
+    const connectRedirectUri = encodeURIComponent("http://localhost:5000/api/auth/linkedin/connect/callback");
+    
+    // Include the userId in the state parameter instead of the redirect URI
+    const stateWithUserId = `${LINKEDIN_STATE}_${userId}`;
+    
+    // This would need to be implemented with actual LinkedIn OAuth credentials
+    const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${connectRedirectUri}&scope=${LINKEDIN_SCOPE}&state=${stateWithUserId}`;
+    
+    // Since we don't have actual LinkedIn credentials, let's simulate a successful connection
+    setLoading(true);
+    
+    try {
+      // Simulate API call to connect LinkedIn account
+      setTimeout(async () => {
+        // Generate a random LinkedIn ID and name for demonstration
+        const linkedinId = `linkedin-${Date.now()}`;
+        const linkedinName = "LinkedIn Demo Account";
+        
+        // Add the simulated account to the database
+        const token = localStorage.getItem("token");
+        await addAccount({
+          platform: "linkedin",
+          accountId: linkedinId,
+          accountName: linkedinName,
+          accessToken: "simulated_access_token",
+          refreshToken: "simulated_refresh_token"
+        }, token);
+        
+        // Refresh the accounts list
+        await fetchAccounts();
+        
+        setNotification({
+          open: true,
+          message: "LinkedIn account connected successfully (simulated)",
+          severity: "success"
+        });
+        
+        setLoading(false);
+        setFormOpen(false);
+      }, 1500);
+    } catch (error) {
+      console.error("Error simulating LinkedIn connection:", error);
+      setNotification({
+        open: true,
+        message: "Failed to simulate LinkedIn connection",
+        severity: "error"
+      });
+      setLoading(false);
+    }
+    
+    // In a real implementation with actual credentials, we would use:
+    // window.location.href = linkedinAuthUrl;
+  };
   // State for accounts data
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   
   // State for form
   const [formOpen, setFormOpen] = useState(false);
@@ -73,9 +189,22 @@ const SocialMediaAccounts = () => {
     severity: "success"
   });
 
-  // Fetch accounts on component mount
+  // Fetch accounts on component mount and when URL parameters change
   useEffect(() => {
     fetchAccounts();
+    
+    // Set up an interval to refresh accounts every few seconds
+    // This ensures the table is updated after OAuth redirect
+    const refreshInterval = setInterval(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('accountConnected') === 'true') {
+        fetchAccounts();
+        // Clear the URL parameters after refreshing
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }, 2000);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
 
   // Fetch all accounts
@@ -248,7 +377,11 @@ const SocialMediaAccounts = () => {
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={() => setError("")}
+        >
           {error}
         </Alert>
       )}
@@ -320,90 +453,125 @@ const SocialMediaAccounts = () => {
       {/* Add/Edit Account Form Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {isEditing ? "Edit Account" : "Add New Account"}
+          {isEditing ? "Edit Account" : "Connect Social Media Account"}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel id="platform-label">Platform</InputLabel>
-                <Select
-                  labelId="platform-label"
-                  name="platform"
-                  value={currentAccount.platform}
+          {isEditing ? (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel id="platform-label">Platform</InputLabel>
+                  <Select
+                    labelId="platform-label"
+                    name="platform"
+                    value={currentAccount.platform}
+                    onChange={handleInputChange}
+                    label="Platform"
+                    disabled
+                  >
+                    <MenuItem value="twitter">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TwitterIcon fontSize="small" />
+                        <Typography>Twitter</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="linkedin">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinkedInIcon fontSize="small" />
+                        <Typography>LinkedIn</Typography>
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="accountName"
+                  label="Account Name"
+                  value={currentAccount.accountName}
                   onChange={handleInputChange}
-                  label="Platform"
-                >
-                  <MenuItem value="twitter">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <TwitterIcon fontSize="small" />
-                      <Typography>Twitter</Typography>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="linkedin">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LinkedInIcon fontSize="small" />
-                      <Typography>LinkedIn</Typography>
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
+                  fullWidth
+                  required
+                  helperText="Display name for this account"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="accountId"
+                  label="Account ID"
+                  value={currentAccount.accountId}
+                  onChange={handleInputChange}
+                  fullWidth
+                  required
+                  helperText="Username or ID from the platform"
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="accountName"
-                label="Account Name"
-                value={currentAccount.accountName}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                helperText="Display name for this account"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="accountId"
-                label="Account ID"
-                value={currentAccount.accountId}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                helperText="Username or ID from the platform"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="accessToken"
-                label="Access Token"
-                value={currentAccount.accessToken}
-                onChange={handleInputChange}
-                fullWidth
-                type="password"
-                helperText={isEditing ? "Leave blank to keep current token" : "OAuth access token"}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="refreshToken"
-                label="Refresh Token"
-                value={currentAccount.refreshToken}
-                onChange={handleInputChange}
-                fullWidth
-                type="password"
-                helperText={isEditing ? "Leave blank to keep current token" : "OAuth refresh token (if available)"}
-              />
-            </Grid>
-          </Grid>
+          ) : (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body1" gutterBottom>
+                Connect your social media accounts to manage them in one place. Choose a platform to connect:
+              </Typography>
+              
+              <Grid container spacing={3} sx={{ mt: 2 }}>
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    startIcon={<TwitterIcon />}
+                    onClick={() => redirectToTwitterAuth()}
+                    sx={{
+                      py: 1.5,
+                      backgroundColor: '#1DA1F2',
+                      '&:hover': {
+                        backgroundColor: '#0d8bd9'
+                      }
+                    }}
+                  >
+                    Connect Twitter Account
+                  </Button>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    startIcon={<LinkedInIcon />}
+                    onClick={() => redirectToLinkedInAuth()}
+                    sx={{
+                      py: 1.5,
+                      backgroundColor: '#0A66C2',
+                      '&:hover': {
+                        backgroundColor: '#0850a0'
+                      }
+                    }}
+                  >
+                    Connect LinkedIn Account (Simulated)
+                  </Button>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    You can connect multiple accounts from the same platform. This allows you to post from different accounts.
+                  </Alert>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : isEditing ? "Update" : "Add"}
-          </Button>
+          {isEditing && (
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : "Update"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
