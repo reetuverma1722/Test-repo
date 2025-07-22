@@ -23,7 +23,12 @@ import {
   Tooltip,
   CircularProgress,
   Alert,
-  Snackbar
+  Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -31,15 +36,22 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  AccountCircle as AccountCircleIcon
 } from "@mui/icons-material";
 import { getKeywords, addKeyword, updateKeyword, deleteKeyword, getFilteredKeywords } from "../../services/keywordService";
+import { getAccountsByPlatform } from "../../services/socialMediaAccountsService";
 
 const TwitterKeywords = () => {
   // State for keywords data
   const [keywords, setKeywords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // State for Twitter accounts
+  const [twitterAccounts, setTwitterAccounts] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   
   // State for form
   const [formOpen, setFormOpen] = useState(false);
@@ -49,7 +61,8 @@ const TwitterKeywords = () => {
     text: "",
     minLikes: 0,
     minRetweets: 0,
-    minFollowers: 0
+    minFollowers: 0,
+    accountId: null
   });
   
   // State for delete confirmation
@@ -61,7 +74,8 @@ const TwitterKeywords = () => {
     text: "",
     minLikes: "",
     minRetweets: "",
-    minFollowers: ""
+    minFollowers: "",
+    accountId: ""
   });
   
   // State for notifications
@@ -76,7 +90,23 @@ const TwitterKeywords = () => {
   // Fetch keywords on component mount
   useEffect(() => {
     fetchKeywords();
+    fetchTwitterAccounts();
   }, []);
+  
+  // Fetch Twitter accounts
+  const fetchTwitterAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await getAccountsByPlatform("twitter", token);
+      setTwitterAccounts(response.data || []);
+    } catch (err) {
+      console.error("Error fetching Twitter accounts:", err);
+      setTwitterAccounts([]);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
 
   // Fetch all keywords
   const fetchKeywords = async () => {
@@ -84,7 +114,7 @@ const TwitterKeywords = () => {
     setError(null);
     try {
       const token = localStorage.getItem("token");
-      const response = await getKeywords(token);
+      const response = await getKeywords(selectedAccount, token);
       setKeywords(response.data || []);
     } catch (err) {
       setError("Failed to fetch keywords. Please try again later.");
@@ -117,9 +147,24 @@ const TwitterKeywords = () => {
       text: "",
       minLikes: "",
       minRetweets: "",
-      minFollowers: ""
+      minFollowers: "",
+      accountId: ""
     });
     fetchKeywords();
+  };
+  
+  // Handle account change
+  const handleAccountChange = (accountId) => {
+    setSelectedAccount(accountId);
+    // Refresh keywords for the selected account
+    const token = localStorage.getItem("token");
+    getKeywords(accountId, token)
+      .then(response => {
+        setKeywords(response.data || []);
+      })
+      .catch(err => {
+        console.error("Error fetching keywords for account:", err);
+      });
   };
 
   // Handle form input changes
@@ -147,7 +192,8 @@ const TwitterKeywords = () => {
       text: "",
       minLikes: 0,
       minRetweets: 0,
-      minFollowers: 0
+      minFollowers: 0,
+      accountId: selectedAccount
     });
     setIsEditing(false);
     setFormOpen(true);
@@ -160,7 +206,8 @@ const TwitterKeywords = () => {
       text: keyword.text,
       minLikes: keyword.minLikes,
       minRetweets: keyword.minRetweets,
-      minFollowers: keyword.minFollowers
+      minFollowers: keyword.minFollowers,
+      accountId: keyword.accountId
     });
     setIsEditing(true);
     setFormOpen(true);
@@ -255,7 +302,31 @@ const TwitterKeywords = () => {
       {/* Header and Actions */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h6">Twitter Keywords Management</Typography>
-        <Box>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel id="account-select-label">Twitter Account</InputLabel>
+            <Select
+              labelId="account-select-label"
+              value={selectedAccount || ""}
+              onChange={(e) => handleAccountChange(e.target.value)}
+              label="Twitter Account"
+              size="small"
+              startAdornment={
+                <InputAdornment position="start">
+                  <AccountCircleIcon fontSize="small" />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value="">
+                <em>All Accounts</em>
+              </MenuItem>
+              {twitterAccounts.map((account) => (
+                <MenuItem key={account.id} value={account.id}>
+                  {account.accountName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -403,19 +474,20 @@ const TwitterKeywords = () => {
               <TableCell align="right">Min Likes</TableCell>
               <TableCell align="right">Min Retweets</TableCell>
               <TableCell align="right">Min Followers</TableCell>
+              <TableCell>Account</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   <CircularProgress size={24} sx={{ my: 2 }} />
                 </TableCell>
               </TableRow>
             ) : keywords.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                     No keywords found. Add a new keyword to get started.
                   </Typography>
@@ -428,6 +500,19 @@ const TwitterKeywords = () => {
                   <TableCell align="right">{keyword.minLikes}</TableCell>
                   <TableCell align="right">{keyword.minRetweets}</TableCell>
                   <TableCell align="right">{keyword.minFollowers}</TableCell>
+                  <TableCell>
+                    {keyword.accountName ? (
+                      <Chip
+                        size="small"
+                        label={keyword.accountName}
+                        color="primary"
+                        variant="outlined"
+                        icon={<AccountCircleIcon />}
+                      />
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">Default</Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="center">
                     <Tooltip title="Edit">
                       <IconButton
@@ -460,6 +545,7 @@ const TwitterKeywords = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* First Row - Full width */}
             <Grid item xs={12}>
               <TextField
                 name="text"
@@ -470,7 +556,32 @@ const TwitterKeywords = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            
+            {/* Account Selection Row */}
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel id="account-label">Twitter Account</InputLabel>
+                <Select
+                  labelId="account-label"
+                  name="accountId"
+                  value={currentKeyword.accountId || ""}
+                  onChange={handleInputChange}
+                  label="Twitter Account"
+                >
+                  <MenuItem value="">
+                    <em>Default (All Accounts)</em>
+                  </MenuItem>
+                  {twitterAccounts.map((account) => (
+                    <MenuItem key={account.id} value={account.id}>
+                      {account.accountName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            {/* Second Row - Always 3 in one row */}
+            <Grid item xs={4}>
               <TextField
                 name="minLikes"
                 label="Minimum Likes"
@@ -478,12 +589,10 @@ const TwitterKeywords = () => {
                 value={currentKeyword.minLikes}
                 onChange={handleInputChange}
                 fullWidth
-                InputProps={{
-                  inputProps: { min: 0 }
-                }}
+                InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={4}>
               <TextField
                 name="minRetweets"
                 label="Minimum Retweets"
@@ -491,12 +600,10 @@ const TwitterKeywords = () => {
                 value={currentKeyword.minRetweets}
                 onChange={handleInputChange}
                 fullWidth
-                InputProps={{
-                  inputProps: { min: 0 }
-                }}
+                InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={4}>
               <TextField
                 name="minFollowers"
                 label="Minimum Followers"
@@ -504,9 +611,7 @@ const TwitterKeywords = () => {
                 value={currentKeyword.minFollowers}
                 onChange={handleInputChange}
                 fullWidth
-                InputProps={{
-                  inputProps: { min: 0 }
-                }}
+                InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
           </Grid>

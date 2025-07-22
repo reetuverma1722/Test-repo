@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { getAllAccounts, getAccountsByPlatform } from "../../services/socialMediaAccountsService";
 import {
   Table,
   TableBody,
@@ -18,6 +19,9 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  FormControl,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -33,6 +37,10 @@ const SearchHistory = () => {
   const [open, setOpen] = useState(false);
   const [selectedTweet, setSelectedTweet] = useState(null);
   const [editedReply, setEditedReply] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const fetchHistory = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/search/history");
@@ -44,7 +52,27 @@ const SearchHistory = () => {
 
   useEffect(() => {
     fetchHistory();
+    fetchAccounts();
   }, []);
+  
+  // Fetch social media accounts
+  const fetchAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await getAccountsByPlatform("twitter", token);
+      setAccounts(response.data || []);
+      
+      // Set default selected account if available
+      if (response.data && response.data.length > 0) {
+        setSelectedAccountId(response.data[0].id);
+      }
+    } catch (err) {
+      console.error("Error fetching accounts:", err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
 
   const handleDelete = async (tweetId) => {
     try {
@@ -149,7 +177,38 @@ const SearchHistory = () => {
   const handlePost = (tweet) => {
     setSelectedTweet(tweet);
     setEditedReply(tweet.reply || "");
+    setIsEditing(false);
     setOpen(true);
+  };
+
+  const handleEdit = (tweet) => {
+    setSelectedTweet(tweet);
+    setEditedReply(tweet.reply || "");
+    setIsEditing(true);
+    setOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await axios.put(`http://localhost:5000/api/update/${selectedTweet.id}`, {
+        reply: editedReply
+      });
+      
+      // Update the reply in the local state
+      setHistory(prev =>
+        prev.map(tweet =>
+          tweet.id === selectedTweet.id
+            ? { ...tweet, reply: editedReply }
+            : tweet
+        )
+      );
+      
+      setOpen(false);
+      alert("Reply updated successfully!");
+    } catch (error) {
+      console.error("Error updating reply:", error);
+      alert("Failed to update reply");
+    }
   };
 
   const handleRetweet = async () => {
@@ -178,6 +237,7 @@ const SearchHistory = () => {
         body: JSON.stringify({
           tweetId,
           reply: tweetReply,
+          accountId: selectedAccountId || null
         }),
       });
 
@@ -334,7 +394,7 @@ const SearchHistory = () => {
                 <TableCell>
                   <Grid sx={{ display: "flex", gap: "10px", fontFamily: "var(--brand-font)", fontSize: "0.9rem" }}>
                     <IconButton
-                      onClick={() => alert("Edit not implemented yet")}
+                      onClick={() => handleEdit(tweet)}
                     >
                       <EditIcon />
                     </IconButton>
@@ -361,7 +421,9 @@ const SearchHistory = () => {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle sx={{ fontFamily: "var(--brand-font)", fontSize: "1.2rem" }}>Retweet Confirmation</DialogTitle>
+        <DialogTitle sx={{ fontFamily: "var(--brand-font)", fontSize: "1.2rem" }}>
+          {isEditing ? "Edit Reply" : "Retweet Confirmation"}
+        </DialogTitle>
         <DialogContent dividers>
           <Typography variant="subtitle1" gutterBottom sx={{ fontFamily: "var(--brand-font)", fontSize: "1rem" }}>
             <strong>Tweet:</strong>
@@ -371,22 +433,69 @@ const SearchHistory = () => {
           </Typography>
 
           <Typography variant="subtitle1" gutterBottom sx={{ fontFamily: "var(--brand-font)", fontSize: "1rem" }}>
-            <strong>Edit Reply:</strong>
+            <strong>{isEditing ? "Edit Reply:" : "Reply:"}</strong>
           </Typography>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            value={editedReply}
-            onChange={(e) => setEditedReply(e.target.value)}
-          />
+          {isEditing ? (
+            <TextField
+              fullWidth
+              multiline
+              minRows={3}
+              value={editedReply}
+              onChange={(e) => setEditedReply(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+          ) : (
+            <Typography
+              variant="body1"
+              sx={{
+                mb: 2,
+                p: 2,
+                border: '1px solid #e0e0e0',
+                borderRadius: 1,
+                backgroundColor: '#f9f9f9',
+                minHeight: '100px'
+              }}
+            >
+              {editedReply}
+            </Typography>
+          )}
+          
+          {!isEditing && (
+            <>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontFamily: "var(--brand-font)", fontSize: "1rem", mt: 2 }}>
+                <strong>Select Account:</strong>
+              </Typography>
+              <FormControl fullWidth>
+                <Select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  displayEmpty
+                  disabled={loadingAccounts}
+                >
+                  <MenuItem value="">
+                    <em>Default Account</em>
+                  </MenuItem>
+                  {accounts.map((account) => (
+                    <MenuItem key={account.id} value={account.id}>
+                      {account.accountName} (@{account.accountId})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)} color="secondary">
             Cancel
           </Button>
-          <Button onClick={handleRetweet} variant="contained" color="primary" sx={{ backgroundColor: "var(--brand-color)", padding: "0.5rem 1rem", borderRadius: "0.25rem", fontSize: "1rem" }}>
-            Retweet
+          <Button
+            onClick={isEditing ? handleSaveEdit : handleRetweet}
+            variant="contained"
+            color="primary"
+            sx={{ backgroundColor: "var(--brand-color)", padding: "0.5rem 1rem", borderRadius: "0.25rem", fontSize: "1rem" }}
+          >
+            {isEditing ? "Save" : "Retweet"}
           </Button>
         </DialogActions>
       </Dialog>

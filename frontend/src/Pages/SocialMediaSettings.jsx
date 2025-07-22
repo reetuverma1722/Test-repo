@@ -9,6 +9,7 @@ import {
   useTheme
 } from "@mui/material";
 import TwitterKeywords from "../Components/social-media/TwitterKeywords";
+import SocialMediaAccounts from "../Components/social-media/SocialMediaAccounts";
 
 // Tab panel component
 function TabPanel(props) {
@@ -92,7 +93,7 @@ const SocialMediaSettings = () => {
             }}
           >
             <Tab label="Twitter Keywords" {...a11yProps(0)} />
-            <Tab label="Account Settings" {...a11yProps(1)} disabled />
+            <Tab label="Account Settings" {...a11yProps(1)} />
             <Tab label="Automation Rules" {...a11yProps(2)} disabled />
           </Tabs>
         </Box>
@@ -102,9 +103,7 @@ const SocialMediaSettings = () => {
         </TabPanel>
         
         <TabPanel value={tabValue} index={1}>
-          <Typography variant="body1" color="text.secondary">
-            Account settings will be available soon.
-          </Typography>
+          <SocialMediaAccounts />
         </TabPanel>
         
         <TabPanel value={tabValue} index={2}>

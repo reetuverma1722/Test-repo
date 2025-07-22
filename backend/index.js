@@ -7,6 +7,7 @@ const dotenv = require('dotenv');
 const authRoutes = require('./routes/authRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const keywordRoutes = require('./routes/keywordRoutes');
+const socialMediaAccountsRoutes = require('./routes/socialMediaAccountsRoutes');
 dotenv.config();
 const app = express();
 app.use(cors());
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api', searchRoutes);
 app.use('/api', keywordRoutes);
+app.use('/api', socialMediaAccountsRoutes);
 const PORT = process.env.PORT || 5000;
 app.get('/', async (req, res) => {
   const accessToken = req.query.twitterId;
