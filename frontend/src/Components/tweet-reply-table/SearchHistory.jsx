@@ -42,6 +42,7 @@ const SearchHistory = () => {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [highlightedTweetId, setHighlightedTweetId] = useState(null);
   const fetchHistory = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/search/history");
@@ -138,9 +139,16 @@ const SearchHistory = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("accessToken");
+    const tweetId = urlParams.get("tweetId");
+    
     // console.log("Access Token from URL:", token);
     if (token) {
       setAccessToken(token);
+    }
+    
+    // Set highlighted tweet ID if present in URL
+    if (tweetId) {
+      setHighlightedTweetId(tweetId);
     }
   }, []);
 
@@ -445,8 +453,9 @@ const SearchHistory = () => {
                 sx={{
                   transition: 'all 0.3s ease',
                   animation: `fadeIn 0.5s ease-out ${index * 0.05}s both`,
+                  backgroundColor: highlightedTweetId === tweet.id ? 'rgba(255, 0, 0, 0.08)' : 'inherit',
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    backgroundColor: highlightedTweetId === tweet.id ? 'rgba(255, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.04)',
                     transform: 'translateY(-1px)',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
                   },

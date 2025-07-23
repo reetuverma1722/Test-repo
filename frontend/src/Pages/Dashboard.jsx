@@ -46,6 +46,7 @@ import {
   Person as PersonIcon,
   Email as EmailIcon,
   Check as CheckIcon,
+  RemoveRedEye as ViewIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -63,6 +64,8 @@ const Dashboard = () => {
   const [active, setActive] = useState("");
   const [loading, setLoading] = useState(false);
   const [keywords, setKeywords] = useState([]);
+  const [selectedKeywords, setSelectedKeywords] = useState([]);
+  const [filteredTweets, setFilteredTweets] = useState([]);
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
@@ -124,12 +127,33 @@ const Dashboard = () => {
       // Create a comma-separated list of keywords
       const keywordList = allKeywords.map((k) => k.text).join(",");
 
-      // Fetch posts for all keywords
+      // Get the maximum values for filtering criteria from all keywords
+      const maxMinLikes = Math.max(...allKeywords.map((k) => k.minLikes || 0));
+      const maxMinRetweets = Math.max(...allKeywords.map((k) => k.minRetweets || 0));
+      const maxMinFollowers = Math.max(...allKeywords.map((k) => k.minFollowers || 0));
+
+      console.log("Filtering criteria:", { maxMinLikes, maxMinRetweets, maxMinFollowers });
+
+      // Fetch posts for all keywords with filtering parameters
       const res = await axios.get(
-        `http://localhost:5000/api/search?keyword=${keywordList}`
+        `http://localhost:5000/api/search?keyword=${keywordList}&minLikes=${maxMinLikes}&minRetweets=${maxMinRetweets}&minFollowers=${maxMinFollowers}`
       );
 
-      setTweets(res.data.tweets || []);
+      // Add keyword information to each tweet for better filtering
+      const fetchedTweets = (res.data.tweets || []).map(tweet => {
+        // Find which keyword this tweet matches
+        const matchingKeyword = allKeywords.find(keyword =>
+          tweet.text.toLowerCase().includes(keyword.text.toLowerCase())
+        );
+        
+        return {
+          ...tweet,
+          keyword: matchingKeyword ? matchingKeyword.text : null
+        };
+      });
+      
+      setTweets(fetchedTweets);
+      // filteredTweets will be updated by the useEffect
     } catch (err) {
       console.error("Failed to fetch posts", err);
     } finally {
@@ -301,6 +325,35 @@ const Dashboard = () => {
       localStorage.setItem("token", "dummy-token");
     }
   }, [navigate]);
+
+  // Handle keyword toggle for filtering
+  const handleKeywordToggle = (keywordText) => {
+    setSelectedKeywords(prev => {
+      const isSelected = prev.includes(keywordText);
+      const newSelected = isSelected
+        ? prev.filter(k => k !== keywordText)
+        : [...prev, keywordText];
+      
+      return newSelected;
+    });
+  };
+  
+  // Update filtered tweets whenever tweets or selected keywords change
+  useEffect(() => {
+    if (selectedKeywords.length === 0) {
+      // If no keywords selected, show all tweets
+      setFilteredTweets(tweets);
+    } else {
+      // Filter tweets that match any of the selected keywords
+      const filtered = tweets.filter(tweet => {
+        // Check if the tweet's keyword is in the selected keywords list
+        return selectedKeywords.some(keyword =>
+          tweet.keyword && tweet.keyword.toLowerCase() === keyword.toLowerCase()
+        );
+      });
+      setFilteredTweets(filtered);
+    }
+  }, [tweets, selectedKeywords]);
 
   // Set active state based on current path
   useEffect(() => {
@@ -978,23 +1031,31 @@ const Dashboard = () => {
 
                 {keywords.length > 0 ? (
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {keywords.map((keyword, index) => (
-                      <Chip
-                        key={index}
-                        label={keyword.text}
-                        size="medium"
-                        color="primary"
-                        sx={{
-                          borderRadius: "16px",
-                          px: 1,
-                          fontWeight: 500,
-                          boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
-                          "&:hover": {
-                            boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
-                          },
-                        }}
-                      />
-                    ))}
+                    {keywords.map((keyword, index) => {
+                      const isSelected = selectedKeywords.includes(keyword.text);
+                      return (
+                        <Chip
+                          key={index}
+                          label={keyword.text}
+                          size="medium"
+                          onClick={() => handleKeywordToggle(keyword.text)}
+                          color={isSelected ? "primary" : "default"}
+                          sx={{
+                            borderRadius: "16px",
+                            px: 1,
+                            fontWeight: 500,
+                            backgroundColor: isSelected ? "#f44336" : "#ffffff",
+                            color: isSelected ? "#ffffff" : "#333333",
+                            boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+                            cursor: "pointer",
+                            "&:hover": {
+                              boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
+                              backgroundColor: isSelected ? "#e53935" : "#f5f5f5",
+                            },
+                          }}
+                        />
+                      );
+                    })}
                   </Box>
                 ) : (
                   <Box
@@ -1035,13 +1096,13 @@ const Dashboard = () => {
                     Searching for tweets...
                   </Typography>
                 </Box>
-              ) : tweets.length > 0 ? (
+              ) : filteredTweets.length > 0 ? (
                 <Box sx={{ position: "relative" }}>
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                     Latest Posts
                   </Typography>
                   <Grid container spacing={3}>
-                    {tweets.map((tweet, i) => (
+                    {filteredTweets.map((tweet, i) => (
                       <Grid
                         item
                         xs={12}
@@ -1069,7 +1130,7 @@ const Dashboard = () => {
                               height: 6,
                               width: "100%",
                               background:
-                                "linear-gradient(90deg, #1976d2, #42a5f5)",
+                                "linear-gradient(90deg, #f3dddc, #eb8270)",
                             }}
                           />
                           <CardContent sx={{ p: 3 }}>
@@ -1092,49 +1153,75 @@ const Dashboard = () => {
                               sx={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 2,
+                                justifyContent: "space-between",
                               }}
                             >
-                              <Typography
-                                variant="body2"
+                              <Box
                                 sx={{
-                                  fontWeight: 500,
-                                  color: "text.primary",
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 0.5,
+                                  gap: 2,
                                 }}
                               >
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    color: "#1976d2",
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: "text.primary",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
                                   }}
                                 >
-                                  {tweet?.like_count}
-                                </span>{" "}
-                                Likes
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 500,
-                                  color: "text.primary",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 0.5,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    color: "#1976d2",
+                                  <span
+                                    style={{
+                                      fontWeight: "bold",
+                                      color: "#f44336",
+                                    }}
+                                  >
+                                    {tweet?.like_count}
+                                  </span>{" "}
+                                  Likes
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: "text.primary",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
                                   }}
                                 >
-                                  {tweet?.retweet_count}
-                                </span>{" "}
-                                Retweets
-                              </Typography>
+                                  <span
+                                    style={{
+                                      fontWeight: "bold",
+                                      color: "#f44336",
+                                    }}
+                                  >
+                                    {tweet?.retweet_count}
+                                  </span>{" "}
+                                  Retweets
+                                </Typography>
+                              </Box>
+                              <Tooltip title="View in Search History">
+                                <IconButton
+                                  onClick={() => {
+                                    navigate(`/history?tweetId=${tweet.id}`)
+                                  }}
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(244, 67, 54, 0.15)',
+                                      transform: 'scale(1.1)'
+                                    }
+                                  }}
+                                >
+                                  <ViewIcon fontSize="small" sx={{ color: '#f44336' }} />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
                           </CardContent>
                         </Card>
