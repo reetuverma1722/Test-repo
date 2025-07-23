@@ -124,9 +124,16 @@ const Dashboard = () => {
       // Create a comma-separated list of keywords
       const keywordList = allKeywords.map((k) => k.text).join(",");
 
-      // Fetch posts for all keywords
+      // Get the maximum values for filtering criteria from all keywords
+      const maxMinLikes = Math.max(...allKeywords.map((k) => k.minLikes || 0));
+      const maxMinRetweets = Math.max(...allKeywords.map((k) => k.minRetweets || 0));
+      const maxMinFollowers = Math.max(...allKeywords.map((k) => k.minFollowers || 0));
+
+      console.log("Filtering criteria:", { maxMinLikes, maxMinRetweets, maxMinFollowers });
+
+      // Fetch posts for all keywords with filtering parameters
       const res = await axios.get(
-        `http://localhost:5000/api/search?keyword=${keywordList}`
+        `http://localhost:5000/api/search?keyword=${keywordList}&minLikes=${maxMinLikes}&minRetweets=${maxMinRetweets}&minFollowers=${maxMinFollowers}`
       );
 
       setTweets(res.data.tweets || []);
@@ -1069,7 +1076,7 @@ const Dashboard = () => {
                               height: 6,
                               width: "100%",
                               background:
-                                "linear-gradient(90deg, #1976d2, #42a5f5)",
+                                "linear-gradient(90deg, #f3dddc, #eb8270)",
                             }}
                           />
                           <CardContent sx={{ p: 3 }}>
@@ -1108,7 +1115,7 @@ const Dashboard = () => {
                                 <span
                                   style={{
                                     fontWeight: "bold",
-                                    color: "#1976d2",
+                                    color: "#f44336",
                                   }}
                                 >
                                   {tweet?.like_count}
@@ -1128,7 +1135,7 @@ const Dashboard = () => {
                                 <span
                                   style={{
                                     fontWeight: "bold",
-                                    color: "#1976d2",
+                                    color: "#f44336",
                                   }}
                                 >
                                   {tweet?.retweet_count}

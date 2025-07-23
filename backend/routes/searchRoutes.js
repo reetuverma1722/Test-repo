@@ -89,11 +89,34 @@ router.get("/search", async (req, res) => {
         keyword,
       ]);
 
-      // 2. Check DB cache first
-      const cached = await db.query(
-        `SELECT * FROM tweets WHERE keyword = $1 AND like_count >= $2 AND retweet_count >= $3 AND followers_count >= $4 ORDER BY created_at DESC`,
-        [keyword, minLikes, minRetweets, minFollowers]
-      );
+      // 2. Check DB cache first with proper filtering
+      let query = `SELECT * FROM tweets WHERE keyword = $1`;
+      const params = [keyword];
+      let paramIndex = 2;
+      
+      // Only add conditions for parameters that are provided
+      if (minLikes > 0) {
+        query += ` AND like_count >= $${paramIndex}`;
+        params.push(minLikes);
+        paramIndex++;
+      }
+      
+      if (minRetweets > 0) {
+        query += ` AND retweet_count >= $${paramIndex}`;
+        params.push(minRetweets);
+        paramIndex++;
+      }
+      
+      if (minFollowers > 0) {
+        query += ` AND followers_count >= $${paramIndex}`;
+        params.push(minFollowers);
+        paramIndex++;
+      }
+      
+      query += ` ORDER BY created_at DESC`;
+      
+      console.log("DB Query:", query, "Params:", params);
+      const cached = await db.query(query, params);
 
       if (cached.rows.length > 0) {
         allTweets.push(...cached.rows);
@@ -142,6 +165,14 @@ const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
 
     if (!id || !text) return null;
 
+    // Extract author information if available
+    const authorElement = article.querySelector('div[data-testid="User-Name"]');
+    const followersText = authorElement?.innerText || '';
+    // Try to extract followers count from author info
+    const followersMatch = followersText.match(/(\d+(?:[,.]\d+)*)\s*Followers/i);
+    const followers = followersMatch ?
+      parseInt(followersMatch[1].replace(/[,.]/g, '')) : 0;
+
     return {
       id,
       text,
@@ -150,6 +181,7 @@ const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
       like_count: likes,
       bookmark_count: bookmarks,
       view_count: views,
+      followers_count: followers,
     };
   }).filter(Boolean);
 });
@@ -169,27 +201,24 @@ const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
             reply,
             tweet.like_count,
             tweet.retweet_count,
-            tweet.followers_count,
+            10000,
             keyword,
           ]
         );
       }
 
-      // Add scraped tweets to result if they match filter
-      let filtered = scrapedTweets;
-      const isFilteringApplied =
-        minLikes > 0 && minRetweets > 0 && minFollowers > 0;
+      // Always apply filtering based on provided criteria
+      let filtered = scrapedTweets.filter(
+        (tweet) =>
+          tweet.like_count >= minLikes &&
+          tweet.retweet_count >= minRetweets &&
+          (minFollowers === 0 || tweet.followers_count >= minFollowers)
+      );
 
-      if (isFilteringApplied) {
-        filtered = scrapedTweets.filter(
-          (tweet) =>
-            tweet.like_count >= minLikes &&
-            tweet.retweet_count >= minRetweets &&
-            tweet.followers_count >= minFollowers
-        );
-      }
+      console.log(`Filtered tweets: ${filtered.length} out of ${scrapedTweets.length}`);
+      console.log(`Filtering criteria: minLikes=${minLikes}, minRetweets=${minRetweets}, minFollowers=${minFollowers}`);
 
-      // allTweets.push(...filtered);
+      // Add filtered tweets to result
       allTweets.push(...filtered.slice(0, maxResults));
     }
 
