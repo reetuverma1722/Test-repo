@@ -46,6 +46,7 @@ import {
   Person as PersonIcon,
   Email as EmailIcon,
   Check as CheckIcon,
+  RemoveRedEye as ViewIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -1099,49 +1100,75 @@ const Dashboard = () => {
                               sx={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 2,
+                                justifyContent: "space-between",
                               }}
                             >
-                              <Typography
-                                variant="body2"
+                              <Box
                                 sx={{
-                                  fontWeight: 500,
-                                  color: "text.primary",
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 0.5,
+                                  gap: 2,
                                 }}
                               >
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    color: "#f44336",
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: "text.primary",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
                                   }}
                                 >
-                                  {tweet?.like_count}
-                                </span>{" "}
-                                Likes
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 500,
-                                  color: "text.primary",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 0.5,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    color: "#f44336",
+                                  <span
+                                    style={{
+                                      fontWeight: "bold",
+                                      color: "#f44336",
+                                    }}
+                                  >
+                                    {tweet?.like_count}
+                                  </span>{" "}
+                                  Likes
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: "text.primary",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
                                   }}
                                 >
-                                  {tweet?.retweet_count}
-                                </span>{" "}
-                                Retweets
-                              </Typography>
+                                  <span
+                                    style={{
+                                      fontWeight: "bold",
+                                      color: "#f44336",
+                                    }}
+                                  >
+                                    {tweet?.retweet_count}
+                                  </span>{" "}
+                                  Retweets
+                                </Typography>
+                              </Box>
+                              <Tooltip title="View in Search History">
+                                <IconButton
+                                  onClick={() => {
+                                    navigate(`/history?tweetId=${tweet.id}`)
+                                  }}
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(244, 67, 54, 0.15)',
+                                      transform: 'scale(1.1)'
+                                    }
+                                  }}
+                                >
+                                  <ViewIcon fontSize="small" sx={{ color: '#f44336' }} />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
                           </CardContent>
                         </Card>
