@@ -43,18 +43,18 @@ import {
 } from "../../services/socialMediaAccountsService";
 
 // Twitter OAuth configuration
-const TWITTER_CLIENT_ID = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
+const TWITTER_CLIENT_ID = process.env.REACT_APP_TWITTER_CLIENT_ID || "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
 // We'll set the redirect URI dynamically in the redirectToTwitterAuth function
-const TWITTER_SCOPE = encodeURIComponent('tweet.read tweet.write users.read offline.access');
+const TWITTER_SCOPE = encodeURIComponent(process.env.REACT_APP_TWITTER_SCOPE || 'tweet.read tweet.write users.read offline.access');
 const TWITTER_STATE = "connect_account"; // To differentiate from login flow
-const TWITTER_CODE_CHALLENGE = "challenge";
-const TWITTER_CALLBACK_URL = "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
+const TWITTER_CODE_CHALLENGE = process.env.REACT_APP_TWITTER_CODE_CHALLENGE || "challenge";
+const TWITTER_CALLBACK_URL = process.env.REACT_APP_TWITTER_CALLBACK_URL || "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
 
 // LinkedIn OAuth configuration
 const LINKEDIN_CLIENT_ID = process.env.REACT_APP_LINKEDIN_CLIENT_ID || "77fqvi8nw1opj1";
-const LINKEDIN_REDIRECT_URI = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
+const LINKEDIN_REDIRECT_URI = encodeURIComponent(process.env.REACT_APP_LINKEDIN_CALLBACK_URL || "http://localhost:5000/api/auth/linkedin/callback");
 // Reduce the scope to only what's necessary to improve performance
-const LINKEDIN_SCOPE = encodeURIComponent('r_liteprofile r_emailaddress');
+const LINKEDIN_SCOPE = encodeURIComponent(process.env.REACT_APP_LINKEDIN_SCOPE || 'r_liteprofile r_emailaddress');
 const LINKEDIN_STATE = "connect_account";
 
 const SocialMediaAccounts = () => {
