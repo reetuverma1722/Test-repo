@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const router = express.Router();
 require('dotenv').config();
+const puppeteer = require('puppeteer');
 const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 const { expandKeyword } = require('../aiSearch');
 const axios = require('axios');
@@ -112,87 +113,7 @@ router.post('/google-login', async (req, res) => {
   }
 });
 
-// router.get('/api/search', async (req, res) => {
-//   const { keyword } = req.query;
-//   const expandedQueries = [
-//     `${keyword}`,
-//     `${keyword} news`,
-//     `${keyword} trends`
-//   ];
 
-//   const results = [];
-
-//   try {
-//     for (const query of expandedQueries) {
-//       const response = await axios.get(
-//         `https://api.twitter.com/2/tweets/search/recent`,
-//         {
-//           headers: { Authorization: `Bearer ${process.env.TWITTER_BEARER_TOKEN}` },
-//           params: {
-//             query: query,
-//             max_results: 10,
-//             'tweet.fields': 'public_metrics',
-//           }
-//         }
-//       );
-
-//       results.push(...response.data.data);
-
-//       // ✅ Add delay here to prevent 429 rate limiting
-//       await new Promise((resolve) => setTimeout(resolve, 1000)); // wait 1 second
-//     }
-
-//     res.json({ data: results });
-//   } catch (error) {
-//     console.error("Twitter API Error:", error.response?.data || error.message);
-//     res.status(500).json({ error: "Search failed", detail: error.message });
-//   }
-// });
-// router.get('/api/search', async (req, res) => {
-//   const { keyword } = req.query;
-
-//   if (!keyword) {
-//     return res.status(400).json({ error: 'Keyword is required' });
-//   }
-
-//   const expandedQueries = [
-//     `${keyword}`,
-//     `${keyword} news`,
-//     `${keyword} trends`,
-//   ];
-
-//   const results = [];
-
-//   try {
-//     for (const query of expandedQueries) {
-//       const response = await axios.get(
-//         'https://api.twitter.com/2/tweets/search/recent',
-//         {
-//           headers: {
-//             Authorization: `Bearer ${BEARER_TOKEN}`,
-//           },
-//           params: {
-//             query,
-//             max_results: 10,
-//             'tweet.fields': 'public_metrics,author_id,created_at',
-//           },
-//         }
-//       );
-
-//       if (response.data.data) {
-//         results.push(...response.data.data);
-//       }
-
-//       // Prevent hitting rate limit
-//       await new Promise((resolve) => setTimeout(resolve, 1000));
-//     }
-
-//     res.json({ keyword, tweets: results });
-//   } catch (error) {
-//     console.error('Twitter API error:', error.response?.data || error.message);
-//     res.status(500).json({ error: 'Search failed', detail: error.message });
-//   }
-// });
 const {
   TWITTER_CLIENT_ID,
   TWITTER_CLIENT_SECRET,
@@ -477,6 +398,222 @@ router.post("/twitter-to-jwt", async (req, res) => {
 });
 
 // The Twitter connect callback is now handled in the main Twitter callback route
+
+// Route for direct Twitter login with username and password
+// router.post("/twitter/direct-login", async (req, res) => {
+//   try {
+//     const { username, password, userId, passwordRecovery } = req.body;
+    
+//     // Check if this is a password recovery request
+//     if (passwordRecovery) {
+//       if (!username || !userId) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Username and userId are required for password recovery"
+//         });
+//       }
+//     } else {
+//       // Regular login requires password
+//       if (!username || !password || !userId) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Username, password, and userId are required"
+//         });
+//       }
+//     }
+    
+//     // Generate a unique account ID and name based on the username
+//     // For password recovery, use a special account ID
+//     const accountId = passwordRecovery
+//       ? `twitter_${username}_recovery`
+//       : `twitter_${username}_${Date.now()}`;
+//     const accountName = passwordRecovery
+//       ? `${username} (Recovery)`
+//       : username;
+    
+//     // For password recovery or when adding multiple accounts, we want to allow
+//     // connecting multiple accounts with the same username
+//     // We'll only check for exact duplicates (same username and account_id)
+//     const accountIdToCheck = passwordRecovery
+//       ? `twitter_${username}_recovery`
+//       : `twitter_${username}_%`;
+      
+//     // Check if this Twitter account is already connected to this user
+//     // For non-recovery accounts, we use LIKE to match any account with this username
+//     const existingAccount = await pool.query(
+//       passwordRecovery
+//         ? 'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL'
+//         : 'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id LIKE $3 AND deleted_at IS NULL',
+//       [userId, 'twitter', accountIdToCheck]
+//     );
+    
+//     if (existingAccount.rows.length > 0 && !passwordRecovery) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "This Twitter account is already connected to your profile"
+//       });
+//     }
+    
+//     // In a real implementation, we would authenticate with Twitter's API
+//     let accessToken;
+    
+//     if (passwordRecovery) {
+//       // For password recovery, we don't verify credentials
+//       accessToken = `recovery_token_${Date.now()}`;
+//     } else {
+//       // For direct login, verify credentials with Twitter API
+//       try {
+//         // This is where you would make a call to Twitter's API to verify credentials
+//         // For demonstration purposes, we'll simulate a verification process
+        
+//         // Verify Twitter credentials
+//         // In a real implementation, you would use Twitter's API to verify the credentials
+//         const verificationResult = verifyTwitterCredentials(username, password);
+        
+//         if (!verificationResult.isValid) {
+//           return res.status(401).json({
+//             success: false,
+//             message: verificationResult.message || "Invalid Twitter credentials. Please check your username and password."
+//           });
+//         }
+        
+//         accessToken = `direct_login_token_${Date.now()}`;
+//       } catch (verificationError) {
+//         console.error("Error verifying Twitter credentials:", verificationError);
+//         return res.status(500).json({
+//           success: false,
+//           message: "Failed to verify Twitter credentials. Please try again later."
+//         });
+//       }
+//     }
+    
+//     // Add the new account to the database
+//     await pool.query(
+//       `INSERT INTO social_media_accounts
+//        (user_id, platform, account_id, account_name, access_token, refresh_token)
+//        VALUES ($1, $2, $3, $4, $5, $6)`,
+//       [userId, 'twitter', accountId, accountName, accessToken, null]
+//     );
+    
+//     // Create a response message based on whether this is a password recovery or not
+//     const message = passwordRecovery
+//       ? "Twitter account connected successfully. You can reset your password later."
+//       : "Twitter account connected successfully";
+      
+//     // Note: We already added the account to the database above, no need to do it twice
+      
+//     res.status(200).json({
+//       success: true,
+//       message: message,
+//       account: {
+//         platform: 'twitter',
+//         accountName: accountName,
+//         accountId: accountId,
+//         passwordRecovery: !!passwordRecovery
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Error connecting Twitter account:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to connect Twitter account",
+//       error: error.message
+//     });
+//   }
+// });
+router.post('/twitter/direct-login', async (req, res) => {
+  const { username, password, userId } = req.body;
+
+  if (!username || !password || !userId) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.goto('https://twitter.com/login');
+
+    await page.waitForSelector('input[name="text"]');
+    await page.type('input[name="text"]', username);
+    await page.keyboard.press('Enter');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+
+    // password input
+    await page.waitForSelector('input[name="password"]', { timeout: 5000 });
+    await page.type('input[name="password"]', password);
+    await page.keyboard.press('Enter');
+
+    // wait and check for error or home redirect
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+
+   const loginError = await page.evaluate(() => {
+  return Array.from(document.querySelectorAll('span')).some(
+    el => el.textContent.toLowerCase().includes('password is incorrect')
+  );
+});
+
+if (loginError) {
+  console.log("Wrong password entered");
+  return res.status(401).json({ success: false, message: "Incorrect password." });
+}
+
+    const url = page.url();
+
+    await browser.close();
+
+    if (url.includes('login') || loginError) {
+      return res.status(401).json({ message: 'Invalid Twitter credentials' });
+    }
+
+    // SUCCESS → Save to DB
+    const accountId = Date.now().toString(); // or fetch real ID if needed
+    await pool.query(
+      `INSERT INTO social_media_accounts (account_id, user_id, platform, username) VALUES ($1, $2, $3, $4)`,
+      [accountId, userId, 'twitter', username]
+    );
+
+    res.status(200).json({ message: 'Twitter connected successfully' });
+  } catch (err) {
+    console.error('Twitter login error:', err);
+    res.status(500).json({ message: 'Twitter login failed' });
+  }
+});
+// Helper function to verify Twitter credentials
+// In a real implementation, this would make an API call to Twitter
+function verifyTwitterCredentials(username, password) {
+  // This is a simulated verification
+  // In a real implementation, you would use Twitter's API to verify the credentials
+  
+  // Basic validation
+  if (!username || username.trim().length === 0) {
+    return { isValid: false, message: "Username cannot be empty" };
+  }
+  
+  if (!password || password.length < 6) {
+    return { isValid: false, message: "Password must be at least 6 characters long" };
+  }
+  
+  // For demonstration purposes, we'll simulate some basic validation
+  // In a real implementation, you would verify against Twitter's API
+  
+  // Simulate some common validation rules
+  if (username.includes(' ')) {
+    return { isValid: false, message: "Twitter usernames cannot contain spaces" };
+  }
+  
+  if (username.length > 15) {
+    return { isValid: false, message: "Twitter usernames cannot be longer than 15 characters" };
+  }
+  
+  // Log the verification result (for debugging)
+  console.log(`Verifying credentials for ${username}: Valid`);
+  
+  // In a real implementation, this would return the result from Twitter's API
+  return { isValid: true };
+}
 
 // Route for handling LinkedIn OAuth callback
 router.get("/linkedin/callback", async (req, res) => {
