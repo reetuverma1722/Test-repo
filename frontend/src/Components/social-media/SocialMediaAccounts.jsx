@@ -753,9 +753,9 @@ const SocialMediaAccounts = () => {
                         twitterPassword: e.target.value
                       })}
                       helperText={
-                        <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                          <span>Enter your Twitter password</span>
-                          <Button
+                        <Box component="span" sx={{ display: 'flex', justifyContent: 'end', width: '100%' }}>
+                          
+                          <Typography
                             variant="text"
                             size="small"
                             onClick={handleForgotPassword}
@@ -764,11 +764,11 @@ const SocialMediaAccounts = () => {
                               minWidth: 'auto',
                               textTransform: 'none',
                               fontSize: '0.75rem',
-                              color: 'primary.main'
+                              color: 'black',
                             }}
                           >
                             Forgot password?
-                          </Button>
+                          </Typography>
                         </Box>
                       }
                     />
