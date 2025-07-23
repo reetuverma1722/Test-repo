@@ -1,12 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken'); 
+const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const router = express.Router();
-require('dotenv').config(); 
+require('dotenv').config();
 const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 const { expandKeyword } = require('../aiSearch');
 const axios = require('axios');
+const { axiosWithRetry } = require('../utils/apiUtils');
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -196,10 +197,19 @@ const {
   TWITTER_CLIENT_ID,
   TWITTER_CLIENT_SECRET,
   TWITTER_CALLBACK_URL,
+  LINKEDIN_CLIENT_ID,
+  LINKEDIN_CLIENT_SECRET,
+  LINKEDIN_CALLBACK_URL
 } = process.env;
 
 router.get("/twitter/callback", async (req, res) => {
-  const { code, state } = req.query;
+  const { code, state, error } = req.query;
+  
+  // Handle case where user cancels the OAuth process
+  if (error || !code) {
+    console.log("Twitter OAuth error or user cancelled:", error);
+    return res.redirect(`http://localhost:3000/social-media-settings?error=cancelled&platform=twitter`);
+  }
   
   try {
     // Check if this is a connect account flow or a login flow
@@ -222,30 +232,42 @@ router.get("/twitter/callback", async (req, res) => {
       code_verifier: "challenge", // should match code_challenge from frontend
     });
 
-    const tokenRes = await axios.post(
-      "https://api.twitter.com/2/oauth2/token",
-      params,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization:
-            "Basic " +
-            Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString("base64"),
-        },
+    console.log("Making token exchange request to Twitter API...");
+    const tokenRes = await axiosWithRetry({
+      method: 'post',
+      url: "https://api.twitter.com/2/oauth2/token",
+      data: params,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization:
+          "Basic " +
+          Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString("base64"),
       }
-    );
+    }, {
+      maxRetries: 5,
+      initialDelay: 2000,
+      maxDelay: 30000
+    });
 
+    console.log("Token exchange successful");
     const access_token = tokenRes.data.access_token;
     const refresh_token = tokenRes.data.refresh_token;
 
     // If this is a connect flow, handle it differently
     if (isConnectFlow && userId) {
       // Get user info from Twitter API
-      const userResponse = await axios.get("https://api.twitter.com/2/users/me", {
+      console.log("Fetching Twitter user info...");
+      const userResponse = await axiosWithRetry({
+        method: 'get',
+        url: "https://api.twitter.com/2/users/me",
         headers: {
           Authorization: `Bearer ${access_token}`
         }
+      }, {
+        maxRetries: 3,
+        initialDelay: 1000
       });
+      console.log("Twitter user info fetched successfully");
       
       const twitterUser = userResponse.data.data;
       
@@ -288,6 +310,17 @@ router.get("/twitter/callback", async (req, res) => {
     console.error("Error details:", err.response?.data || err.message);
     console.error("Error stack:", err.stack);
     
+    // Provide a more user-friendly error message for rate limiting
+    if (err.response && err.response.status === 429) {
+      const retryAfter = err.response.headers && err.response.headers['retry-after']
+        ? parseInt(err.response.headers['retry-after'], 10)
+        : 60;
+        
+      console.log(`Rate limit exceeded. Retry after: ${retryAfter} seconds`);
+      
+      return res.redirect(`http://localhost:3000/social-media-settings?error=rate_limit&retryAfter=${retryAfter}`);
+    }
+    
     // Send a more detailed error response
     res.status(500).send(`Twitter login failed: ${err.message}. Please check server logs for more details.`);
   }
@@ -298,20 +331,33 @@ router.post("/tweet", async (req, res) => {
   const { tweetText, accessToken } = req.body;
 
   try {
-    const tweetRes = await axios.post(
-      "https://api.twitter.com/2/tweets",
-      { text: tweetText },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    console.log("Posting tweet to Twitter API...");
+    const tweetRes = await axiosWithRetry({
+      method: 'post',
+      url: "https://api.twitter.com/2/tweets",
+      data: { text: tweetText },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       }
-    );
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000
+    });
+    console.log("Tweet posted successfully");
 
     res.json(tweetRes.data);
   } catch (error) {
     console.error("❌ Tweet post error:", error.response?.data || error.message);
+    
+    // Provide a more user-friendly error message for rate limiting
+    if (error.response && error.response.status === 429) {
+      return res.status(429).json({
+        error: "Twitter rate limit exceeded. Please try again in a few minutes.",
+        details: error.response.data
+      });
+    }
+    
     res.status(500).json({ error: error.response?.data || "Tweet failed" });
   }
 });
@@ -326,11 +372,18 @@ router.post("/twitter-to-jwt", async (req, res) => {
   
   try {
     // Get user info from Twitter API
-    const userResponse = await axios.get("https://api.twitter.com/2/users/me", {
+    console.log("Fetching Twitter user info for JWT conversion...");
+    const userResponse = await axiosWithRetry({
+      method: 'get',
+      url: "https://api.twitter.com/2/users/me",
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000
     });
+    console.log("Twitter user info fetched successfully for JWT conversion");
     
     const twitterUser = userResponse.data.data;
     
@@ -397,6 +450,23 @@ router.post("/twitter-to-jwt", async (req, res) => {
     console.error("Error converting Twitter token to JWT:", error);
     console.error("Error details:", error.response?.data || error.message);
     console.error("Error stack:", error.stack);
+    
+    // Provide a more user-friendly error message for rate limiting
+    if (error.response && error.response.status === 429) {
+      const retryAfter = error.response.headers && error.response.headers['retry-after']
+        ? parseInt(error.response.headers['retry-after'], 10)
+        : 60;
+        
+      console.log(`Twitter rate limit exceeded. Retry after: ${retryAfter} seconds`);
+      
+      return res.status(429).json({
+        success: false,
+        message: "Twitter rate limit exceeded. Please try again later.",
+        retryAfter: retryAfter,
+        error: "rate_limit_exceeded"
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Failed to authenticate with Twitter",
@@ -408,68 +478,156 @@ router.post("/twitter-to-jwt", async (req, res) => {
 
 // The Twitter connect callback is now handled in the main Twitter callback route
 
-// Route for handling LinkedIn OAuth callback specifically for connecting additional accounts
-router.get("/linkedin/connect/callback", async (req, res) => {
-  const { code, state } = req.query;
+// Route for handling LinkedIn OAuth callback
+router.get("/linkedin/callback", async (req, res) => {
+  const { code, state, error } = req.query;
   
-  // Extract userId from state parameter
-  // Format: connect_account_userId
-  const stateParts = state ? state.split('_') : [];
-  
-  if (stateParts.length < 2 || stateParts[0] !== "connect" || stateParts[1] !== "account") {
-    return res.status(400).send("Invalid state parameter");
+  // Handle case where user cancels the OAuth process
+  if (error || !code) {
+    console.log("LinkedIn OAuth error or user cancelled:", error);
+    return res.redirect(`http://localhost:3000/social-media-settings?error=cancelled&platform=linkedin`);
   }
   
-  const userId = stateParts[2];
-  
-  if (!userId) {
-    return res.status(400).send("User ID is required");
-  }
-
   try {
-    // This would need to be implemented with actual LinkedIn OAuth credentials
-    // For now, we'll just simulate a successful connection
+    // Check if this is a connect account flow
+    const isConnectFlow = state && state.startsWith("connect_account");
     
-    // In a real implementation, you would:
-    // 1. Exchange the code for an access token
-    // 2. Get the user's LinkedIn profile
-    // 3. Add the account to the social_media_accounts table
-    
-    // Simulate adding a LinkedIn account
-    const linkedinUser = {
-      id: `linkedin-${Date.now()}`, // Simulated LinkedIn user ID
-      name: "LinkedIn User" // Simulated LinkedIn user name
-    };
-    
-    // Check if this LinkedIn account is already connected to this user
-    const existingAccount = await pool.query(
-      'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
-      [userId, 'linkedin', linkedinUser.id]
-    );
-    
-    if (existingAccount.rows.length > 0) {
-      // Update the existing account
-      await pool.query(
-        `UPDATE social_media_accounts
-         SET access_token = $1, refresh_token = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = $3 AND platform = $4 AND account_id = $5`,
-        ["simulated_access_token", "simulated_refresh_token", userId, 'linkedin', linkedinUser.id]
+    // Extract userId from state if this is a connect flow
+    let userId = null;
+    if (isConnectFlow) {
+      const stateParts = state.split('_');
+      if (stateParts.length >= 3) {
+        userId = stateParts[2];
+      }
+    }
+
+    if (isConnectFlow && !userId) {
+      return res.status(400).send("User ID is required for connecting accounts");
+    }
+
+    // Exchange the authorization code for an access token
+    const tokenParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: LINKEDIN_CALLBACK_URL,
+      client_id: LINKEDIN_CLIENT_ID,
+      client_secret: LINKEDIN_CLIENT_SECRET
+    });
+
+    console.log("Making token exchange request to LinkedIn API...");
+    const tokenResponse = await axiosWithRetry({
+      method: 'post',
+      url: 'https://www.linkedin.com/oauth/v2/accessToken',
+      data: tokenParams.toString(),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    }, {
+      maxRetries: 3,
+      initialDelay: 2000,
+      maxDelay: 20000
+    });
+    console.log("LinkedIn token exchange successful");
+
+    const accessToken = tokenResponse.data.access_token;
+    const refreshToken = tokenResponse.data.refresh_token || null;
+
+    // Get user profile information from LinkedIn API
+    console.log("Fetching LinkedIn user profile...");
+    const profileResponse = await axiosWithRetry({
+      method: 'get',
+      url: 'https://api.linkedin.com/v2/me',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000
+    });
+    console.log("LinkedIn user profile fetched successfully");
+
+    const linkedinUser = profileResponse.data;
+    const linkedinId = linkedinUser.id;
+    const linkedinName = `${linkedinUser.localizedFirstName} ${linkedinUser.localizedLastName}`;
+
+    // Get email address if available
+    let email = null;
+    try {
+      console.log("Fetching LinkedIn user email...");
+      const emailResponse = await axiosWithRetry({
+        method: 'get',
+        url: 'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }, {
+        maxRetries: 2,
+        initialDelay: 1000
+      });
+      console.log("LinkedIn user email fetched successfully");
+      
+      if (emailResponse.data &&
+          emailResponse.data.elements &&
+          emailResponse.data.elements.length > 0) {
+        email = emailResponse.data.elements[0]['handle~'].emailAddress;
+      }
+    } catch (emailErr) {
+      console.error("Failed to fetch LinkedIn email:", emailErr.message);
+      // Continue without email if we can't get it
+    }
+
+    // If this is a connect flow, add the account to the user's social media accounts
+    if (isConnectFlow && userId) {
+      // Check if this LinkedIn account is already connected to this user
+      const existingAccount = await pool.query(
+        'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
+        [userId, 'linkedin', linkedinId]
       );
-    } else {
-      // Add the new account
-      await pool.query(
-        `INSERT INTO social_media_accounts
-         (user_id, platform, account_id, account_name, access_token, refresh_token)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, 'linkedin', linkedinUser.id, linkedinUser.name, "simulated_access_token", "simulated_refresh_token"]
-      );
+      
+      if (existingAccount.rows.length > 0) {
+        // Update the existing account
+        await pool.query(
+          `UPDATE social_media_accounts
+           SET access_token = $1, refresh_token = $2, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $3 AND platform = $4 AND account_id = $5`,
+          [accessToken, refreshToken, userId, 'linkedin', linkedinId]
+        );
+      } else {
+        // Add the new account
+        await pool.query(
+          `INSERT INTO social_media_accounts
+           (user_id, platform, account_id, account_name, access_token, refresh_token)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, 'linkedin', linkedinId, linkedinName, accessToken, refreshToken]
+        );
+      }
+      
+      // Redirect back to the social media settings page
+      return res.redirect(`http://localhost:3000/social-media-settings?accountConnected=true&platform=linkedin&name=${encodeURIComponent(linkedinName)}`);
     }
     
-    // Redirect back to the social media settings page
-    res.redirect(`http://localhost:3000/social-media-settings?accountConnected=true&platform=linkedin&name=${encodeURIComponent(linkedinUser.name)}`);
+    // If this is a login flow, create or update user and generate JWT
+    // This part would be similar to the Twitter login flow
+    // For now, just redirect to the dashboard with a message
+    res.redirect(`http://localhost:3000/dashboard?message=LinkedIn login not fully implemented yet`);
+    
   } catch (err) {
-    console.error("❌ LinkedIn account connection failed:", err.response?.data || err.message);
-    res.status(500).send("Failed to connect LinkedIn account");
+    console.error("❌ LinkedIn OAuth failed:", err.response?.data || err.message);
+    console.error("Error details:", err.response?.data || err.message);
+    console.error("Error stack:", err.stack);
+    
+    // Provide a more user-friendly error message for rate limiting
+    if (err.response && err.response.status === 429) {
+      const retryAfter = err.response.headers && err.response.headers['retry-after']
+        ? parseInt(err.response.headers['retry-after'], 10)
+        : 60;
+        
+      console.log(`LinkedIn rate limit exceeded. Retry after: ${retryAfter} seconds`);
+      
+      return res.redirect(`http://localhost:3000/social-media-settings?error=rate_limit&platform=linkedin&retryAfter=${retryAfter}`);
+    }
+    
+    res.status(500).send(`LinkedIn authentication failed: ${err.message}. Please check server logs for more details.`);
   }
 });
 

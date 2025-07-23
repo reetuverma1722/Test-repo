@@ -317,30 +317,6 @@ const TwitterKeywords = () => {
       >
         <Typography variant="h6">Twitter Keywords Management</Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel id="account-select-label">Twitter Account</InputLabel>
-            <Select
-              labelId="account-select-label"
-              value={selectedAccount || ""}
-              onChange={(e) => handleAccountChange(e.target.value)}
-              label="Twitter Account"
-              size="small"
-              startAdornment={
-                <InputAdornment position="start">
-                  <AccountCircleIcon fontSize="small" />
-                </InputAdornment>
-              }
-            >
-              <MenuItem value="">
-                <em>All Accounts</em>
-              </MenuItem>
-              {twitterAccounts.map((account) => (
-                <MenuItem key={account.id} value={account.id}>
-                  {account.accountName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
