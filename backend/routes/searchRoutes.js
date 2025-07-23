@@ -71,7 +71,7 @@ router.get("/search", async (req, res) => {
   const minLikes = parseInt(req.query.minLikes || "0");
   const minRetweets = parseInt(req.query.minRetweets || "0");
   const minFollowers = parseInt(req.query.minFollowers || "0");
-const maxResults = parseInt(req.query.max_results || "10");
+  const maxResults = parseInt(req.query.max_results || "10");
   if (!rawKeyword)
     return res.status(400).json({ error: "Keyword is required" });
 
@@ -120,28 +120,40 @@ const maxResults = parseInt(req.query.max_results || "10");
       }
 
       const scrapedTweets = await page.evaluate(() => {
-        const articles = document.querySelectorAll("article");
-        return Array.from(articles)
-          .map((article) => {
-            const text = article.querySelector("div[lang]")?.innerText;
-            const idMatch = article
-              .querySelector('a[href*="/status/"]')
-              ?.getAttribute("href")
-              ?.match(/status\/(\d+)/);
-            const id = idMatch ? idMatch[1] : null;
+  const articles = document.querySelectorAll("article");
 
-            if (!id || !text) return null;
+  return Array.from(articles).map((article) => {
+    const text = article.querySelector("div[lang]")?.innerText;
+    const idMatch = article
+      .querySelector('a[href*="/status/"]')
+      ?.getAttribute("href")
+      ?.match(/status\/(\d+)/);
+    const id = idMatch ? idMatch[1] : null;
 
-            return {
-              id,
-              text,
-              like_count: Math.floor(Math.random() * 1000),
-              retweet_count: Math.floor(Math.random() * 500),
-              followers_count: Math.floor(Math.random() * 10000),
-            };
-          })
-          .filter(Boolean);
-      });
+    const metricsLabel = article.querySelector('[role="group"]')?.getAttribute("aria-label") || "";
+
+    // Extract values using regex
+   const replies = Number((metricsLabel.match(/(\d+)\s+repl/))?.[1]) || 0;
+const retweets = Number((metricsLabel.match(/(\d+)\s+repost/))?.[1]) || 0;
+const likes = Number((metricsLabel.match(/(\d+)\s+like/))?.[1]) || 0;
+const bookmarks = Number((metricsLabel.match(/(\d+)\s+bookmark/))?.[1]) || 0;
+const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
+
+
+    if (!id || !text) return null;
+
+    return {
+      id,
+      text,
+      reply_count: replies,
+      retweet_count: retweets,
+      like_count: likes,
+      bookmark_count: bookmarks,
+      view_count: views,
+    };
+  }).filter(Boolean);
+});
+
 
       for (const tweet of scrapedTweets) {
         const reply = await generateReply(tweet.text);
@@ -166,7 +178,7 @@ const maxResults = parseInt(req.query.max_results || "10");
       // Add scraped tweets to result if they match filter
       let filtered = scrapedTweets;
       const isFilteringApplied =
-        minLikes > 0 || minRetweets > 0 || minFollowers > 0;
+        minLikes > 0 && minRetweets > 0 && minFollowers > 0;
 
       if (isFilteringApplied) {
         filtered = scrapedTweets.filter(
@@ -200,7 +212,7 @@ router.get("/search/history", async (req, res) => {
       FROM tweets
       ORDER BY created_at DESC
     `);
- const formattedData = result.rows.map(post => ({
+    const formattedData = result.rows.map(post => ({
       ...post,
       tweet_url: `https://twitter.com/i/web/status/${post.id}`
     }));
@@ -227,26 +239,26 @@ router.delete("/search/delete/:id", async (req, res) => {
 router.post("/postReply", async (req, res) => {
   const { tweetId, reply, accountId } = req.body;
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !tweetId || !reply) {
     return res.status(400).json({ message: 'Missing token, tweetId or reply' });
   }
-  
+
   try {
     let accessToken = authHeader.replace("Bearer ", "");
-    
+
     // If accountId is provided, get the access token for that account
     if (accountId) {
       const accountResult = await db.query(
         'SELECT access_token FROM social_media_accounts WHERE id = $1 AND deleted_at IS NULL',
         [accountId]
       );
-      
+
       if (accountResult.rows.length > 0 && accountResult.rows[0].access_token) {
         accessToken = accountResult.rows[0].access_token;
       }
     }
-    
+
     // Call Twitter API here to post the reply
     const twitterResponse = await axios.post(
       `https://api.twitter.com/2/tweets`,
@@ -261,7 +273,7 @@ router.post("/postReply", async (req, res) => {
         },
       }
     );
-    
+
     res.json({
       message: "Reply posted successfully",
       data: twitterResponse.data,
@@ -277,17 +289,17 @@ router.post("/postReply", async (req, res) => {
 router.put("/update/:id", async (req, res) => {
   const { id } = req.params;
   const { reply } = req.body;
-  
+
   if (!reply) {
     return res.status(400).json({ message: 'Reply content is required' });
   }
-  
+
   try {
     await db.query(
       `UPDATE tweets SET reply = $1 WHERE id = $2`,
       [reply, id]
     );
-    
+
     res.json({ success: true, message: 'Reply updated successfully' });
   } catch (err) {
     console.error("Update error:", err.message);

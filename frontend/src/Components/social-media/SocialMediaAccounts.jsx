@@ -44,7 +44,7 @@ import {
 } from "../../services/socialMediaAccountsService";
 
 // Twitter OAuth configuration
-const TWITTER_CLIENT_ID = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
+const TWITTER_CLIENT_ID = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
 // We'll set the redirect URI dynamically in the redirectToTwitterAuth function
 const TWITTER_SCOPE = encodeURIComponent('tweet.read tweet.write users.read offline.access');
 const TWITTER_STATE = "connect_account"; // To differentiate from login flow
