@@ -43,18 +43,18 @@ import {
 } from "../../services/socialMediaAccountsService";
 
 // Twitter OAuth configuration
-const TWITTER_CLIENT_ID = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
+const TWITTER_CLIENT_ID = process.env.REACT_APP_TWITTER_CLIENT_ID || "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
 // We'll set the redirect URI dynamically in the redirectToTwitterAuth function
-const TWITTER_SCOPE = encodeURIComponent('tweet.read tweet.write users.read offline.access');
+const TWITTER_SCOPE = encodeURIComponent(process.env.REACT_APP_TWITTER_SCOPE || 'tweet.read tweet.write users.read offline.access');
 const TWITTER_STATE = "connect_account"; // To differentiate from login flow
-const TWITTER_CODE_CHALLENGE = "challenge";
-const TWITTER_CALLBACK_URL = "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
+const TWITTER_CODE_CHALLENGE = process.env.REACT_APP_TWITTER_CODE_CHALLENGE || "challenge";
+const TWITTER_CALLBACK_URL = process.env.REACT_APP_TWITTER_CALLBACK_URL || "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
 
 // LinkedIn OAuth configuration
 const LINKEDIN_CLIENT_ID = process.env.REACT_APP_LINKEDIN_CLIENT_ID || "77fqvi8nw1opj1";
-const LINKEDIN_REDIRECT_URI = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
+const LINKEDIN_REDIRECT_URI = encodeURIComponent(process.env.REACT_APP_LINKEDIN_CALLBACK_URL || "http://localhost:5000/api/auth/linkedin/callback");
 // Reduce the scope to only what's necessary to improve performance
-const LINKEDIN_SCOPE = encodeURIComponent('r_liteprofile r_emailaddress');
+const LINKEDIN_SCOPE = encodeURIComponent(process.env.REACT_APP_LINKEDIN_SCOPE || 'r_liteprofile r_emailaddress');
 const LINKEDIN_STATE = "connect_account";
 
 const SocialMediaAccounts = () => {
@@ -169,6 +169,7 @@ const SocialMediaAccounts = () => {
   // State for form
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [passwordRecoveryDialogOpen, setPasswordRecoveryDialogOpen] = useState(false);
   const [currentAccount, setCurrentAccount] = useState({
     id: null,
     platform: "twitter",
@@ -176,7 +177,9 @@ const SocialMediaAccounts = () => {
     accountName: "",
     accessToken: "",
     refreshToken: "",
-    tokenExpiresAt: null
+    tokenExpiresAt: null,
+    twitterUsername: "",
+    twitterPassword: ""
   });
   
   // State for delete confirmation
@@ -378,6 +381,165 @@ const SocialMediaAccounts = () => {
       setDeleteDialogOpen(false);
     }
   };
+  
+  // Handle direct Twitter login with username and password
+  const handleTwitterDirectLogin = async () => {
+    try {
+      // Validate inputs
+      if (!currentAccount.twitterUsername || !currentAccount.twitterPassword) {
+        setNotification({
+          open: true,
+          message: "Please enter both Twitter username and password",
+          severity: "error"
+        });
+        return;
+      }
+      
+      // Get the current user ID
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        setError("You must be logged in to connect a Twitter account. Please log out and log back in if you're seeing this message.");
+        return;
+      }
+      
+      setLoading(true);
+      
+      // Call the backend API to authenticate with Twitter
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/twitter/direct-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          username: currentAccount.twitterUsername,
+          password: currentAccount.twitterPassword,
+          userId: userId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to connect Twitter account');
+      }
+      
+      // Clear the form
+      setCurrentAccount({
+        ...currentAccount,
+        twitterUsername: '',
+        twitterPassword: ''
+      });
+      
+      // Refresh the accounts list
+      await fetchAccounts();
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        message: "Twitter account connected successfully",
+        severity: "success"
+      });
+      
+      // Close the form
+      setFormOpen(false);
+    } catch (error) {
+      console.error("Error connecting Twitter account:", error);
+      setNotification({
+        open: true,
+        message: error.message || "Failed to connect Twitter account. Please check your credentials and try again.",
+        severity: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle forgot password button click
+  const handleForgotPassword = () => {
+    // Check if username is provided
+    if (!currentAccount.twitterUsername) {
+      setNotification({
+        open: true,
+        message: "Please enter your Twitter username first",
+        severity: "error"
+      });
+      return;
+    }
+    
+    // Get the current user ID
+    const userId = currentUser?.id;
+    
+    if (!userId) {
+      setError("You must be logged in to connect a Twitter account. Please log out and log back in if you're seeing this message.");
+      return;
+    }
+    
+    // Open the confirmation dialog
+    setPasswordRecoveryDialogOpen(true);
+  };
+  
+  // Handle confirmation of password recovery
+  const confirmPasswordRecovery = () => {
+    // Get the current user ID
+    const userId = currentUser?.id;
+    
+    // Show loading state
+    setLoading(true);
+    
+    // Call the backend API to connect Twitter account with just the username
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/twitter/direct-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        username: currentAccount.twitterUsername,
+        userId: userId,
+        passwordRecovery: true
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success notification
+        setNotification({
+          open: true,
+          message: "Twitter account connected successfully. You can reset your password later.",
+          severity: "success"
+        });
+        
+        // Clear the form
+        setCurrentAccount({
+          ...currentAccount,
+          twitterUsername: '',
+          twitterPassword: ''
+        });
+        
+        // Refresh the accounts list
+        fetchAccounts();
+        
+        // Close the form
+        setFormOpen(false);
+      } else {
+        throw new Error(data.message || "Failed to connect Twitter account");
+      }
+    })
+    .catch(error => {
+      console.error("Error connecting Twitter account:", error);
+      setNotification({
+        open: true,
+        message: error.message || "Failed to connect Twitter account. Please try again later.",
+        severity: "error"
+      });
+    })
+    .finally(() => {
+      setLoading(false);
+      setPasswordRecoveryDialogOpen(false);
+    });
+  };
 
   // Close notification
   const handleCloseNotification = () => {
@@ -555,22 +717,80 @@ const SocialMediaAccounts = () => {
               
               <Grid container spacing={3} sx={{ mt: 2 }}>
                 <Grid item xs={12}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    startIcon={<TwitterIcon />}
-                    onClick={() => redirectToTwitterAuth()}
-                    sx={{
-                      py: 1.5,
-                      backgroundColor: '#1DA1F2',
-                      '&:hover': {
-                        backgroundColor: '#0d8bd9'
+                  <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+                    <Typography variant="h6" gutterBottom>
+                      <TwitterIcon sx={{ color: '#1DA1F2', mr: 1, verticalAlign: 'middle' }} />
+                      Connect Twitter Account
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Enter your Twitter credentials to connect your account
+                    </Typography>
+                    
+                    <TextField
+                      fullWidth
+                      label="Twitter Username or Email"
+                      variant="outlined"
+                      margin="normal"
+                      name="twitterUsername"
+                      value={currentAccount.twitterUsername || ''}
+                      onChange={(e) => setCurrentAccount({
+                        ...currentAccount,
+                        twitterUsername: e.target.value
+                      })}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      label="Twitter Password"
+                      variant="outlined"
+                      margin="normal"
+                      name="twitterPassword"
+                      type="password"
+                      value={currentAccount.twitterPassword || ''}
+                      onChange={(e) => setCurrentAccount({
+                        ...currentAccount,
+                        twitterPassword: e.target.value
+                      })}
+                      helperText={
+                        <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span>Enter your Twitter password</span>
+                          <Button
+                            variant="text"
+                            size="small"
+                            onClick={handleForgotPassword}
+                            sx={{
+                              p: 0,
+                              minWidth: 'auto',
+                              textTransform: 'none',
+                              fontSize: '0.75rem',
+                              color: 'primary.main'
+                            }}
+                          >
+                            Forgot password?
+                          </Button>
+                        </Box>
                       }
-                    }}
-                  >
-                    Connect Twitter Account
-                  </Button>
+                    />
+                    
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      size="large"
+                      startIcon={<TwitterIcon />}
+                      onClick={handleTwitterDirectLogin}
+                      sx={{
+                        mt: 2,
+                        py: 1.5,
+                        backgroundColor: '#1DA1F2',
+                        '&:hover': {
+                          backgroundColor: '#0d8bd9'
+                        }
+                      }}
+                    >
+                      Connect Twitter Account
+                    </Button>
+                  </Paper>
                 </Grid>
                 
                 <Grid item xs={12}>
@@ -634,6 +854,33 @@ const SocialMediaAccounts = () => {
             disabled={loading}
           >
             {loading ? <CircularProgress size={24} /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Password Recovery Confirmation Dialog */}
+      <Dialog
+        open={passwordRecoveryDialogOpen}
+        onClose={() => setPasswordRecoveryDialogOpen(false)}
+      >
+        <DialogTitle>Password Recovery</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You are about to add a Twitter account without password verification. This is useful if you've forgotten your password.
+            <br /><br />
+            You will need to reset your Twitter password later to use this account fully.
+            <br /><br />
+            Do you want to continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPasswordRecoveryDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={confirmPasswordRecovery}
+            color="primary"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Continue"}
           </Button>
         </DialogActions>
       </Dialog>
