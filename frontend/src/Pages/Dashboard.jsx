@@ -64,6 +64,8 @@ const Dashboard = () => {
   const [active, setActive] = useState("");
   const [loading, setLoading] = useState(false);
   const [keywords, setKeywords] = useState([]);
+  const [selectedKeywords, setSelectedKeywords] = useState([]);
+  const [filteredTweets, setFilteredTweets] = useState([]);
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
@@ -137,7 +139,9 @@ const Dashboard = () => {
         `http://localhost:5000/api/search?keyword=${keywordList}&minLikes=${maxMinLikes}&minRetweets=${maxMinRetweets}&minFollowers=${maxMinFollowers}`
       );
 
-      setTweets(res.data.tweets || []);
+      const fetchedTweets = res.data.tweets || [];
+      setTweets(fetchedTweets);
+      setFilteredTweets(fetchedTweets);
     } catch (err) {
       console.error("Failed to fetch posts", err);
     } finally {
@@ -309,6 +313,33 @@ const Dashboard = () => {
       localStorage.setItem("token", "dummy-token");
     }
   }, [navigate]);
+
+  // Handle keyword toggle for filtering
+  const handleKeywordToggle = (keywordText) => {
+    setSelectedKeywords(prev => {
+      const isSelected = prev.includes(keywordText);
+      const newSelected = isSelected
+        ? prev.filter(k => k !== keywordText)
+        : [...prev, keywordText];
+      
+      // Filter tweets based on selected keywords
+      if (newSelected.length === 0) {
+        // If no keywords selected, show all tweets
+        setFilteredTweets(tweets);
+      } else {
+        // Filter tweets that match any of the selected keywords
+        const filtered = tweets.filter(tweet => {
+          // Check if the tweet's keyword is in the selected keywords list
+          return newSelected.some(keyword =>
+            tweet.keyword && tweet.keyword.toLowerCase() === keyword.toLowerCase()
+          );
+        });
+        setFilteredTweets(filtered);
+      }
+      
+      return newSelected;
+    });
+  };
 
   // Set active state based on current path
   useEffect(() => {
@@ -986,23 +1017,31 @@ const Dashboard = () => {
 
                 {keywords.length > 0 ? (
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {keywords.map((keyword, index) => (
-                      <Chip
-                        key={index}
-                        label={keyword.text}
-                        size="medium"
-                        color="primary"
-                        sx={{
-                          borderRadius: "16px",
-                          px: 1,
-                          fontWeight: 500,
-                          boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
-                          "&:hover": {
-                            boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
-                          },
-                        }}
-                      />
-                    ))}
+                    {keywords.map((keyword, index) => {
+                      const isSelected = selectedKeywords.includes(keyword.text);
+                      return (
+                        <Chip
+                          key={index}
+                          label={keyword.text}
+                          size="medium"
+                          onClick={() => handleKeywordToggle(keyword.text)}
+                          color={isSelected ? "primary" : "default"}
+                          sx={{
+                            borderRadius: "16px",
+                            px: 1,
+                            fontWeight: 500,
+                            backgroundColor: isSelected ? "#f44336" : "#ffffff",
+                            color: isSelected ? "#ffffff" : "#333333",
+                            boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+                            cursor: "pointer",
+                            "&:hover": {
+                              boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
+                              backgroundColor: isSelected ? "#e53935" : "#f5f5f5",
+                            },
+                          }}
+                        />
+                      );
+                    })}
                   </Box>
                 ) : (
                   <Box
@@ -1043,13 +1082,13 @@ const Dashboard = () => {
                     Searching for tweets...
                   </Typography>
                 </Box>
-              ) : tweets.length > 0 ? (
+              ) : filteredTweets.length > 0 ? (
                 <Box sx={{ position: "relative" }}>
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                     Latest Posts
                   </Typography>
                   <Grid container spacing={3}>
-                    {tweets.map((tweet, i) => (
+                    {filteredTweets.map((tweet, i) => (
                       <Grid
                         item
                         xs={12}
