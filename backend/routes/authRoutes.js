@@ -1,12 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken'); 
+const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const router = express.Router();
-require('dotenv').config(); 
+require('dotenv').config();
 const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 const { expandKeyword } = require('../aiSearch');
 const axios = require('axios');
+const { axiosWithRetry } = require('../utils/apiUtils');
 router.post('/register', async (req, res) => {
   try {
     const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -196,7 +197,13 @@ const {
 } = process.env;
 
 router.get("/twitter/callback", async (req, res) => {
-  const { code, state } = req.query;
+  const { code, state, error } = req.query;
+  
+  // Handle case where user cancels the OAuth process
+  if (error || !code) {
+    console.log("Twitter OAuth error or user cancelled:", error);
+    return res.redirect(`http://localhost:3000/social-media-settings?error=cancelled&platform=twitter`);
+  }
   
   try {
     // Check if this is a connect account flow or a login flow
@@ -219,30 +226,42 @@ router.get("/twitter/callback", async (req, res) => {
       code_verifier: "challenge", // should match code_challenge from frontend
     });
 
-    const tokenRes = await axios.post(
-      "https://api.twitter.com/2/oauth2/token",
-      params,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization:
-            "Basic " +
-            Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString("base64"),
-        },
+    console.log("Making token exchange request to Twitter API...");
+    const tokenRes = await axiosWithRetry({
+      method: 'post',
+      url: "https://api.twitter.com/2/oauth2/token",
+      data: params,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization:
+          "Basic " +
+          Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString("base64"),
       }
-    );
+    }, {
+      maxRetries: 5,
+      initialDelay: 2000,
+      maxDelay: 30000
+    });
 
+    console.log("Token exchange successful");
     const access_token = tokenRes.data.access_token;
     const refresh_token = tokenRes.data.refresh_token;
 
     // If this is a connect flow, handle it differently
     if (isConnectFlow && userId) {
       // Get user info from Twitter API
-      const userResponse = await axios.get("https://api.twitter.com/2/users/me", {
+      console.log("Fetching Twitter user info...");
+      const userResponse = await axiosWithRetry({
+        method: 'get',
+        url: "https://api.twitter.com/2/users/me",
         headers: {
           Authorization: `Bearer ${access_token}`
         }
+      }, {
+        maxRetries: 3,
+        initialDelay: 1000
       });
+      console.log("Twitter user info fetched successfully");
       
       const twitterUser = userResponse.data.data;
       
@@ -285,6 +304,17 @@ router.get("/twitter/callback", async (req, res) => {
     console.error("Error details:", err.response?.data || err.message);
     console.error("Error stack:", err.stack);
     
+    // Provide a more user-friendly error message for rate limiting
+    if (err.response && err.response.status === 429) {
+      const retryAfter = err.response.headers && err.response.headers['retry-after']
+        ? parseInt(err.response.headers['retry-after'], 10)
+        : 60;
+        
+      console.log(`Rate limit exceeded. Retry after: ${retryAfter} seconds`);
+      
+      return res.redirect(`http://localhost:3000/social-media-settings?error=rate_limit&retryAfter=${retryAfter}`);
+    }
+    
     // Send a more detailed error response
     res.status(500).send(`Twitter login failed: ${err.message}. Please check server logs for more details.`);
   }
@@ -295,20 +325,33 @@ router.post("/tweet", async (req, res) => {
   const { tweetText, accessToken } = req.body;
 
   try {
-    const tweetRes = await axios.post(
-      "https://api.twitter.com/2/tweets",
-      { text: tweetText },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    console.log("Posting tweet to Twitter API...");
+    const tweetRes = await axiosWithRetry({
+      method: 'post',
+      url: "https://api.twitter.com/2/tweets",
+      data: { text: tweetText },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       }
-    );
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000
+    });
+    console.log("Tweet posted successfully");
 
     res.json(tweetRes.data);
   } catch (error) {
     console.error("❌ Tweet post error:", error.response?.data || error.message);
+    
+    // Provide a more user-friendly error message for rate limiting
+    if (error.response && error.response.status === 429) {
+      return res.status(429).json({
+        error: "Twitter rate limit exceeded. Please try again in a few minutes.",
+        details: error.response.data
+      });
+    }
+    
     res.status(500).json({ error: error.response?.data || "Tweet failed" });
   }
 });
@@ -323,11 +366,18 @@ router.post("/twitter-to-jwt", async (req, res) => {
   
   try {
     // Get user info from Twitter API
-    const userResponse = await axios.get("https://api.twitter.com/2/users/me", {
+    console.log("Fetching Twitter user info for JWT conversion...");
+    const userResponse = await axiosWithRetry({
+      method: 'get',
+      url: "https://api.twitter.com/2/users/me",
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000
     });
+    console.log("Twitter user info fetched successfully for JWT conversion");
     
     const twitterUser = userResponse.data.data;
     
@@ -394,6 +444,23 @@ router.post("/twitter-to-jwt", async (req, res) => {
     console.error("Error converting Twitter token to JWT:", error);
     console.error("Error details:", error.response?.data || error.message);
     console.error("Error stack:", error.stack);
+    
+    // Provide a more user-friendly error message for rate limiting
+    if (error.response && error.response.status === 429) {
+      const retryAfter = error.response.headers && error.response.headers['retry-after']
+        ? parseInt(error.response.headers['retry-after'], 10)
+        : 60;
+        
+      console.log(`Twitter rate limit exceeded. Retry after: ${retryAfter} seconds`);
+      
+      return res.status(429).json({
+        success: false,
+        message: "Twitter rate limit exceeded. Please try again later.",
+        retryAfter: retryAfter,
+        error: "rate_limit_exceeded"
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Failed to authenticate with Twitter",
@@ -407,7 +474,13 @@ router.post("/twitter-to-jwt", async (req, res) => {
 
 // Route for handling LinkedIn OAuth callback
 router.get("/linkedin/callback", async (req, res) => {
-  const { code, state } = req.query;
+  const { code, state, error } = req.query;
+  
+  // Handle case where user cancels the OAuth process
+  if (error || !code) {
+    console.log("LinkedIn OAuth error or user cancelled:", error);
+    return res.redirect(`http://localhost:3000/social-media-settings?error=cancelled&platform=linkedin`);
+  }
   
   try {
     // Check if this is a connect account flow
@@ -435,28 +508,37 @@ router.get("/linkedin/callback", async (req, res) => {
       client_secret: LINKEDIN_CLIENT_SECRET
     });
 
-    const tokenResponse = await axios.post(
-      'https://www.linkedin.com/oauth/v2/accessToken',
-      tokenParams.toString(),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+    console.log("Making token exchange request to LinkedIn API...");
+    const tokenResponse = await axiosWithRetry({
+      method: 'post',
+      url: 'https://www.linkedin.com/oauth/v2/accessToken',
+      data: tokenParams.toString(),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
       }
-    );
+    }, {
+      maxRetries: 3,
+      initialDelay: 2000,
+      maxDelay: 20000
+    });
+    console.log("LinkedIn token exchange successful");
 
     const accessToken = tokenResponse.data.access_token;
     const refreshToken = tokenResponse.data.refresh_token || null;
 
     // Get user profile information from LinkedIn API
-    const profileResponse = await axios.get(
-      'https://api.linkedin.com/v2/me',
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+    console.log("Fetching LinkedIn user profile...");
+    const profileResponse = await axiosWithRetry({
+      method: 'get',
+      url: 'https://api.linkedin.com/v2/me',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
       }
-    );
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000
+    });
+    console.log("LinkedIn user profile fetched successfully");
 
     const linkedinUser = profileResponse.data;
     const linkedinId = linkedinUser.id;
@@ -465,14 +547,18 @@ router.get("/linkedin/callback", async (req, res) => {
     // Get email address if available
     let email = null;
     try {
-      const emailResponse = await axios.get(
-        'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
+      console.log("Fetching LinkedIn user email...");
+      const emailResponse = await axiosWithRetry({
+        method: 'get',
+        url: 'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
         }
-      );
+      }, {
+        maxRetries: 2,
+        initialDelay: 1000
+      });
+      console.log("LinkedIn user email fetched successfully");
       
       if (emailResponse.data &&
           emailResponse.data.elements &&
@@ -523,6 +609,17 @@ router.get("/linkedin/callback", async (req, res) => {
     console.error("❌ LinkedIn OAuth failed:", err.response?.data || err.message);
     console.error("Error details:", err.response?.data || err.message);
     console.error("Error stack:", err.stack);
+    
+    // Provide a more user-friendly error message for rate limiting
+    if (err.response && err.response.status === 429) {
+      const retryAfter = err.response.headers && err.response.headers['retry-after']
+        ? parseInt(err.response.headers['retry-after'], 10)
+        : 60;
+        
+      console.log(`LinkedIn rate limit exceeded. Retry after: ${retryAfter} seconds`);
+      
+      return res.redirect(`http://localhost:3000/social-media-settings?error=rate_limit&platform=linkedin&retryAfter=${retryAfter}`);
+    }
     
     res.status(500).send(`LinkedIn authentication failed: ${err.message}. Please check server logs for more details.`);
   }

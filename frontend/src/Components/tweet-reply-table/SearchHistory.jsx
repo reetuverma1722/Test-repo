@@ -66,7 +66,7 @@ const SearchHistory = () => {
       
       // Set default selected account if available
       if (response.data && response.data.length > 0) {
-        setSelectedAccountId(response.data[0].id);
+        setSelectedAccountId(response.data[0].accountName);
       }
     } catch (err) {
       console.error("Error fetching accounts:", err);
@@ -841,7 +841,7 @@ const SearchHistory = () => {
         <FormControl fullWidth>
           <Select
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
+            onChange={(e) => setSelectedAccountId(selectedAccountId)}
             displayEmpty
             disabled={loadingAccounts}
             sx={{

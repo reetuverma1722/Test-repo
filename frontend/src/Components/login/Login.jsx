@@ -101,19 +101,28 @@ const Login = ({ isPopup = false }) => {
   };
 
   const redirectToTwitter = () => {
-    const clientId = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
-    const redirectUri = encodeURIComponent(
-      "http://localhost:5000/api/auth/twitter/callback"
-    );
-    const scope = encodeURIComponent(
-     'tweet.read tweet.write users.read offline.access'
-    );
-    const state = "state"; // Random string in production for CSRF protection
-    const codeChallenge = "challenge"; // For now, static; later use real PKCE
+    try {
+      const clientId = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
+      const redirectUri = encodeURIComponent(
+        "http://localhost:5000/api/auth/twitter/callback"
+      );
+      const scope = encodeURIComponent(
+       'tweet.read tweet.write users.read offline.access'
+      );
+      // Generate a more unique state with timestamp to help with rate limiting
+      const state = `state_${Date.now()}`; // Random string in production for CSRF protection
+      const codeChallenge = "challenge"; // For now, static; later use real PKCE
 
-    const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
+      const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
 
-    window.location.href = twitterAuthUrl;
+      // Add a small delay before redirecting to avoid rapid successive requests
+      setTimeout(() => {
+        window.location.href = twitterAuthUrl;
+      }, 500);
+    } catch (error) {
+      console.error("Error redirecting to Twitter:", error);
+      setError("Failed to connect to Twitter. Please try again later.");
+    }
   };
 
   return (

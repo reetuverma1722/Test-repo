@@ -26,7 +26,6 @@ import {
   Alert,
   Snackbar,
   Tooltip,
-  Chip
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -52,9 +51,10 @@ const TWITTER_CODE_CHALLENGE = "challenge";
 const TWITTER_CALLBACK_URL = "http://localhost:5000/api/auth/twitter/callback"; // Must match exactly what's registered with Twitter
 
 // LinkedIn OAuth configuration
-const LINKEDIN_CLIENT_ID = process.env.REACT_APP_LINKEDIN_CLIENT_ID || "77xwl5eh9xmq0s";
+const LINKEDIN_CLIENT_ID = process.env.REACT_APP_LINKEDIN_CLIENT_ID || "77fqvi8nw1opj1";
 const LINKEDIN_REDIRECT_URI = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
-const LINKEDIN_SCOPE = encodeURIComponent('r_liteprofile r_emailaddress w_member_social');
+// Reduce the scope to only what's necessary to improve performance
+const LINKEDIN_SCOPE = encodeURIComponent('r_liteprofile r_emailaddress');
 const LINKEDIN_STATE = "connect_account";
 
 const SocialMediaAccounts = () => {
@@ -75,49 +75,91 @@ const SocialMediaAccounts = () => {
   
   // Function to redirect to Twitter OAuth
   const redirectToTwitterAuth = () => {
-    // Use the state variable instead of reading from localStorage again
-    const userId = currentUser?.id;
-    
-    if (!userId) {
-      // Show a more helpful error message
-      setError("You must be logged in to connect a Twitter account. Please log out and log back in if you're seeing this message.");
-      return;
+    try {
+      // Use the state variable instead of reading from localStorage again
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        // Show a more helpful error message
+        setError("You must be logged in to connect a Twitter account. Please log out and log back in if you're seeing this message.");
+        return;
+      }
+      
+      // Use the same callback URL that's registered with Twitter
+      // We'll differentiate the flow using the state parameter
+      const redirectUri = encodeURIComponent(TWITTER_CALLBACK_URL);
+      
+      // Include the userId and timestamp in the state parameter to make it unique
+      // This helps prevent rate limiting by ensuring each request has a unique state
+      const timestamp = Date.now();
+      const stateWithUserId = `${TWITTER_STATE}_${userId}_${timestamp}`;
+      
+      const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${TWITTER_SCOPE}&state=${stateWithUserId}&code_challenge=${TWITTER_CODE_CHALLENGE}&code_challenge_method=plain`;
+      
+      // Add a small delay before redirecting to avoid rapid successive requests
+      setNotification({
+        open: true,
+        message: "Connecting to Twitter...",
+        severity: "info"
+      });
+      
+      setTimeout(() => {
+        window.location.href = twitterAuthUrl;
+      }, 1000);
+    } catch (error) {
+      console.error("Error redirecting to Twitter:", error);
+      setError("Failed to connect to Twitter. Please try again later.");
     }
-    
-    // Use the same callback URL that's registered with Twitter
-    // We'll differentiate the flow using the state parameter
-    const redirectUri = encodeURIComponent(TWITTER_CALLBACK_URL);
-    
-    // Include the userId in the state parameter
-    const stateWithUserId = `${TWITTER_STATE}_${userId}`;
-    
-    const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${TWITTER_SCOPE}&state=${stateWithUserId}&code_challenge=${TWITTER_CODE_CHALLENGE}&code_challenge_method=plain`;
-    window.location.href = twitterAuthUrl;
   };
   
   // Function to redirect to LinkedIn OAuth
   const redirectToLinkedInAuth = () => {
-    // Use the state variable instead of reading from localStorage again
-    const userId = currentUser?.id;
-    
-    if (!userId) {
-      // Show a more helpful error message
-      setError("You must be logged in to connect a LinkedIn account. Please log out and log back in if you're seeing this message.");
-      return;
+    try {
+      // Use the state variable instead of reading from localStorage again
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        // Show a more helpful error message
+        setError("You must be logged in to connect a LinkedIn account. Please log out and log back in if you're seeing this message.");
+        return;
+      }
+      
+      // We're already using LINKEDIN_REDIRECT_URI which is properly encoded
+      
+      // Include the userId and timestamp in the state parameter to make it unique
+      // This helps prevent rate limiting by ensuring each request has a unique state
+      const timestamp = Date.now();
+      const stateWithUserId = `${LINKEDIN_STATE}_${userId}_${timestamp}`;
+      
+      // Create the LinkedIn OAuth URL with actual credentials
+      const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${LINKEDIN_REDIRECT_URI}&scope=${LINKEDIN_SCOPE}&state=${stateWithUserId}`;
+      
+      // Add a small delay before redirecting to avoid rapid successive requests
+      setNotification({
+        open: true,
+        message: "Connecting to LinkedIn...",
+        severity: "info"
+      });
+      
+      // Set a timeout to handle the case where LinkedIn OAuth takes too long
+      const timeoutId = setTimeout(() => {
+        setNotification({
+          open: true,
+          message: "LinkedIn connection is taking longer than expected. Please try again.",
+          severity: "warning"
+        });
+      }, 10000); // 10 seconds timeout
+      
+      // Store the timeout ID in localStorage so we can clear it if the user returns
+      localStorage.setItem('linkedinTimeoutId', timeoutId);
+      
+      setTimeout(() => {
+        window.location.href = linkedinAuthUrl;
+      }, 1000);
+    } catch (error) {
+      console.error("Error redirecting to LinkedIn:", error);
+      setError("Failed to connect to LinkedIn. Please try again later.");
     }
-    
-    // Use the connect callback endpoint instead of the login callback
-    const connectRedirectUri = encodeURIComponent("http://localhost:5000/api/auth/linkedin/callback");
-    
-    // Include the userId in the state parameter instead of the redirect URI
-    const stateWithUserId = `${LINKEDIN_STATE}_${userId}`;
-    
-    // Create the LinkedIn OAuth URL with actual credentials
-    const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=77fqvi8nw1opj1&redirect_uri=http://localhost:5000/api/auth/linkedin/callback
-&scope=${LINKEDIN_SCOPE}&state=${stateWithUserId}`;
-    
-    // Redirect to LinkedIn OAuth authorization page
-    window.location.href = linkedinAuthUrl;
   };
   // State for accounts data
   const [accounts, setAccounts] = useState([]);
@@ -152,6 +194,44 @@ const SocialMediaAccounts = () => {
   useEffect(() => {
     fetchAccounts();
     
+    // Clear any existing LinkedIn timeout
+    const linkedinTimeoutId = localStorage.getItem('linkedinTimeoutId');
+    if (linkedinTimeoutId) {
+      clearTimeout(parseInt(linkedinTimeoutId, 10));
+      localStorage.removeItem('linkedinTimeoutId');
+    }
+    
+    // Check URL parameters for errors or success messages
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    const platform = urlParams.get('platform') || 'social media';
+    const retryAfter = urlParams.get('retryAfter');
+    const accountConnected = urlParams.get('accountConnected');
+    
+    // Handle errors
+    if (error === 'cancelled') {
+      setNotification({
+        open: true,
+        message: `${platform.charAt(0).toUpperCase() + platform.slice(1)} connection was cancelled. Please try again if you want to connect your account.`,
+        severity: "info"
+      });
+      
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'rate_limit') {
+      const waitTime = retryAfter ? parseInt(retryAfter, 10) : 60;
+      const minutes = Math.ceil(waitTime / 60);
+      
+      setNotification({
+        open: true,
+        message: `${platform.charAt(0).toUpperCase() + platform.slice(1)} rate limit exceeded. Please try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+        severity: "warning"
+      });
+      
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     // Set up an interval to refresh accounts every few seconds
     // This ensures the table is updated after OAuth redirect
     const refreshInterval = setInterval(() => {
@@ -174,6 +254,7 @@ const SocialMediaAccounts = () => {
       const token = localStorage.getItem("token");
       const response = await getAllAccounts(token);
       setAccounts(response.data || []);
+      console.log("res",response)
     } catch (err) {
       setError("Failed to fetch accounts. Please try again later.");
       console.error("Error fetching accounts:", err);
@@ -310,9 +391,9 @@ const SocialMediaAccounts = () => {
   const getPlatformIcon = (platform) => {
     switch (platform.toLowerCase()) {
       case 'twitter':
-        return <TwitterIcon color="primary" />;
+        return <TwitterIcon style={{color:"blue"}} />;
       case 'linkedin':
-        return <LinkedInIcon color="primary" />;
+        return <LinkedInIcon style={{color:"blue"}} />;
       default:
         return null;
     }
@@ -507,7 +588,7 @@ const SocialMediaAccounts = () => {
                       }
                     }}
                   >
-                    Connect LinkedIn Account (Simulated)
+                    Connect LinkedIn Account
                   </Button>
                 </Grid>
                 

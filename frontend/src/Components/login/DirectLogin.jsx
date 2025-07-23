@@ -11,6 +11,11 @@ const DirectLogin = ({ redirectTo = '/social-media-settings' }) => {
     // Set the token in localStorage
     localStorage.setItem('token', dummyToken);
     
+    // Set dummy user data in localStorage
+    console.log("Setting dummy token for development");
+    const dummyUser = { id: 1, email: 'test@example.com', name: 'Test User' };
+    localStorage.setItem('user', JSON.stringify(dummyUser));
+    
     // Redirect to the specified page
     navigate(redirectTo);
   }, [navigate, redirectTo]);

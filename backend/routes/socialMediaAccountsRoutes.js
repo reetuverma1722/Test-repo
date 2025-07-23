@@ -10,9 +10,31 @@ const checkAuth = (req, res, next) => {
     // Get token from Authorization header
     const token = req.headers.authorization?.split(' ')[1];
     
+    // Get user data from localStorage if available (for development)
+    const userStr = req.headers['x-user-data'];
+    let userData = null;
+    
+    if (userStr) {
+      try {
+        userData = JSON.parse(userStr);
+      } catch (e) {
+        console.error('Error parsing user data from header:', e);
+      }
+    }
+    
     if (!token) {
       // For development purposes, allow requests without a token
-      console.log('No token provided, using default user ID');
+      console.log('No token provided, checking for user data in headers');
+      
+      // If user data is provided in headers, use that
+      if (userData && userData.id) {
+        req.user = { id: userData.id };
+        console.log('Using user ID from headers:', userData.id);
+        return next();
+      }
+      
+      // Otherwise use default user ID
+      console.log('No user data in headers, using default user ID');
       req.user = { id: 1 }; // Default user ID for testing
       return next();
     }
@@ -22,8 +44,16 @@ const checkAuth = (req, res, next) => {
       req.user = decoded;
       console.log('Authenticated user:', req.user);
     } catch (err) {
-      console.log('Invalid token, using default user ID');
-      req.user = { id: 1 }; // Default user ID for testing
+      console.log('Invalid token, checking for user data in headers');
+      
+      // If user data is provided in headers, use that
+      if (userData && userData.id) {
+        req.user = { id: userData.id };
+        console.log('Using user ID from headers:', userData.id);
+      } else {
+        console.log('No user data in headers, using default user ID');
+        req.user = { id: 1 }; // Default user ID for testing
+      }
     }
     
     next();
