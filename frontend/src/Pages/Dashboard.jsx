@@ -139,9 +139,21 @@ const Dashboard = () => {
         `http://localhost:5000/api/search?keyword=${keywordList}&minLikes=${maxMinLikes}&minRetweets=${maxMinRetweets}&minFollowers=${maxMinFollowers}`
       );
 
-      const fetchedTweets = res.data.tweets || [];
+      // Add keyword information to each tweet for better filtering
+      const fetchedTweets = (res.data.tweets || []).map(tweet => {
+        // Find which keyword this tweet matches
+        const matchingKeyword = allKeywords.find(keyword =>
+          tweet.text.toLowerCase().includes(keyword.text.toLowerCase())
+        );
+        
+        return {
+          ...tweet,
+          keyword: matchingKeyword ? matchingKeyword.text : null
+        };
+      });
+      
       setTweets(fetchedTweets);
-      setFilteredTweets(fetchedTweets);
+      // filteredTweets will be updated by the useEffect
     } catch (err) {
       console.error("Failed to fetch posts", err);
     } finally {
@@ -322,24 +334,26 @@ const Dashboard = () => {
         ? prev.filter(k => k !== keywordText)
         : [...prev, keywordText];
       
-      // Filter tweets based on selected keywords
-      if (newSelected.length === 0) {
-        // If no keywords selected, show all tweets
-        setFilteredTweets(tweets);
-      } else {
-        // Filter tweets that match any of the selected keywords
-        const filtered = tweets.filter(tweet => {
-          // Check if the tweet's keyword is in the selected keywords list
-          return newSelected.some(keyword =>
-            tweet.keyword && tweet.keyword.toLowerCase() === keyword.toLowerCase()
-          );
-        });
-        setFilteredTweets(filtered);
-      }
-      
       return newSelected;
     });
   };
+  
+  // Update filtered tweets whenever tweets or selected keywords change
+  useEffect(() => {
+    if (selectedKeywords.length === 0) {
+      // If no keywords selected, show all tweets
+      setFilteredTweets(tweets);
+    } else {
+      // Filter tweets that match any of the selected keywords
+      const filtered = tweets.filter(tweet => {
+        // Check if the tweet's keyword is in the selected keywords list
+        return selectedKeywords.some(keyword =>
+          tweet.keyword && tweet.keyword.toLowerCase() === keyword.toLowerCase()
+        );
+      });
+      setFilteredTweets(filtered);
+    }
+  }, [tweets, selectedKeywords]);
 
   // Set active state based on current path
   useEffect(() => {
