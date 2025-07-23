@@ -9,6 +9,12 @@ const { expandKeyword } = require('../aiSearch');
 const axios = require('axios');
 router.post('/register', async (req, res) => {
   try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+    
     const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ message: 'User already exists' });

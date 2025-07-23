@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 // Middleware to check authentication
 const checkAuth = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1] || localStorage.getItem('token');
+    const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
       // For development purposes, allow requests without a token

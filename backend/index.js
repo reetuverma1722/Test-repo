@@ -9,6 +9,9 @@ const searchRoutes = require('./routes/searchRoutes');
 const keywordRoutes = require('./routes/keywordRoutes');
 const socialMediaAccountsRoutes = require('./routes/socialMediaAccountsRoutes');
 dotenv.config();
+
+// Run the script to check and create tables if they don't exist
+require('./scripts/check-and-create-tables');
 const app = express();
 app.use(cors());
 app.use(express.json());

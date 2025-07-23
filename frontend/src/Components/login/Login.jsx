@@ -54,7 +54,20 @@ const Login = ({ isPopup = false }) => {
 
       setSuccess(data.message);
 
-      if (!isRegister) {
+      if (isRegister) {
+        // After successful registration, automatically log in the user
+        try {
+          const loginData = await authService.login(email, password);
+          console.log("Logged in user:", loginData.user);
+          localStorage.setItem("user", JSON.stringify(loginData.user));
+          localStorage.setItem("token", loginData.token);
+          navigate("/dashboard");
+        } catch (loginErr) {
+          // If auto-login fails, show success message but don't navigate
+          console.error("Auto-login after registration failed:", loginErr);
+          setSuccess(data.message + " Please log in with your new credentials.");
+        }
+      } else {
         console.log("Logged in user:", data.user);
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("token", data.token);
