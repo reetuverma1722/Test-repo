@@ -61,8 +61,8 @@ export const getAccounts = async (token = null) => {
 };
 
 // Get post history for a specific account
-export const getPostHistory = async (accountId, token = null) => {
-  return await apiGet(`/history/${accountId}`, token);
+export const getPostHistory = async (id, token = null) => {
+  return await apiGet(`/history/${id}`, token);
 };
 
 // Repost a specific post

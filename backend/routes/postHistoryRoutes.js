@@ -54,20 +54,20 @@ router.get('/accounts', checkAuth, async (req, res) => {
 });
 
 // Get post history for a specific account
-router.get('/history/:accountId', checkAuth, async (req, res) => {
+router.get('/history/:id', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const accountId = req.params.accountId;
+    const accountId = req.params.id;
     
     // Verify the account belongs to the user
-    const accountCheck = await pool.query(
-      'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
-      [accountId, userId]
-    );
+    // const accountCheck = await pool.query(
+    //   'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+    //   [accountId, userId]
+    // );
     
-    if (accountCheck.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Account not found' });
-    }
+    // if (accountCheck.rows.length === 0) {
+    //   return res.status(404).json({ success: false, message: 'Account not found' });
+    // }
     
     // Fetch post history for the account
     const result = await pool.query(
