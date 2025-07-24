@@ -1098,9 +1098,10 @@ const Dashboard = () => {
                       select
                       size="small"
                       label="Twitter Account"
-                      value={selectedAccount || ''}
+                      value={selectedAccount || 'All Accounts'}
                       onChange={(e) => {
-                        setSelectedAccount(e.target.value);
+                        // When "All Accounts" is selected, set selectedAccount to null
+                        setSelectedAccount(e.target.value === '' ? null : e.target.value);
                         // Refetch posts when account changes
                         setTimeout(() => fetchAllPosts(), 100);
                       }}
