@@ -344,12 +344,8 @@ const SearchHistory = () => {
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
                 transition: 'all 0.3s',
-                '&:hover': {
-                  boxShadow: '0 0 0 2px rgba(0,0,0,0.05)'
-                },
-                '&.Mui-focused': {
-                  boxShadow: '0 0 0 2px rgba(255,0,0,0.2)'
-                }
+               
+              
               }
             }}
             InputProps={{
@@ -365,18 +361,14 @@ const SearchHistory = () => {
               onClick={handleDeleteSelected}
               startIcon={<DeleteIcon />}
               sx={{
-                backgroundColor: "#fef2f2",
+                backgroundColor: "#eb5050ff",
                 padding: "0.5rem 1.5rem",
                 borderRadius: "8px",
                 fontSize: "0.9rem",
                 fontWeight: 600,
-                boxShadow: '0 4px 12px rgba(255,0,0,0.2)',
+               
                 transition: 'all 0.3s ease',
-                '&:hover': {
-                  backgroundColor: "#fef2f2",
-                  boxShadow: '0 6px 16px rgba(255,0,0,0.3)',
-                  transform: 'translateY(-2px)'
-                }
+               
               }}
             >
               Delete Selected ({selectedIds.length})
@@ -453,9 +445,9 @@ const SearchHistory = () => {
                 sx={{
                   transition: 'all 0.3s ease',
                   animation: `fadeIn 0.5s ease-out ${index * 0.05}s both`,
-                  backgroundColor: highlightedTweetId === tweet.id ? 'rgba(255, 0, 0, 0.08)' : 'inherit',
+                  backgroundColor: highlightedTweetId === tweet.id ? 'rgba(248, 3, 3, 0.25)' : 'inherit',
                   '&:hover': {
-                    backgroundColor: highlightedTweetId === tweet.id ? 'rgba(255, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                    backgroundColor: highlightedTweetId === tweet.id ? 'rgba(209, 22, 22, 0.32)' : 'rgba(0, 0, 0, 0.04)',
                     transform: 'translateY(-1px)',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
                   },
