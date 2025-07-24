@@ -133,8 +133,7 @@ const Dashboard = () => {
   };
 
   // Fetch all keywords
-  const fetchAllKeywords = async () => {
-    debugger
+  const fetchAllKeywords = async () => { 
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get("http://localhost:5000/api/keywords", {
