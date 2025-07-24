@@ -522,10 +522,54 @@ router.post("/twitter-to-jwt", async (req, res) => {
 //   }
 // });
 router.post('/twitter/direct-login', async (req, res) => {
-  const { username, password, userId } = req.body;
+  const { username, password, userId, passwordRecovery, accountId, accountName } = req.body;
 
+  // Check if this is a password recovery request
+  if (passwordRecovery) {
+    if (!username || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and userId are required for password recovery'
+      });
+    }
+    
+    try {
+      // For password recovery, we don't verify credentials
+      // Use the provided accountId and accountName or generate from username
+      const actualAccountId = accountId || `twitter_${username}_${Date.now()}`;
+      const actualAccountName = accountName || username;
+      
+      // Add the account to the database
+      await pool.query(
+        `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name) VALUES ($1, $2, $3, $4)`,
+        [actualAccountId, userId, 'twitter', actualAccountName]
+      );
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Twitter account connected successfully. You can reset your password later.',
+        account: {
+          platform: 'twitter',
+          accountName: actualAccountName,
+          accountId: actualAccountId,
+          passwordRecovery: true
+        }
+      });
+    } catch (err) {
+      console.error('Twitter password recovery error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to connect Twitter account in recovery mode'
+      });
+    }
+  }
+
+  // Regular login flow
   if (!username || !password || !userId) {
-    return res.status(400).json({ message: 'Missing required fields' });
+    return res.status(400).json({
+      success: false,
+      message: 'Username, password, and userId are required'
+    });
   }
 
   try {
@@ -539,7 +583,6 @@ router.post('/twitter/direct-login', async (req, res) => {
     await page.keyboard.press('Enter');
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-
     // password input
     await page.waitForSelector('input[name="password"]', { timeout: 5000 });
     await page.type('input[name="password"]', password);
@@ -548,37 +591,53 @@ router.post('/twitter/direct-login', async (req, res) => {
     // wait and check for error or home redirect
     await new Promise(resolve => setTimeout(resolve, 3000));
 
+    const loginError = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('span')).some(
+        el => el.textContent.toLowerCase().includes('password is incorrect')
+      );
+    });
 
-   const loginError = await page.evaluate(() => {
-  return Array.from(document.querySelectorAll('span')).some(
-    el => el.textContent.toLowerCase().includes('password is incorrect')
-  );
-});
-
-if (loginError) {
-  console.log("Wrong password entered");
-  return res.status(401).json({ success: false, message: "Incorrect password." });
-}
+    if (loginError) {
+      console.log("Wrong password entered");
+      await browser.close();
+      return res.status(401).json({ success: false, message: "Incorrect password." });
+    }
 
     const url = page.url();
-
     await browser.close();
 
     if (url.includes('login') || loginError) {
-      return res.status(401).json({ message: 'Invalid Twitter credentials' });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Twitter credentials'
+      });
     }
 
     // SUCCESS → Save to DB
-    const accountId = Date.now().toString(); // or fetch real ID if needed
+    // Use the provided accountId and accountName or generate from username
+    const actualAccountId = accountId || `twitter_${username}_${Date.now()}`;
+    const actualAccountName = accountName || username;
+    
     await pool.query(
-      `INSERT INTO social_media_accounts (account_id, user_id, platform, username) VALUES ($1, $2, $3, $4)`,
-      [accountId, userId, 'twitter', username]
+      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name) VALUES ($1, $2, $3, $4)`,
+      [actualAccountId, userId, 'twitter', actualAccountName]
     );
 
-    res.status(200).json({ message: 'Twitter connected successfully' });
+    res.status(200).json({
+      success: true,
+      message: 'Twitter connected successfully',
+      account: {
+        platform: 'twitter',
+        accountName: actualAccountName,
+        accountId: actualAccountId
+      }
+    });
   } catch (err) {
     console.error('Twitter login error:', err);
-    res.status(500).json({ message: 'Twitter login failed' });
+    res.status(500).json({
+      success: false,
+      message: 'Twitter login failed'
+    });
   }
 });
 // Helper function to verify Twitter credentials

@@ -265,54 +265,54 @@ router.delete("/search/delete/:id", async (req, res) => {
   }
 });
 // POST /api/post-reply
-router.post("/postReply", async (req, res) => {
-  const { tweetId, reply, accountId } = req.body;
-  const authHeader = req.headers.authorization;
+// router.post("/postReply", async (req, res) => {
+//   const { tweetId, reply, accountId } = req.body;
+//   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !tweetId || !reply) {
-    return res.status(400).json({ message: 'Missing token, tweetId or reply' });
-  }
+//   if (!authHeader || !tweetId || !reply) {
+//     return res.status(400).json({ message: 'Missing token, tweetId or reply' });
+//   }
 
-  try {
-    let accessToken = authHeader.replace("Bearer ", "");
+//   try {
+//     let accessToken = authHeader.replace("Bearer ", "");
 
-    // If accountId is provided, get the access token for that account
-    if (accountId) {
-      const accountResult = await db.query(
-        'SELECT access_token FROM social_media_accounts WHERE id = $1 AND deleted_at IS NULL',
-        [accountId]
-      );
+//     // If accountId is provided, get the access token for that account
+//     if (accountId) {
+//       const accountResult = await db.query(
+//         'SELECT access_token FROM social_media_accounts WHERE id = $1 AND deleted_at IS NULL',
+//         [accountId]
+//       );
 
-      if (accountResult.rows.length > 0 && accountResult.rows[0].access_token) {
-        accessToken = accountResult.rows[0].access_token;
-      }
-    }
+//       if (accountResult.rows.length > 0 && accountResult.rows[0].access_token) {
+//         accessToken = accountResult.rows[0].access_token;
+//       }
+//     }
 
-    // Call Twitter API here to post the reply
-    const twitterResponse = await axios.post(
-      `https://api.twitter.com/2/tweets`,
-      {
-        text: reply,
-        reply: { in_reply_to_tweet_id: tweetId },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+//     // Call Twitter API here to post the reply
+//     const twitterResponse = await axios.post(
+//       `https://api.twitter.com/2/tweets`,
+//       {
+//         text: reply,
+//         reply: { in_reply_to_tweet_id: tweetId },
+//       },
+//       {
+//         headers: {
+//           Authorization: `Bearer ${accessToken}`,
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
 
-    res.json({
-      message: "Reply posted successfully",
-      data: twitterResponse.data,
-      accountId: accountId || null
-    });
-  } catch (err) {
-    console.error("Tweet post error", err?.response?.data || err);
-    res.status(500).json({ error: "Failed to post tweet" });
-  }
-});
+//     res.json({
+//       message: "Reply posted successfully",
+//       data: twitterResponse.data,
+//       accountId: accountId || null
+//     });
+//   } catch (err) {
+//     console.error("Tweet post error", err?.response?.data || err);
+//     res.status(500).json({ error: "Failed to post tweet" });
+//   }
+// });
 
 // PUT /api/search/update/:id - Update reply for a tweet
 router.put("/update/:id", async (req, res) => {

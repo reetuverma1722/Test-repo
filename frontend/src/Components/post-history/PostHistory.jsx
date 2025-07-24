@@ -180,7 +180,7 @@ const PostHistory = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {getPlatformIcon(account.platform)}
                     <Typography>
-                      {account.account_name} (@{account.account_handle})
+                      {account.accountName} (@{account.account_handle})
                     </Typography>
                   </Box>
                 </MenuItem>
