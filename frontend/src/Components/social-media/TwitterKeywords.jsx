@@ -360,7 +360,7 @@ const TwitterKeywords = () => {
                 </MenuItem>
                 {twitterAccounts.map((account) => (
                   <MenuItem key={account.id} value={account.id}>
-                    {`${account.accountName} (ID: ${account.id})`}
+                    {`${account.accountName}`}
                   </MenuItem>
                 ))}
               </Select>
@@ -535,7 +535,7 @@ const TwitterKeywords = () => {
                   <TableCell>{keyword.text}</TableCell>
                   <TableCell>
                     {keyword.accountId ?
-                      `${keyword.accountName} (ID: ${keyword.accountId})` :
+                      `${keyword.accountName}` :
                       <em>Default (All Accounts)</em>
                     }
                   </TableCell>
