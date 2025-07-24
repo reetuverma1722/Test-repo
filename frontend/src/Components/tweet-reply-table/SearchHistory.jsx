@@ -43,9 +43,13 @@ const SearchHistory = () => {
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [highlightedTweetId, setHighlightedTweetId] = useState(null);
-  const fetchHistory = async () => {
+  const fetchHistory = async (accountId = null) => {
     try {
-      const res = await axios.get("http://localhost:5000/api/search/history");
+      let url = "http://localhost:5000/api/search/history";
+      if (accountId) {
+        url += `?accountId=${accountId}`;
+      }
+      const res = await axios.get(url);
       setHistory(res.data);
     } catch (err) {
       console.error("Error fetching history:", err.message);
@@ -53,9 +57,14 @@ const SearchHistory = () => {
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchHistory(selectedAccountId);
     fetchAccounts();
   }, []);
+
+  // Refetch history when selected account changes
+  useEffect(() => {
+    fetchHistory(selectedAccountId);
+  }, [selectedAccountId]);
   
   // Fetch social media accounts
   const fetchAccounts = async () => {
@@ -67,7 +76,7 @@ const SearchHistory = () => {
       
       // Set default selected account if available
       if (response.data && response.data.length > 0) {
-        setSelectedAccountId(response.data[0].accountName);
+        setSelectedAccountId(response.data[0].id);
       }
     } catch (err) {
       console.error("Error fetching accounts:", err);
@@ -299,6 +308,35 @@ const SearchHistory = () => {
         }
       }}
     >
+      {/* Account Selection */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={3}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Filter by Twitter Account:
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={9}>
+            <FormControl fullWidth size="small">
+              <Select
+                value={selectedAccountId || ""}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                displayEmpty
+                sx={{ minWidth: 250 }}
+              >
+                <MenuItem value="">
+                  <em>All Accounts</em>
+                </MenuItem>
+                {accounts.map((account) => (
+                  <MenuItem key={account.id} value={account.id}>
+                    {account.accountName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
       <Grid
         container
         justifyContent="space-between"
@@ -344,12 +382,8 @@ const SearchHistory = () => {
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
                 transition: 'all 0.3s',
-                '&:hover': {
-                  boxShadow: '0 0 0 2px rgba(0,0,0,0.05)'
-                },
-                '&.Mui-focused': {
-                  boxShadow: '0 0 0 2px rgba(255,0,0,0.2)'
-                }
+               
+              
               }
             }}
             InputProps={{
@@ -365,18 +399,14 @@ const SearchHistory = () => {
               onClick={handleDeleteSelected}
               startIcon={<DeleteIcon />}
               sx={{
-                backgroundColor: "#fef2f2",
+                backgroundColor: "#eb5050ff",
                 padding: "0.5rem 1.5rem",
                 borderRadius: "8px",
                 fontSize: "0.9rem",
                 fontWeight: 600,
-                boxShadow: '0 4px 12px rgba(255,0,0,0.2)',
+               
                 transition: 'all 0.3s ease',
-                '&:hover': {
-                  backgroundColor: "#fef2f2",
-                  boxShadow: '0 6px 16px rgba(255,0,0,0.3)',
-                  transform: 'translateY(-2px)'
-                }
+               
               }}
             >
               Delete Selected ({selectedIds.length})
@@ -453,9 +483,9 @@ const SearchHistory = () => {
                 sx={{
                   transition: 'all 0.3s ease',
                   animation: `fadeIn 0.5s ease-out ${index * 0.05}s both`,
-                  backgroundColor: highlightedTweetId === tweet.id ? 'rgba(255, 0, 0, 0.08)' : 'inherit',
+                  backgroundColor: highlightedTweetId === tweet.id ? 'rgba(248, 3, 3, 0.25)' : 'inherit',
                   '&:hover': {
-                    backgroundColor: highlightedTweetId === tweet.id ? 'rgba(255, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                    backgroundColor: highlightedTweetId === tweet.id ? 'rgba(209, 22, 22, 0.32)' : 'rgba(0, 0, 0, 0.04)',
                     transform: 'translateY(-1px)',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
                   },
@@ -850,7 +880,7 @@ const SearchHistory = () => {
         <FormControl fullWidth>
           <Select
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(selectedAccountId)}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
             displayEmpty
             disabled={loadingAccounts}
             sx={{

@@ -97,6 +97,11 @@ const TwitterKeywords = () => {
     fetchKeywords();
     fetchTwitterAccounts();
   }, []);
+  
+  // Fetch keywords when selected account changes
+  useEffect(() => {
+    fetchKeywords();
+  }, [selectedAccount]);
 
   // Fetch Twitter accounts
   const fetchTwitterAccounts = async () => {
@@ -136,7 +141,12 @@ const TwitterKeywords = () => {
     setError(null);
     try {
       const token = localStorage.getItem("token");
-      const response = await getFilteredKeywords(filters, token);
+      // Include the selected account in the filters if one is selected
+      const filtersWithAccount = {
+        ...filters,
+        accountId: selectedAccount || filters.accountId,
+      };
+      const response = await getFilteredKeywords(filtersWithAccount, token);
       setKeywords(response.data || []);
     } catch (err) {
       setError("Failed to apply filters. Please try again later.");
@@ -155,21 +165,14 @@ const TwitterKeywords = () => {
       minFollowers: "",
       accountId: "",
     });
+    // Keep the selected account filter when clearing other filters
     fetchKeywords();
   };
 
   // Handle account change
   const handleAccountChange = (accountId) => {
     setSelectedAccount(accountId);
-    // Refresh keywords for the selected account
-    const token = localStorage.getItem("token");
-    getKeywords(accountId, token)
-      .then((response) => {
-        setKeywords(response.data || []);
-      })
-      .catch((err) => {
-        console.error("Error fetching keywords for account:", err);
-      });
+    // Refresh keywords for the selected account will happen via useEffect
   };
 
   // Handle form input changes
@@ -177,7 +180,7 @@ const TwitterKeywords = () => {
     const { name, value } = e.target;
     setCurrentKeyword({
       ...currentKeyword,
-      [name]: name === "text" ? value : Number(value),
+      [name]: name === "text" || name === "accountId" ? value : Number(value),
     });
   };
 
@@ -238,11 +241,20 @@ const TwitterKeywords = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      
+      // Create a copy of the keyword data with accountId converted to number if it exists
+      const keywordData = {
+        ...currentKeyword,
+        // Make sure accountId is properly converted to a number or set to null if empty string
+        accountId: currentKeyword.accountId ? Number(currentKeyword.accountId) : null
+      };
+
+      console.log('Submitting keyword with data:', keywordData);
 
       if (isEditing) {
-        await updateKeyword(currentKeyword.id, currentKeyword, token);
+        await updateKeyword(currentKeyword.id, keywordData, token);
       } else {
-        await addKeyword(currentKeyword, token);
+        await addKeyword(keywordData, token);
       }
 
       // Refresh the keywords list
@@ -326,6 +338,36 @@ const TwitterKeywords = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Account Selection */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={3}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Select Twitter Account:
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={9}>
+            <FormControl fullWidth size="small">
+              <Select
+                value={selectedAccount || ""}
+                onChange={(e) => handleAccountChange(e.target.value)}
+                displayEmpty
+                sx={{ minWidth: 250 }}
+              >
+                <MenuItem value="">
+                  <em>All Accounts</em>
+                </MenuItem>
+                {twitterAccounts.map((account) => (
+                  <MenuItem key={account.id} value={account.id}>
+                    {`${account.accountName}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
 
       {/* Inline Filters */}
       <Paper sx={{ p: 0.5, mb: 3 }}>
@@ -461,6 +503,7 @@ const TwitterKeywords = () => {
           <TableHead>
             <TableRow>
               <TableCell>Keyword</TableCell>
+              <TableCell>Account</TableCell>
               <TableCell align="right">Min Likes</TableCell>
               <TableCell align="right">Min Retweets</TableCell>
               <TableCell align="right">Min Followers</TableCell>
@@ -490,6 +533,12 @@ const TwitterKeywords = () => {
               keywords.map((keyword) => (
                 <TableRow key={keyword.id}>
                   <TableCell>{keyword.text}</TableCell>
+                  <TableCell>
+                    {keyword.accountId ?
+                      `${keyword.accountName}` :
+                      <em>Default (All Accounts)</em>
+                    }
+                  </TableCell>
                   <TableCell align="right">{keyword.minLikes}</TableCell>
                   <TableCell align="right">{keyword.minRetweets}</TableCell>
                   <TableCell align="right">{keyword.minFollowers}</TableCell>
@@ -531,7 +580,7 @@ const TwitterKeywords = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             {/* First Row - Full width */}
-            <Grid item xs={12}>
+            <Grid >
               <TextField
                 name="text"
                 label="Keyword Text"
@@ -541,7 +590,7 @@ const TwitterKeywords = () => {
                 required
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid >
               <TextField
                 name="minLikes"
                 label="Minimum Likes"
@@ -552,7 +601,7 @@ const TwitterKeywords = () => {
                 InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid>
               <TextField
                 name="minRetweets"
                 label="Minimum Retweets"
@@ -563,7 +612,7 @@ const TwitterKeywords = () => {
                 InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid >
               <TextField
                 name="minFollowers"
                 label="Minimum Followers"
@@ -573,6 +622,30 @@ const TwitterKeywords = () => {
                 fullWidth
                 InputProps={{ inputProps: { min: 0 } }}
               />
+            </Grid>
+            {/* Twitter Account Selection - Full width on its own line */}
+            <Grid sx={{ mt: 2 }}>
+             
+                <InputLabel id="account-select-label" >Twitter Account</InputLabel>
+                <Select
+                  labelId="account-select-label"
+                  id="account-select"
+                  name="accountId"
+                  value={currentKeyword.accountId || ""}
+                  onChange={handleInputChange}
+                  label="Twitter Account"
+                  sx={{width:"190%"}}
+                >
+                  <MenuItem value="">
+                    <em> (All Accounts)</em>
+                  </MenuItem>
+                  {twitterAccounts.map((account) => (
+                    <MenuItem key={account.id} value={account.id}>
+                      {`${account.accountName}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              
             </Grid>
           </Grid>
         </DialogContent>
