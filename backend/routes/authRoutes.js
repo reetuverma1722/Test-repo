@@ -522,63 +522,44 @@ router.post("/twitter-to-jwt", async (req, res) => {
 //   }
 // });
 router.post('/twitter/direct-login', async (req, res) => {
-  const { username, password, userId, passwordRecovery } = req.body;
+  const { username, password, userId, passwordRecovery, accountId, accountName } = req.body;
 
-  // Handle password recovery request
+  // Check if this is a password recovery request
   if (passwordRecovery) {
     if (!username || !userId) {
       return res.status(400).json({
         success: false,
-        message: "Username and userId are required for password recovery"
+        message: 'Username and userId are required for password recovery'
       });
     }
     
     try {
       // For password recovery, we don't verify credentials
-      const accountId = `twitter_${username}_recovery`;
-      const accountName = `${username} (Recovery)`;
-      const accessToken = `recovery_token_${Date.now()}`;
+      // Use the provided accountId and accountName or generate from username
+      const actualAccountId = accountId || `twitter_${username}_${Date.now()}`;
+      const actualAccountName = accountName || username;
       
-      // Check if recovery account already exists
-      const existingAccount = await pool.query(
-        'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
-        [userId, 'twitter', accountId]
+      // Add the account to the database
+      await pool.query(
+        `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name) VALUES ($1, $2, $3, $4)`,
+        [actualAccountId, userId, 'twitter', actualAccountName]
       );
-      
-      if (existingAccount.rows.length > 0) {
-        // Update existing recovery account
-        await pool.query(
-          `UPDATE social_media_accounts
-           SET updated_at = CURRENT_TIMESTAMP
-           WHERE user_id = $1 AND platform = $2 AND account_id = $3`,
-          [userId, 'twitter', accountId]
-        );
-      } else {
-        // Add new recovery account
-        await pool.query(
-          `INSERT INTO social_media_accounts
-           (user_id, platform, account_id, account_name, access_token, refresh_token)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [userId, 'twitter', accountId, accountName, accessToken, null]
-        );
-      }
       
       return res.status(200).json({
         success: true,
-        message: "Twitter account connected successfully. You can reset your password later.",
+        message: 'Twitter account connected successfully. You can reset your password later.',
         account: {
           platform: 'twitter',
-          accountName: accountName,
-          accountId: accountId,
+          accountName: actualAccountName,
+          accountId: actualAccountId,
           passwordRecovery: true
         }
       });
-    } catch (error) {
-      console.error("Error connecting Twitter recovery account:", error);
+    } catch (err) {
+      console.error('Twitter password recovery error:', err);
       return res.status(500).json({
         success: false,
-        message: "Failed to connect Twitter recovery account",
-        error: error.message
+        message: 'Failed to connect Twitter account in recovery mode'
       });
     }
   }
@@ -587,305 +568,75 @@ router.post('/twitter/direct-login', async (req, res) => {
   if (!username || !password || !userId) {
     return res.status(400).json({
       success: false,
-      message: "Username, password, and userId are required"
+      message: 'Username, password, and userId are required'
     });
   }
 
-  // Check if this Twitter account is already connected to this user
   try {
-    const existingAccount = await pool.query(
-      'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_name = $3 AND deleted_at IS NULL',
-      [userId, 'twitter', username]
-    );
-    
-    if (existingAccount.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "This Twitter account is already connected to your profile"
-      });
-    }
-    
-    // Launch browser for Twitter verification
-    let browser;
-    try {
-      console.log(`Attempting to verify Twitter credentials for ${username}`);
-      
-      // Launch browser with additional options to avoid detection
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--window-size=1920,1080',
-        ]
-      });
-      
-      const page = await browser.newPage();
-      
-      // Set user agent to avoid detection
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      // Set viewport
-      await page.setViewport({ width: 1280, height: 800 });
-      
-      // Navigate to Twitter login page - using the flow URL which is more reliable
-      await page.goto('https://twitter.com/i/flow/login', { waitUntil: 'networkidle2' });
-      console.log('Navigated to Twitter login page');
-      
-      // Wait for the page to load completely
-      // await page.waitForTimeout(3000);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
 
-      
-      // Try different selectors for username field
-      const usernameSelectors = [
-        'input[name="text"]',
-        'input[autocomplete="username"]',
-        'input[type="text"]'
-      ];
-      
-      let usernameField = null;
-      for (const selector of usernameSelectors) {
-        try {
-          usernameField = await page.waitForSelector(selector, { timeout: 5000 });
-          if (usernameField) {
-            console.log(`Found username field with selector: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          console.log(`Selector ${selector} not found, trying next...`);
-        }
-      }
-      
-      if (!usernameField) {
-        throw new Error('Could not find username input field');
-      }
-      
-      // Type email instead of username (Twitter now prioritizes email login)
-      // Use email format if username doesn't contain @ symbol
-      const loginIdentifier = username.includes('@') ? username : `${username}@gmail.com`;
-      console.log(`Using login identifier: ${loginIdentifier}`);
-      await usernameField.type(loginIdentifier, { delay: 100 });
+    await page.goto('https://twitter.com/login');
 
-      // await page.waitForTimeout(1000);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    await page.waitForSelector('input[name="text"]');
+    await page.type('input[name="text"]', username);
+    await page.keyboard.press('Enter');
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-      
-      // Find and click the Next button
-      const nextButtonSelectors = [
-        'div[role="button"]',
-        'span',
-        'button[type="submit"]'
-      ];
-      
-      let nextButton = null;
-      for (const selector of nextButtonSelectors) {
-        try {
-          // Find all elements matching the selector
-          const buttons = await page.$$(selector);
-          
-          // Find the one containing "Next" text
-          for (const button of buttons) {
-            const buttonText = await page.evaluate(el => el.textContent, button);
-            if (buttonText && buttonText.includes('Next')) {
-              nextButton = button;
-              console.log(`Found next button with text: ${buttonText}`);
-              break;
-            }
-          }
-          
-          if (nextButton) break;
-        } catch (e) {
-          console.log(`Next button selector ${selector} not found, trying next...`);
-        }
-      }
-      
-      if (!nextButton) {
-        throw new Error('Could not find Next button');
-      }
-      
-      await nextButton.click();
-      console.log('Clicked Next button after entering username');
-      
-      // Wait for password field to appear
-      // await page.waitForTimeout(3000);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+    // password input
+    await page.waitForSelector('input[name="password"]', { timeout: 5000 });
+    await page.type('input[name="password"]', password);
+    await page.keyboard.press('Enter');
 
+    // wait and check for error or home redirect
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-      
-      // Check if we're asked for additional verification (like phone/email)
-      const verificationRequired = await page.evaluate(() => {
-        return document.body.innerText.includes('Enter your phone number or username') ||
-               document.body.innerText.includes('Enter your email');
-      });
-      
-      if (verificationRequired) {
-        console.log('Additional verification required');
-        await browser.close();
-        return res.status(401).json({
-          success: false,
-          message: "Twitter requires additional verification. Please use OAuth login instead."
-        });
-      }
-      
-      // Try different selectors for password field with increased timeout
-      const passwordSelectors = [
-        'input[name="password"]',
-        'input[type="password"]',
-        'input[autocomplete="current-password"]'
-      ];
-      
-      let passwordField = null;
-      for (const selector of passwordSelectors) {
-        try {
-          passwordField = await page.waitForSelector(selector, { timeout: 10000 });
-          if (passwordField) {
-            console.log(`Found password field with selector: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          console.log(`Password selector ${selector} not found, trying next...`);
-        }
-      }
-      
-      if (!passwordField) {
-        // Take a screenshot for debugging
-        await page.screenshot({ path: 'twitter-login-debug.png' });
-        throw new Error('Could not find password input field');
-      }
-      
-      // Type password
-      await passwordField.type(password, { delay: 100 });
-      // await page.waitForTimeout(1000);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      
-      // Find and click login button
-      const loginButtonSelectors = [
-        'div[role="button"]',
-        'span',
-        'button[type="submit"]'
-      ];
-      
-      let loginButton = null;
-      for (const selector of loginButtonSelectors) {
-        try {
-          // Find all elements matching the selector
-          const buttons = await page.$$(selector);
-          
-          // Find the one containing "Log in" text
-          for (const button of buttons) {
-            const buttonText = await page.evaluate(el => el.textContent, button);
-            if (buttonText && (buttonText.includes('Log in') || buttonText.includes('Login'))) {
-              loginButton = button;
-              console.log(`Found login button with text: ${buttonText}`);
-              break;
-            }
-          }
-          
-          if (loginButton) break;
-        } catch (e) {
-          console.log(`Login button selector ${selector} not found, trying next...`);
-        }
-      }
-      
-      if (!loginButton) {
-        throw new Error('Could not find Login button');
-      }
-      
-      await loginButton.click();
-      console.log('Clicked Login button after entering password');
-      
-      // Wait for navigation to complete
-      // await page.waitForTimeout(5000);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      
-      // Check for login errors
-      const loginError = await page.evaluate(() => {
-        const errorMessages = [
-          'incorrect',
-          'wrong password',
-          'doesn\'t exist',
-          'couldn\'t find your account',
-          'failed',
-          'invalid'
-        ];
-        
-        const pageText = document.body.innerText.toLowerCase();
-        for (const msg of errorMessages) {
-          if (pageText.includes(msg)) {
-            return true;
-          }
-        }
-        return false;
-      });
-      
-      if (loginError) {
-        console.log('Login error detected');
-        await browser.close();
-        return res.status(401).json({
-          success: false,
-          message: "Invalid Twitter credentials. Please check your username and password."
-        });
-      }
-      
-      // Check if we're on the home page or still on login page
-      const currentUrl = page.url();
-      console.log(`Current URL after login attempt: ${currentUrl}`);
-      
-      if (currentUrl.includes('login') || currentUrl.includes('flow')) {
-        console.log('Still on login page, login failed');
-        await browser.close();
-        return res.status(401).json({
-          success: false,
-          message: "Failed to log in to Twitter. Please check your credentials."
-        });
-      }
-      
-      // Successfully logged in
-      console.log('Successfully logged in to Twitter');
-      await browser.close();
-      
-      // Generate account ID and save to database
-      const accountId = `twitter_${username}_${Date.now()}`;
-      const accessToken = `direct_login_token_${Date.now()}`;
-      
-      await pool.query(
-        `INSERT INTO social_media_accounts
-         (user_id, platform, account_id, account_name, access_token, refresh_token)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, 'twitter', accountId, username, accessToken, null]
+    const loginError = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('span')).some(
+        el => el.textContent.toLowerCase().includes('password is incorrect')
       );
-      
-      return res.status(200).json({
-        success: true,
-        message: "Twitter account connected successfully",
-        account: {
-          platform: 'twitter',
-          accountName: username,
-          accountId: accountId,
-          passwordRecovery: false
-        }
-      });
-      
-    } catch (browserError) {
-      console.error('Error during Twitter login process:', browserError);
-      if (browser) await browser.close();
-      return res.status(500).json({
+    });
+
+    if (loginError) {
+      console.log("Wrong password entered");
+      await browser.close();
+      return res.status(401).json({ success: false, message: "Incorrect password." });
+    }
+
+    const url = page.url();
+    await browser.close();
+
+    if (url.includes('login') || loginError) {
+      return res.status(401).json({
         success: false,
-        message: "Error during Twitter login process: " + browserError.message
+        message: 'Invalid Twitter credentials'
       });
     }
-  } catch (error) {
-    console.error("Error connecting Twitter account:", error);
-    return res.status(500).json({
+
+    // SUCCESS → Save to DB
+    // Use the provided accountId and accountName or generate from username
+    const actualAccountId = accountId || `twitter_${username}_${Date.now()}`;
+    const actualAccountName = accountName || username;
+    
+    await pool.query(
+      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name) VALUES ($1, $2, $3, $4)`,
+      [actualAccountId, userId, 'twitter', actualAccountName]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Twitter connected successfully',
+      account: {
+        platform: 'twitter',
+        accountName: actualAccountName,
+        accountId: actualAccountId
+      }
+    });
+  } catch (err) {
+    console.error('Twitter login error:', err);
+    res.status(500).json({
       success: false,
-      message: "Failed to connect Twitter account",
-      error: error.message
+      message: 'Twitter login failed'
     });
   }
 });

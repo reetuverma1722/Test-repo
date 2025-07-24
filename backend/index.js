@@ -8,6 +8,8 @@ const authRoutes = require('./routes/authRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const keywordRoutes = require('./routes/keywordRoutes');
 const socialMediaAccountsRoutes = require('./routes/socialMediaAccountsRoutes');
+const trendingRoutes = require('./routes/trendingRoutes');
+const postHistoryRoutes = require('./routes/postHistoryRoutes');
 dotenv.config();
 
 // Run the script to check and create tables if they don't exist
@@ -20,6 +22,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api', searchRoutes);
 app.use('/api', keywordRoutes);
 app.use('/api', socialMediaAccountsRoutes);
+app.use('/api', trendingRoutes);
+app.use('/api', postHistoryRoutes);
 const PORT = process.env.PORT || 5000;
 app.get('/', async (req, res) => {
   const accessToken = req.query.twitterId;
