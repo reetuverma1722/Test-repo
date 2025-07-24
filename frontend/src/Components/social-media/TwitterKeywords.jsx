@@ -535,7 +535,7 @@ const TwitterKeywords = () => {
                   <TableCell>{keyword.text}</TableCell>
                   <TableCell>
                     {keyword.accountId ?
-                      `${keyword.accountName}` :
+                      `${keyword.accountName} (ID: ${keyword.accountId})` :
                       <em>Default (All Accounts)</em>
                     }
                   </TableCell>
@@ -580,7 +580,7 @@ const TwitterKeywords = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             {/* First Row - Full width */}
-            <Grid item xs={12}>
+            <Grid >
               <TextField
                 name="text"
                 label="Keyword Text"
@@ -590,7 +590,7 @@ const TwitterKeywords = () => {
                 required
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid >
               <TextField
                 name="minLikes"
                 label="Minimum Likes"
@@ -601,7 +601,7 @@ const TwitterKeywords = () => {
                 InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid>
               <TextField
                 name="minRetweets"
                 label="Minimum Retweets"
@@ -612,7 +612,7 @@ const TwitterKeywords = () => {
                 InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid >
               <TextField
                 name="minFollowers"
                 label="Minimum Followers"
@@ -623,9 +623,10 @@ const TwitterKeywords = () => {
                 InputProps={{ inputProps: { min: 0 } }}
               />
             </Grid>
-            <Grid item xs={4} sx={{ mt: 1 }}>
-              <FormControl fullWidth>
-                <InputLabel id="account-select-label">Twitter Account</InputLabel>
+            {/* Twitter Account Selection - Full width on its own line */}
+            <Grid sx={{ mt: 2 }}>
+             
+                <InputLabel id="account-select-label" >Twitter Account</InputLabel>
                 <Select
                   labelId="account-select-label"
                   id="account-select"
@@ -633,9 +634,10 @@ const TwitterKeywords = () => {
                   value={currentKeyword.accountId || ""}
                   onChange={handleInputChange}
                   label="Twitter Account"
+                  sx={{width:"190%"}}
                 >
                   <MenuItem value="">
-                    <em>Default (All Accounts)</em>
+                    <em> (All Accounts)</em>
                   </MenuItem>
                   {twitterAccounts.map((account) => (
                     <MenuItem key={account.id} value={account.id}>
@@ -643,7 +645,7 @@ const TwitterKeywords = () => {
                     </MenuItem>
                   ))}
                 </Select>
-              </FormControl>
+              
             </Grid>
           </Grid>
         </DialogContent>
