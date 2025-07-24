@@ -137,4 +137,62 @@ router.post('/repost/:postId', checkAuth, async (req, res) => {
   }
 });
 
+// Add a post from search history to post_history
+router.post('/add-from-search', checkAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      accountId,
+      tweetId,
+      tweetText,
+      tweetUrl,
+      reply,
+      keywordId,
+      keyword,
+      likeCount,
+      retweetCount
+    } = req.body;
+    
+    // Validate required fields
+    if (!accountId || !tweetText) {
+      return res.status(400).json({
+        success: false,
+        message: 'Account ID and tweet text are required'
+      });
+    }
+    
+    // Check if the account belongs to the user
+    const accountCheck = await pool.query(
+      'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+      [accountId, userId]
+    );
+    
+    if (accountCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found or does not belong to this user'
+      });
+    }
+    
+    // Insert into post_history table
+    const result = await pool.query(
+      `INSERT INTO post_history
+       (account_id, post_text, post_url, keyword_id, likes_count, retweets_count, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING id`,
+      [accountId, tweetText, tweetUrl, keywordId, likeCount || 0, retweetCount || 0]
+    );
+    
+    res.status(201).json({
+      success: true,
+      message: 'Post added to history successfully',
+      data: { id: result.rows[0].id }
+    });
+    
+  } catch (error) {
+    console.error('Error adding post to history:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

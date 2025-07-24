@@ -70,6 +70,11 @@ export const repostPost = async (postId, token = null) => {
   return await apiPost(`/repost/${postId}`, {}, token);
 };
 
+// Add a post from search history to post_history
+export const addFromSearch = async (postData, token = null) => {
+  return await apiPost('/add-from-search', postData, token);
+};
+
 // Format time since fetch
 export const formatTimeSince = (timeSinceMs) => {
   const minutes = Math.floor(timeSinceMs / (1000 * 60));
@@ -98,6 +103,7 @@ export default {
   getAccounts,
   getPostHistory,
   repostPost,
+  addFromSearch,
   formatTimeSince,
   isRepostAllowed
 };

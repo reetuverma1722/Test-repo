@@ -313,6 +313,51 @@ router.delete("/search/delete/:id", async (req, res) => {
 //     res.status(500).json({ error: "Failed to post tweet" });
 //   }
 // });
+router.post("/postReply", async (req, res) => {
+  const {
+    accountId,
+    tweetText,
+    tweetUrl,
+    reply,
+    keywordId,
+    keyword,
+    likeCount,
+    retweetCount,
+  } = req.body;
+
+  const engagementCount = (likeCount || 0) + (retweetCount || 0);
+
+  try {
+    const insertQuery = `
+      INSERT INTO post_history 
+        (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id)
+      VALUES 
+        ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7)
+      RETURNING id
+    `;
+
+    const values = [
+      tweetText,
+      tweetUrl,
+      engagementCount,
+      likeCount,
+      retweetCount,
+      keywordId,
+      accountId,
+    ];
+
+    const result = await pool.query(insertQuery, values);
+
+    res.status(200).json({
+      success: true,
+      message: "Post added to history",
+      post_id: result.rows[0].id,
+    });
+  } catch (error) {
+    console.error("Insert Error:", error.message);
+    res.status(500).json({ success: false, message: "Failed to save post" });
+  }
+});
 
 // PUT /api/search/update/:id - Update reply for a tweet
 router.put("/update/:id", async (req, res) => {
