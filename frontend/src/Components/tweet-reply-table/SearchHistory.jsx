@@ -43,9 +43,13 @@ const SearchHistory = () => {
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [highlightedTweetId, setHighlightedTweetId] = useState(null);
-  const fetchHistory = async () => {
+  const fetchHistory = async (accountId = null) => {
     try {
-      const res = await axios.get("http://localhost:5000/api/search/history");
+      let url = "http://localhost:5000/api/search/history";
+      if (accountId) {
+        url += `?accountId=${accountId}`;
+      }
+      const res = await axios.get(url);
       setHistory(res.data);
     } catch (err) {
       console.error("Error fetching history:", err.message);
@@ -53,9 +57,14 @@ const SearchHistory = () => {
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchHistory(selectedAccountId);
     fetchAccounts();
   }, []);
+
+  // Refetch history when selected account changes
+  useEffect(() => {
+    fetchHistory(selectedAccountId);
+  }, [selectedAccountId]);
   
   // Fetch social media accounts
   const fetchAccounts = async () => {
@@ -67,7 +76,7 @@ const SearchHistory = () => {
       
       // Set default selected account if available
       if (response.data && response.data.length > 0) {
-        setSelectedAccountId(response.data[0].accountName);
+        setSelectedAccountId(response.data[0].id);
       }
     } catch (err) {
       console.error("Error fetching accounts:", err);
@@ -299,6 +308,35 @@ const SearchHistory = () => {
         }
       }}
     >
+      {/* Account Selection */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={3}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Filter by Twitter Account:
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={9}>
+            <FormControl fullWidth size="small">
+              <Select
+                value={selectedAccountId || ""}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                displayEmpty
+                sx={{ minWidth: 250 }}
+              >
+                <MenuItem value="">
+                  <em>All Accounts</em>
+                </MenuItem>
+                {accounts.map((account) => (
+                  <MenuItem key={account.id} value={account.id}>
+                    {account.accountName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
       <Grid
         container
         justifyContent="space-between"
@@ -842,7 +880,7 @@ const SearchHistory = () => {
         <FormControl fullWidth>
           <Select
             value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(selectedAccountId)}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
             displayEmpty
             disabled={loadingAccounts}
             sx={{
