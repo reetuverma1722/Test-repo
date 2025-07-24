@@ -4,7 +4,6 @@ import {
   Toolbar,
   Typography,
   IconButton,
-  InputBase,
   Button,
   Grid,
   Drawer,
@@ -55,6 +54,7 @@ import authService from "../services/authService";
 import TweetReplyTable from "../Components/tweet-reply-table/SearchHistory";
 import GoalsTable from "./Post_Manager";
 import SocialMediaSettings from "./SocialMediaSettings";
+import { getAccountsByPlatform } from "../services/socialMediaAccountsService";
 
 const drawerWidth = 260;
 
@@ -69,6 +69,11 @@ const Dashboard = () => {
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
+  
+  // Twitter accounts state
+  const [twitterAccounts, setTwitterAccounts] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   
   // Password change state
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -87,6 +92,36 @@ const Dashboard = () => {
   //   if (!token) navigate("/login");
   // }, [navigate]);
 
+  // Fetch Twitter accounts
+  const fetchTwitterAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const response = await getAccountsByPlatform('twitter');
+      
+      // Extract the data array from the response
+      // The API returns { success: true, data: [...accounts] }
+      const accounts = response.data || [];
+      
+      console.log("Fetched Twitter accounts:", accounts);
+      setTwitterAccounts(accounts);
+      
+      // Set the first account as selected by default if available
+      if (accounts.length > 0) {
+        setSelectedAccount(accounts[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to fetch Twitter accounts", err);
+      setTwitterAccounts([]); // Reset to empty array on error
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+  
+  // Fetch keywords and Twitter accounts on component mount
+  useEffect(() => {
+    fetchTwitterAccounts();
+  }, []);
+  
   const handleLogout = () => {
     localStorage.removeItem("token");
     setLogoutOpen(false);
@@ -95,6 +130,7 @@ const Dashboard = () => {
 
   // Fetch all keywords
   const fetchAllKeywords = async () => {
+    debugger
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get("http://localhost:5000/api/keywords", {
@@ -109,50 +145,77 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch posts for all keywords
   const fetchAllPosts = async () => {
     setLoading(true);
     setTweets([]);
-
+  
     try {
       // First fetch all keywords
       const allKeywords = await fetchAllKeywords();
-      setKeywords(allKeywords);
-
-      if (allKeywords.length === 0) {
+      
+      // Filter keywords by selected account if one is selected
+      const filteredKeywords = selectedAccount
+        ? allKeywords.filter(k => {
+            console.log("Comparing keyword account:", k.accountId, "with selected account:", selectedAccount);
+            // Convert both to strings for comparison to handle potential type mismatches
+            return String(k.accountId) === String(selectedAccount);
+          })
+        : allKeywords;
+      
+      console.log("All keywords:", allKeywords);
+      console.log("Filtered keywords:", filteredKeywords);
+      console.log("Selected account:", selectedAccount);
+      
+      setKeywords(filteredKeywords);
+  
+      if (filteredKeywords.length === 0) {
         setLoading(false);
         return;
       }
-
-      // Create a comma-separated list of keywords
-      const keywordList = allKeywords.map((k) => k.text).join(",");
-
-      // Get the maximum values for filtering criteria from all keywords
-      const maxMinLikes = Math.max(...allKeywords.map((k) => k.minLikes || 0));
-      const maxMinRetweets = Math.max(...allKeywords.map((k) => k.minRetweets || 0));
-      const maxMinFollowers = Math.max(...allKeywords.map((k) => k.minFollowers || 0));
-
-      console.log("Filtering criteria:", { maxMinLikes, maxMinRetweets, maxMinFollowers });
-
-      // Fetch posts for all keywords with filtering parameters
-      const res = await axios.get(
-        `http://localhost:5000/api/search?keyword=${keywordList}&minLikes=${maxMinLikes}&minRetweets=${maxMinRetweets}&minFollowers=${maxMinFollowers}`
-      );
-
-      // Add keyword information to each tweet for better filtering
-      const fetchedTweets = (res.data.tweets || []).map(tweet => {
-        // Find which keyword this tweet matches
-        const matchingKeyword = allKeywords.find(keyword =>
-          tweet.text.toLowerCase().includes(keyword.text.toLowerCase())
-        );
-        
-        return {
-          ...tweet,
-          keyword: matchingKeyword ? matchingKeyword.text : null
-        };
-      });
+  
+      // Instead of using max values across all keywords, fetch posts for each keyword individually
+      let allFetchedTweets = [];
       
-      setTweets(fetchedTweets);
+      // Process each keyword individually
+      for (const keyword of filteredKeywords) {
+        // Ensure we're using numeric values by explicitly converting to numbers
+        const minLikes = Number(keyword.minLikes) || 0;
+        const minRetweets = Number(keyword.minRetweets) || 0;
+        const minFollowers = Number(keyword.minFollowers) || 0;
+        
+        console.log(`Fetching for keyword "${keyword.text}" with criteria:`,
+          { minLikes, minRetweets, minFollowers });
+        
+        // Build search URL for this specific keyword
+        let searchUrl = `http://localhost:5000/api/search?keyword=${keyword.text}&minLikes=${minLikes}&minRetweets=${minRetweets}&minFollowers=${minFollowers}`;
+        
+        if (selectedAccount) {
+          searchUrl += `&accountId=${selectedAccount}`;
+        }
+        
+        console.log("Search URL for keyword:", searchUrl);
+        
+        try {
+          const res = await axios.get(searchUrl);
+          
+          // Add keyword information to each tweet
+          const keywordTweets = (res.data.tweets || []).map(tweet => ({
+            ...tweet,
+            keyword: keyword.text
+          }));
+          
+          allFetchedTweets = [...allFetchedTweets, ...keywordTweets];
+        } catch (err) {
+          console.error(`Error fetching tweets for keyword "${keyword.text}":`, err);
+        }
+      }
+      
+      // Remove duplicates (in case a tweet matches multiple keywords)
+      const uniqueTweets = Array.from(new Map(allFetchedTweets.map(tweet =>
+        [tweet.id, tweet])).values());
+      
+      console.log(`Fetched ${uniqueTweets.length} unique tweets across all keywords`);
+      setTweets(uniqueTweets);
       // filteredTweets will be updated by the useEffect
     } catch (err) {
       console.error("Failed to fetch posts", err);
@@ -160,8 +223,7 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-  // Dashboard.jsx
-  // Handle menu open/close
+
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -1025,9 +1087,41 @@ const Dashboard = () => {
                   backdropFilter: "blur(10px)",
                 }}
               >
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Your Keywords & Posts
-                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Your Keywords & Posts
+                  </Typography>
+                  
+                  {/* Twitter Account Selection */}
+                  <Box sx={{ minWidth: 200 }}>
+                    <TextField
+                      select
+                      size="small"
+                      label="Twitter Account"
+                      value={selectedAccount || ''}
+                      onChange={(e) => {
+                        setSelectedAccount(e.target.value);
+                        // Refetch posts when account changes
+                        setTimeout(() => fetchAllPosts(), 100);
+                      }}
+                      disabled={loadingAccounts}
+                      fullWidth
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    >
+                      <MenuItem value="">All Accounts</MenuItem>
+                      {Array.isArray(twitterAccounts) && twitterAccounts.map((account) => (
+                        <MenuItem key={account.id} value={account.id}>
+                          {account.accountName} ({account.accountId})
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Box>
+                </Box>
 
                 {keywords.length > 0 ? (
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
