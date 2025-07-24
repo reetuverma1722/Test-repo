@@ -1227,7 +1227,7 @@ const Dashboard = () => {
                         // When "All Accounts" is selected, set selectedAccount to null
                         setSelectedAccount(e.target.value === '' ? null : e.target.value);
                         // Refetch posts when account changes
-                        setTimeout(() => fetchAllPosts(), 100);
+                        // setTimeout(() => fetchAllPosts(), 100);
                       }}
                       disabled={loadingAccounts}
                       fullWidth
