@@ -47,6 +47,8 @@ import {
   Email as EmailIcon,
   Check as CheckIcon,
   RemoveRedEye as ViewIcon,
+  TrendingUp as TrendingUpIcon,
+  PostAdd as PostAddIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -55,6 +57,8 @@ import authService from "../services/authService";
 import TweetReplyTable from "../Components/tweet-reply-table/SearchHistory";
 import GoalsTable from "./Post_Manager";
 import SocialMediaSettings from "./SocialMediaSettings";
+import TrendingAnalytics from "./TrendingAnalytics";
+import PostHistoryPage from "./PostHistoryPage";
 
 const drawerWidth = 260;
 
@@ -366,6 +370,10 @@ const Dashboard = () => {
       setActive("post-manager");
     } else if (path.includes("/social-media-settings")) {
       setActive("social-media-settings");
+    } else if (path.includes("/trending-analytics")) {
+      setActive("trending-analytics");
+    } else if (path.includes("/post-history")) {
+      setActive("post-history");
     }
   }, [location.pathname]);
 
@@ -690,6 +698,118 @@ const Dashboard = () => {
                 }}
               />
             </ListItem>
+            <ListItem
+              button
+              selected={location.pathname.includes("/trending-analytics")}
+              onClick={() => {
+                setActive("trending-analytics");
+                navigate("/trending-analytics");
+              }}
+              sx={{
+                mb: 1,
+                mx: 1.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                height: "44px",
+                "&.Mui-selected": {
+                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
+                  color: "#f44336",
+                  borderLeft: "3px solid #f44336",
+                  paddingLeft: "13px",
+                  "& .MuiListItemIcon-root": {
+                    color: "#f44336",
+                  },
+                },
+
+                "&:hover": {
+                  backgroundColor: location.pathname.includes(
+                    "/trending-analytics"
+                  )
+                    ? "rgba(210, 25, 87, 0.29)"
+                    : "rgba(119, 76, 76, 0.04)",
+                  transform: "translateX(3px)",
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 36,
+                  color: location.pathname.includes("/trending-analytics")
+                    ? "inherit"
+                    : "text.secondary",
+                }}
+              >
+                <TrendingUpIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Trending Analytics"
+                primaryTypographyProps={{
+                  fontSize: "0.9rem",
+                  fontWeight: location.pathname.includes(
+                    "/trending-analytics"
+                  )
+                    ? 600
+                    : 500,
+                }}
+              />
+            </ListItem>
+            <ListItem
+              button
+              selected={location.pathname.includes("/post-history")}
+              onClick={() => {
+                setActive("post-history");
+                navigate("/post-history");
+              }}
+              sx={{
+                mb: 1,
+                mx: 1.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                height: "44px",
+                "&.Mui-selected": {
+                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
+                  color: "#f44336",
+                  borderLeft: "3px solid #f44336",
+                  paddingLeft: "13px",
+                  "& .MuiListItemIcon-root": {
+                    color: "#f44336",
+                  },
+                },
+
+                "&:hover": {
+                  backgroundColor: location.pathname.includes(
+                    "/post-history"
+                  )
+                    ? "rgba(210, 25, 87, 0.29)"
+                    : "rgba(119, 76, 76, 0.04)",
+                  transform: "translateX(3px)",
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 36,
+                  color: location.pathname.includes("/post-history")
+                    ? "inherit"
+                    : "text.secondary",
+                }}
+              >
+                <PostAddIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Post History"
+                primaryTypographyProps={{
+                  fontSize: "0.9rem",
+                  fontWeight: location.pathname.includes(
+                    "/post-history"
+                  )
+                    ? 600
+                    : 500,
+                }}
+              />
+            </ListItem>
           </List>
         </Box>
       </Drawer>
@@ -819,6 +939,10 @@ const Dashboard = () => {
             <GoalsTable />
           ) : location.pathname.includes("/social-media-settings") ? (
             <SocialMediaSettings />
+          ) : location.pathname.includes("/trending-analytics") ? (
+            <TrendingAnalytics />
+          ) : location.pathname.includes("/post-history") ? (
+            <PostHistoryPage />
           ) : (
             <>
               {/* Dashboard Header */}

@@ -19,7 +19,8 @@ import {
   ImportExport as ExportIcon,
   PostAdd as PostManagerIcon,
   Settings as SettingsIcon,
-  KeyboardArrowRight as ArrowIcon
+  KeyboardArrowRight as ArrowIcon,
+  TrendingUp as TrendingUpIcon
 } from "@mui/icons-material";
 
 const drawerWidth = 240;
@@ -56,6 +57,11 @@ const Sidebar = () => {
       text: "Social Media Settings",
       path: "/social-media-settings",
       icon: <SettingsIcon fontSize="small" />
+    },
+    {
+      text: "Trending Analytics",
+      path: "/trending-analytics",
+      icon: <TrendingUpIcon fontSize="small" />
     },
   ];
 

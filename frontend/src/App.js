@@ -8,6 +8,8 @@ import GoalsTable from "./Pages/Post_Manager";
 import HistoryTable from "./Pages/history";
 import Keyword_Management from "./Pages/Keyword_Management";
 import SocialMediaSettings from "./Pages/SocialMediaSettings";
+import TrendingAnalytics from "./Pages/TrendingAnalytics";
+import PostHistoryPage from "./Pages/PostHistoryPage";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/history" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/keyword-management" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/social-media-settings" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/trending-analytics" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/post-history" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   );
