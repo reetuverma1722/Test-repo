@@ -1116,7 +1116,7 @@ const Dashboard = () => {
                       <MenuItem value="">All Accounts</MenuItem>
                       {Array.isArray(twitterAccounts) && twitterAccounts.map((account) => (
                         <MenuItem key={account.id} value={account.id}>
-                          {account.accountName} ({account.accountId})
+                          {account.accountName}
                         </MenuItem>
                       ))}
                     </TextField>
