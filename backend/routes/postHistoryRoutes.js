@@ -59,19 +59,24 @@ router.get('/history/:id', checkAuth, async (req, res) => {
     const userId = req.user.id;
     const accountId = req.params.id;
     
-    // Verify the account belongs to the user
-    // const accountCheck = await pool.query(
-    //   'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
-    //   [accountId, userId]
-    // );
-    
-    // if (accountCheck.rows.length === 0) {
-    //   return res.status(404).json({ success: false, message: 'Account not found' });
-    // }
+    // Verify the account exists
+    try {
+      const accountCheck = await pool.query(
+        'SELECT id FROM social_media_accounts WHERE id = $1 AND deleted_at IS NULL',
+        [accountId]
+      );
+      
+      if (accountCheck.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Account not found' });
+      }
+    } catch (accountError) {
+      console.error('Error checking account:', accountError);
+      return res.status(404).json({ success: false, message: 'Invalid account ID' });
+    }
     
     // Fetch post history for the account
     const result = await pool.query(
-      `SELECT ph.id, ph.post_text, ph.post_url, ph.posted_at, ph.engagement_count, 
+      `SELECT ph.id, ph.post_text, ph.post_url, ph.posted_at, ph.engagement_count,
               ph.likes_count, ph.retweets_count, ph.created_at, ph.updated_at,
               k.text as keyword, k.min_likes, k.min_retweets, k.min_followers,
               (NOW() - ph.created_at) as time_since_fetch

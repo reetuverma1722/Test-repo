@@ -10,6 +10,12 @@ const apiGet = async (endpoint, token = null) => {
     // Always include Authorization header, even with a dummy token for development
     headers.Authorization = `Bearer ${token || 'dummy-token'}`;
     
+    // Add user data from localStorage if available
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      headers['X-User-Data'] = userStr;
+    }
+    
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'GET',
       headers,
@@ -57,7 +63,24 @@ const apiPost = async (endpoint, data = {}, token = null) => {
 
 // Get all social media accounts for the user
 export const getAccounts = async (token = null) => {
-  return await apiGet('/accounts', token);
+  // Get user ID from localStorage
+  let userId = null;
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      userId = user.id;
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
+  }
+  
+  // If userId is available, include it in the request
+  if (userId) {
+    return await apiGet(`/accounts/twitter?userId=${userId}`, token);
+  } else {
+    return await apiGet('/accounts/twitter', token);
+  }
 };
 
 // Get post history for a specific account

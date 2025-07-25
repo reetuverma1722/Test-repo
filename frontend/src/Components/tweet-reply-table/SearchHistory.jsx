@@ -80,7 +80,7 @@ const SearchHistory = () => {
 
       // Set default selected account if available
       if (response.data && response.data.length > 0) {
-        setSelectedAccountId(response.data[0].id);
+        setSelectedAccountId(response.data[0].accountName);
       }
     } catch (err) {
       console.error("Error fetching accounts:", err);
@@ -934,8 +934,8 @@ const SearchHistory = () => {
                   </MenuItem>
                   {accounts?.length ? (
                     accounts.map((account) => (
-                      <MenuItem key={account.id} value={account.id}>
-                        {account.accountName} (@{account.accountId})
+                      <MenuItem key={account.id} value={account.accountName}>
+                        {account.accountName}
                       </MenuItem>
                     ))
                   ) : (

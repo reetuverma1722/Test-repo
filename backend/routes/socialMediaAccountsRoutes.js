@@ -90,7 +90,8 @@ router.get('/accounts', checkAuth, async (req, res) => {
 // Get accounts by platform
 router.get('/accounts/:platform', checkAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    // Use userId from query parameter if provided, otherwise use from auth
+    const userId = req.query.userId || req.user.id;
     const { platform } = req.params;
     
     const result = await pool.query(
