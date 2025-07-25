@@ -34,6 +34,7 @@ import axios from "axios";
 
 const SearchHistory = () => {
   const [history, setHistory] = useState([]);
+  const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [search, setSearch] = useState("");
@@ -232,6 +233,81 @@ const SearchHistory = () => {
       alert("Failed to update reply");
     }
   };
+
+  const redirectToTwitter = () => {
+    try {
+      const clientId = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
+      const redirectUri = encodeURIComponent(
+        "http://localhost:5000/api/auth/twitter/callback"
+      );
+      const scope = encodeURIComponent(
+       'tweet.read tweet.write users.read offline.access'
+      );
+      console.log("phase 1")
+      // Generate a more unique state with timestamp to help with rate limiting
+      const state = `state_${Date.now()}`; // Random string in production for CSRF protection
+      const codeChallenge = "challenge"; // For now, static; later use real PKCE
+
+      const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
+
+      // Add a small delay before redirecting to avoid rapid successive requests
+      setTimeout(() => {
+        window.location.href = twitterAuthUrl;
+      }, 500);
+    } catch (error) {
+      console.error("Error redirecting to Twitter:", error);
+      setError("Failed to connect to Twitter. Please try again later.");
+    }
+  };
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
+
+  if (!code) return;
+
+  // Exchange code for access token and trigger retweet
+  console.log("passed phase 2",code)
+  const exchangeCodeAndRetweet = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/twitter/exchange-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.access_token) {
+        console.log("✅ Twitter Access Token:", data.access_token);
+        localStorage.setItem("twitter_access_token", data.access_token);
+
+        // Trigger retweet API on your backend
+        const retweetRes = await fetch("http://localhost:5000/api/twitter/retweet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.access_token}`,
+          },
+          body: JSON.stringify({
+            tweetId: '1948117932606984467',
+            reply: 'Greatt'
+          }),
+        });
+
+        const result = await retweetRes.json();
+        if (!retweetRes.ok) throw new Error(result.message);
+
+        console.log("✅ Retweet & Reply Success", result);
+      } else {
+        throw new Error(data.message || "No access token returned");
+      }
+    } catch (err) {
+      console.error("❌ Twitter retweet failed:", err.message);
+    }
+  };
+
+  exchangeCodeAndRetweet();
+}, []);
 
   const handleRetweet = async () => {
     const tweet = selectedTweet;
@@ -969,7 +1045,7 @@ const SearchHistory = () => {
             Cancel
           </Button>
           <Button
-            onClick={isEditing ? handleSaveEdit : handleRetweet}
+            onClick={isEditing ? handleSaveEdit : redirectToTwitter}
             variant="contained"
             startIcon={isEditing ? <EditIcon /> : <Search />}
             sx={{

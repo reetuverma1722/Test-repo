@@ -305,8 +305,17 @@ router.post("/twitter-to-jwt", async (req, res) => {
       initialDelay: 1000
     });
     console.log("Twitter user info fetched successfully for JWT conversion");
+    console.log("userResponse:", JSON.stringify(userResponse.data, null, 2));
+
     
-    const twitterUser = userResponse.data.data;
+const twitterUser = userResponse.data.data;
+
+ const twitterId = twitterUser.id;
+const twitterUsername = twitterUser.username;
+
+console.log("Twitter ID:", twitterId);           // 1304332511288328194
+console.log("Twitter Username:", twitterUsername); // GeetaTi29691700
+
     
     if (!twitterUser || !twitterUser.id) {
       return res.status(400).json({ success: false, message: "Invalid Twitter token" });
