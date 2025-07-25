@@ -80,7 +80,7 @@ const SearchHistory = () => {
 
       // Set default selected account if available
       if (response.data && response.data.length > 0) {
-        setSelectedAccountId(response.data[0].accountName);
+        setSelectedAccountId(response.data[0].accountId);
       }
     } catch (err) {
       console.error("Error fetching accounts:", err);
