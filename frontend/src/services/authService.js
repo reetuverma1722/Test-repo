@@ -30,7 +30,7 @@ export const convertTwitterToken = async (accessToken) => {
     // Check for rate limit error (HTTP 429)
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers?.['retry-after'] ||
-                         error.response.data?.retryAfter || 60;
+                         error.response.data?.retryAfter;
       
       throw {
         isRateLimit: true,

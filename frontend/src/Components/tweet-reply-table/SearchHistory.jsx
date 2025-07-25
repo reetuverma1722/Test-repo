@@ -60,7 +60,7 @@ const SearchHistory = () => {
       console.error("Error fetching history:", err.message);
     }
   };
-
+let isPosting = false;
   useEffect(() => {
     fetchHistory(selectedAccountId);
     fetchAccounts();
@@ -89,7 +89,7 @@ const SearchHistory = () => {
       setLoadingAccounts(false);
     }
   };
-
+  
   const handleDelete = async (tweetId) => {
     try {
       await axios.delete(`http://localhost:5000/api/search/delete/${tweetId}`);
@@ -235,6 +235,8 @@ const SearchHistory = () => {
   };
 
   const redirectToTwitter = () => {
+      if (isPosting) return;
+      isPosting = true;
     try {
       const clientId = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
       const redirectUri = encodeURIComponent(
@@ -257,132 +259,134 @@ const SearchHistory = () => {
     } catch (error) {
       console.error("Error redirecting to Twitter:", error);
       setError("Failed to connect to Twitter. Please try again later.");
-    }
+    }finally {
+    isPosting = false;
+  }
   };
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get("code");
+// useEffect(() => {
+//   const urlParams = new URLSearchParams(window.location.search);
+//   const code = urlParams.get("code");
 
-  if (!code) return;
+//   if (!code) return;
 
-  // Exchange code for access token and trigger retweet
-  console.log("passed phase 2",code)
-  const exchangeCodeAndRetweet = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/twitter/exchange-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
+//   // Exchange code for access token and trigger retweet
+//   console.log("passed phase 2",code)
+//   const exchangeCodeAndRetweet = async () => {
+//     try {
+//       const res = await fetch("http://localhost:5000/api/auth/twitter/exchange-token", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ code }),
+//       });
 
-      const data = await res.json();
+//       const data = await res.json();
 
-      if (res.ok && data.access_token) {
-        console.log("✅ Twitter Access Token:", data.access_token);
-        localStorage.setItem("twitter_access_token", data.access_token);
+//       if (res.ok && data.access_token) {
+//         console.log("✅ Twitter Access Token:", data.access_token);
+//         localStorage.setItem("twitter_access_token", data.access_token);
 
-        // Trigger retweet API on your backend
-        const retweetRes = await fetch("http://localhost:5000/api/twitter/retweet", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${data.access_token}`,
-          },
-          body: JSON.stringify({
-            tweetId: '1948117932606984467',
-            reply: 'Greatt'
-          }),
-        });
+//         // Trigger retweet API on your backend
+//         const retweetRes = await fetch("http://localhost:5000/api/twitter/retweet", {
+//           method: "POST",
+//           headers: {
+//             "Content-Type": "application/json",
+//             Authorization: `Bearer ${data.access_token}`,
+//           },
+//           body: JSON.stringify({
+//             tweetId: '1948117932606984467',
+//             reply: 'Greatt'
+//           }),
+//         });
 
-        const result = await retweetRes.json();
-        if (!retweetRes.ok) throw new Error(result.message);
+//         const result = await retweetRes.json();
+//         if (!retweetRes.ok) throw new Error(result.message);
 
-        console.log("✅ Retweet & Reply Success", result);
-      } else {
-        throw new Error(data.message || "No access token returned");
-      }
-    } catch (err) {
-      console.error("❌ Twitter retweet failed:", err.message);
-    }
-  };
+//         console.log("✅ Retweet & Reply Success", result);
+//       } else {
+//         throw new Error(data.message || "No access token returned");
+//       }
+//     } catch (err) {
+//       console.error("❌ Twitter retweet failed:", err.message);
+//     }
+//   };
 
-  exchangeCodeAndRetweet();
-}, []);
+//   exchangeCodeAndRetweet();
+// }, []);
 
-  const handleRetweet = async () => {
-    const tweet = selectedTweet;
-    const tweetReply = editedReply;
+  // const handleRetweet = async () => {
+  //   const tweet = selectedTweet;
+  //   const tweetReply = editedReply;
 
-    if (!tweet || !selectedAccountId) {
-      alert("Please select an account and ensure tweet data is available");
-      return;
-    }
+  //   if (!tweet || !selectedAccountId) {
+  //     alert("Please select an account and ensure tweet data is available");
+  //     return;
+  //   }
 
-    const token = localStorage.getItem("token");
+  //   const token = localStorage.getItem("token");
 
-    try {
-      // First, post the reply if needed
-      // if (tweetReply) {
-      //   const access_token = localStorage.getItem("twitter_access_token");
+  //   try {
+  //     // First, post the reply if needed
+  //     // if (tweetReply) {
+  //     //   const access_token = localStorage.getItem("twitter_access_token");
         
-      //   if (!access_token) {
-      //     alert("Twitter access token not found. Please login with Twitter.");
-      //     return;
-      //   }
+  //     //   if (!access_token) {
+  //     //     alert("Twitter access token not found. Please login with Twitter.");
+  //     //     return;
+  //     //   }
 
-      //   try {
-      //     const response = await fetch("http://localhost:5000/api/postReply", {
-      //       method: "POST",
-      //       headers: {
-      //         "Content-Type": "application/json",
-      //         Authorization: `Bearer ${access_token}`,
-      //       },
-      //       body: JSON.stringify({
-      //         tweetId: tweet.id,
-      //         reply: tweetReply,
-      //         accountId: selectedAccountId,
-      //       }),
-      //     });
+  //     //   try {
+  //     //     const response = await fetch("http://localhost:5000/api/postReply", {
+  //     //       method: "POST",
+  //     //       headers: {
+  //     //         "Content-Type": "application/json",
+  //     //         Authorization: `Bearer ${access_token}`,
+  //     //       },
+  //     //       body: JSON.stringify({
+  //     //         tweetId: tweet.id,
+  //     //         reply: tweetReply,
+  //     //         accountId: selectedAccountId,
+  //     //       }),
+  //     //     });
 
-      //     const data = await response.json();
+  //     //     const data = await response.json();
 
-      //     if (!response.ok) {
-      //       alert("Error posting reply: " + data.message);
-      //       return;
-      //     }
-      //   } catch (error) {
-      //     console.error("Tweet reply error:", error);
-      //     alert("Failed to post reply.");
-      //     return;
-      //   }
-      // }
+  //     //     if (!response.ok) {
+  //     //       alert("Error posting reply: " + data.message);
+  //     //       return;
+  //     //     }
+  //     //   } catch (error) {
+  //     //     console.error("Tweet reply error:", error);
+  //     //     alert("Failed to post reply.");
+  //     //     return;
+  //     //   }
+  //     // }
 
-      // Then add to post history
-      const postData = {
-        accountId: selectedAccountId,
-        tweetId: tweet.id,
-        tweetText: tweet.text,
-        tweetUrl: tweet.tweet_url,
-        reply: tweetReply,
-        keywordId: tweet.keyword_id,
-        keyword: tweet.keyword,
-        likeCount: tweet.like_count,
-        retweetCount: tweet.retweet_count
-      };
-       console.log("posting............")
-      const result = await addFromSearch(postData, token);
+  //     // Then add to post history
+  //     const postData = {
+  //       accountId: selectedAccountId,
+  //       tweetId: tweet.id,
+  //       tweetText: tweet.text,
+  //       tweetUrl: tweet.tweet_url,
+  //       reply: tweetReply,
+  //       keywordId: tweet.keyword_id,
+  //       keyword: tweet.keyword,
+  //       likeCount: tweet.like_count,
+  //       retweetCount: tweet.retweet_count
+  //     };
+  //      console.log("posting............")
+  //     const result = await addFromSearch(postData, token);
       
-      if (result.success) {
-        alert("Post added to history successfully!");
-        setOpen(false); // close modal
-      } else {
-        alert("Error adding to post history: " + result.message);
-      }
-    } catch (error) {
-      console.error("Error adding to post history:", error);
-      alert("Failed to add post to history.");
-    }
-  };
+  //     if (result.success) {
+  //       alert("Post added to history successfully!");
+  //       setOpen(false); // close modal
+  //     } else {
+  //       alert("Error adding to post history: " + result.message);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error adding to post history:", error);
+  //     alert("Failed to add post to history.");
+  //   }
+  // };
 
   //   const handleRetweet = () => {
   //   const tweetId = selectedTweet?.id;
