@@ -3,6 +3,7 @@ import {
   getAllAccounts,
   getAccountsByPlatform,
 } from "../../services/socialMediaAccountsService";
+import { addFromSearch } from "../../services/postHistoryService";
 import {
   Table,
   TableBody,
@@ -233,46 +234,77 @@ const SearchHistory = () => {
   };
 
   const handleRetweet = async () => {
-    const tweetId = selectedTweet?.id;
+    const tweet = selectedTweet;
     const tweetReply = editedReply;
 
-    if (!tweetId || !tweetReply) {
-      alert("Tweet or reply is missing");
+    if (!tweet || !selectedAccountId) {
+      alert("Please select an account and ensure tweet data is available");
       return;
     }
 
-    const access_token = localStorage.getItem("twitter_access_token");
-
-    if (!access_token) {
-      alert("Access token not found. Please login with Twitter.");
-      return;
-    }
+    const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:5000/api/postReply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access_token}`,
-        },
-        body: JSON.stringify({
-          tweetId,
-          reply: tweetReply,
-          accountId: selectedAccountId || null,
-        }),
-      });
+      // First, post the reply if needed
+      // if (tweetReply) {
+      //   const access_token = localStorage.getItem("twitter_access_token");
+        
+      //   if (!access_token) {
+      //     alert("Twitter access token not found. Please login with Twitter.");
+      //     return;
+      //   }
 
-      const data = await response.json();
+      //   try {
+      //     const response = await fetch("http://localhost:5000/api/postReply", {
+      //       method: "POST",
+      //       headers: {
+      //         "Content-Type": "application/json",
+      //         Authorization: `Bearer ${access_token}`,
+      //       },
+      //       body: JSON.stringify({
+      //         tweetId: tweet.id,
+      //         reply: tweetReply,
+      //         accountId: selectedAccountId,
+      //       }),
+      //     });
 
-      if (response.ok) {
-        alert("Reply posted successfully!");
+      //     const data = await response.json();
+
+      //     if (!response.ok) {
+      //       alert("Error posting reply: " + data.message);
+      //       return;
+      //     }
+      //   } catch (error) {
+      //     console.error("Tweet reply error:", error);
+      //     alert("Failed to post reply.");
+      //     return;
+      //   }
+      // }
+
+      // Then add to post history
+      const postData = {
+        accountId: selectedAccountId,
+        tweetId: tweet.id,
+        tweetText: tweet.text,
+        tweetUrl: tweet.tweet_url,
+        reply: tweetReply,
+        keywordId: tweet.keyword_id,
+        keyword: tweet.keyword,
+        likeCount: tweet.like_count,
+        retweetCount: tweet.retweet_count
+      };
+       console.log("posting............")
+      const result = await addFromSearch(postData, token);
+      
+      if (result.success) {
+        alert("Post added to history successfully!");
         setOpen(false); // close modal
       } else {
-        alert("Error posting reply: " + data.message);
+        alert("Error adding to post history: " + result.message);
       }
     } catch (error) {
-      console.error("Tweet post error:", error);
-      alert("Failed to post reply.");
+      console.error("Error adding to post history:", error);
+      alert("Failed to add post to history.");
     }
   };
 

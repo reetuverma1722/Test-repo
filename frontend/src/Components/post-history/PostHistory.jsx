@@ -19,14 +19,22 @@ import {
   CircularProgress,
   Alert,
   Tooltip,
-  IconButton
+  IconButton,
+  Popover,
+  Card,
+  CardContent,
+  Divider
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
   Twitter as TwitterIcon,
   LinkedIn as LinkedInIcon,
   AccessTime as AccessTimeIcon,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Visibility as VisibilityIcon,
+  ThumbUp as ThumbUpIcon,
+  Repeat as RepeatIcon,
+  BarChart as BarChartIcon
 } from '@mui/icons-material';
 import { getAccounts, getPostHistory, repostPost, formatTimeSince, isRepostAllowed } from '../../services/postHistoryService';
 
@@ -41,6 +49,8 @@ const PostHistory = () => {
   const [reposting, setReposting] = useState(null);
   const [repostSuccess, setRepostSuccess] = useState(null);
   const [repostError, setRepostError] = useState(null);
+  const [popoverAnchorEl, setPopoverAnchorEl] = useState(null);
+  const [selectedPostId, setSelectedPostId] = useState(null);
 
   // Fetch accounts on component mount
   useEffect(() => {
@@ -151,6 +161,24 @@ const PostHistory = () => {
   // Get selected account
   const getSelectedAccountDetails = () => {
     return accounts.find(account => account.id === selectedAccount) || {};
+  };
+
+  // Handle engagement view popup
+  const handleEngagementViewClick = (event, postId) => {
+    setPopoverAnchorEl(event.currentTarget);
+    setSelectedPostId(postId);
+  };
+
+  const handlePopoverClose = () => {
+    setPopoverAnchorEl(null);
+    setSelectedPostId(null);
+  };
+
+  const open = Boolean(popoverAnchorEl);
+
+  // Get the selected post data
+  const getSelectedPost = () => {
+    return posts.find(post => post.id === selectedPostId) || {};
   };
 
   return (
@@ -304,16 +332,24 @@ const PostHistory = () => {
                           {new Date(post.posted_at).toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                            <Typography variant="body2">
-                              Likes: <strong>{post.likes_count || 0}</strong>
-                            </Typography>
-                            <Typography variant="body2">
-                              Retweets: <strong>{post.retweets_count || 0}</strong>
-                            </Typography>
-                            <Typography variant="body2">
-                              Total: <strong>{post.engagement_count || 0}</strong>
-                            </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, marginLeft:4,color:'#f44336' }}>
+                            {/* <Button
+                             
+                              size="small"
+                              startIcon={<VisibilityIcon />}
+                              onClick={(e) => handleEngagementViewClick(e, post.id)}
+                              sx={{
+                                mt: 1,
+                                borderRadius: 6,
+                                textTransform: 'none',
+
+                                fontSize: '0.75rem',
+                                py: 0.5
+                              }}
+                            >
+                              View
+                            </Button> */}
+                            <VisibilityIcon  onClick={(e) => handleEngagementViewClick(e, post.id)} />
                           </Box>
                         </TableCell>
                         <TableCell>
@@ -341,7 +377,7 @@ const PostHistory = () => {
                             {reposting === post.id ? (
                               <CircularProgress size={20} color="inherit" />
                             ) : (
-                              'Repost'
+                              'Refetch'
                             )}
                           </Button>
                           {!canRepost && (
@@ -372,6 +408,144 @@ const PostHistory = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+
+      {/* Engagement Popup */}
+      <Popover
+        open={open}
+        anchorEl={popoverAnchorEl}
+        onClose={handlePopoverClose}
+        anchorOrigin={{
+          vertical: 'center',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'center',
+          horizontal: 'left',
+        }}
+        sx={{
+          '& .MuiPopover-paper': {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          }
+        }}
+      >
+        <Card sx={{ width: 300, overflow: 'hidden' }}>
+          <Box sx={{
+            bgcolor: 'primary.main',
+            color: 'white',
+            py: 1.5,
+            px: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <BarChartIcon />
+            <Typography variant="subtitle1" fontWeight="bold">
+              Engagement Details
+            </Typography>
+          </Box>
+          <CardContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Likes */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{
+                  bgcolor: 'rgba(244, 67, 54, 0.1)',
+                  borderRadius: '50%',
+                  p: 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <ThumbUpIcon sx={{ color: '#f44336' }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Likes
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().likes_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Divider />
+              
+              {/* Retweets */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{
+                  bgcolor: 'rgba(33, 150, 243, 0.1)',
+                  borderRadius: '50%',
+                  p: 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <RepeatIcon sx={{ color: '#2196f3' }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Retweets
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().retweets_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Divider />
+              
+              {/* Total Engagement */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{
+                  bgcolor: 'rgba(76, 175, 80, 0.1)',
+                  borderRadius: '50%',
+                  p: 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <BarChartIcon sx={{ color: '#4caf50' }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Engagement
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().engagement_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Engagement Rate (if available) */}
+              {getSelectedPost().engagement_rate && (
+                <>
+                  <Divider />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{
+                      bgcolor: 'rgba(156, 39, 176, 0.1)',
+                      borderRadius: '50%',
+                      p: 1,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <BarChartIcon sx={{ color: '#9c27b0' }} />
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Engagement Rate
+                      </Typography>
+                      <Typography variant="h6" fontWeight="bold">
+                        {getSelectedPost().engagement_rate}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                </>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Popover>
     </Box>
   );
 };
