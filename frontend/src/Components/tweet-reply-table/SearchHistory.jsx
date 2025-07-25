@@ -934,8 +934,8 @@ const SearchHistory = () => {
                   </MenuItem>
                   {accounts?.length ? (
                     accounts.map((account) => (
-                      <MenuItem key={account.id} value={account.accountName}>
-                        {account.accountName}
+                      <MenuItem key={account.id} value={account.id}>
+                        {account.accountName} (@{account.accountId})
                       </MenuItem>
                     ))
                   ) : (
