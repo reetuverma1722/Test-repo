@@ -827,4 +827,93 @@ router.get("/linkedin/callback", async (req, res) => {
   }
 });
 
+// Route for direct LinkedIn login with username and password
+router.post('/linkedin/direct-login', async (req, res) => {
+  const { username, password, userId, accountId, accountName } = req.body;
+
+  // Validate required fields
+  if (!username || !password || !userId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Username, password, and userId are required'
+    });
+  }
+
+  try {
+    // Launch browser
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    // Navigate to LinkedIn login page
+    await page.goto('https://www.linkedin.com/login');
+
+    // Wait for username field and enter username
+    await page.waitForSelector('input#username');
+    await page.type('input#username', username);
+    
+    // Enter password
+    await page.waitForSelector('input#password');
+    await page.type('input#password', password);
+    
+    // Click login button
+    await page.click('button[type="submit"]');
+    
+    // Wait for navigation to complete
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Check for login errors
+    const loginError = await page.evaluate(() => {
+      const errorElement = document.querySelector('#error-for-password');
+      return errorElement ? errorElement.textContent.trim() : null;
+    });
+
+    if (loginError) {
+      console.log("LinkedIn login error:", loginError);
+      await browser.close();
+      return res.status(401).json({
+        success: false,
+        message: "Invalid LinkedIn credentials. Please check your email and password."
+      });
+    }
+
+    // Check if we're on the dashboard/feed page
+    const url = page.url();
+    await browser.close();
+
+    if (url.includes('login') || url.includes('checkpoint')) {
+      return res.status(401).json({
+        success: false,
+        message: 'LinkedIn login failed. You may need to verify your account or solve a CAPTCHA.'
+      });
+    }
+
+    // SUCCESS → Save to DB
+    // Use the provided accountId and accountName or generate from username
+    const actualAccountId = accountId || `linkedin_${username}_${Date.now()}`;
+    const actualAccountName = accountName || username;
+    
+    await pool.query(
+      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name)
+       VALUES ($1, $2, $3, $4)`,
+      [actualAccountId, userId, 'linkedin', actualAccountName]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'LinkedIn account connected successfully',
+      account: {
+        platform: 'linkedin',
+        accountName: actualAccountName,
+        accountId: actualAccountId
+      }
+    });
+  } catch (err) {
+    console.error('LinkedIn login error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'LinkedIn login failed. Please try again later.'
+    });
+  }
+});
+
 module.exports = router;

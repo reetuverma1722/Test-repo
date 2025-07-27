@@ -161,6 +161,9 @@ const SocialMediaAccounts = () => {
       setError("Failed to connect to LinkedIn. Please try again later.");
     }
   };
+
+
+  
   // State for accounts data
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -179,7 +182,9 @@ const SocialMediaAccounts = () => {
     refreshToken: "",
     tokenExpiresAt: null,
     twitterUsername: "",
-    twitterPassword: ""
+    twitterPassword: "",
+    linkedinUsername: "",
+    linkedinPassword: ""
   });
   
   // State for delete confirmation
@@ -541,6 +546,80 @@ const SocialMediaAccounts = () => {
     });
   };
 
+  // Handle direct LinkedIn login with username and password
+  const handleLinkedInDirectLogin = async () => {
+    try {
+      // Validate inputs
+      if (!currentAccount.linkedinUsername || !currentAccount.linkedinPassword) {
+        setNotification({
+          open: true,
+          message: "Please enter both LinkedIn email and password",
+          severity: "error"
+        });
+        return;
+      }
+      
+      // Get the current user ID
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        setError("You must be logged in to connect a LinkedIn account. Please log out and log back in if you're seeing this message.");
+        return;
+      }
+      
+      setLoading(true);
+      
+      // Call the backend API to authenticate with LinkedIn
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/linkedin/direct-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          username: currentAccount.linkedinUsername,
+          password: currentAccount.linkedinPassword,
+          userId: userId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to connect LinkedIn account');
+      }
+      
+      // Clear the form
+      setCurrentAccount({
+        ...currentAccount,
+        linkedinUsername: '',
+        linkedinPassword: ''
+      });
+      
+      // Refresh the accounts list
+      await fetchAccounts();
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        message: "LinkedIn account connected successfully",
+        severity: "success"
+      });
+      
+      // Close the form
+      setFormOpen(false);
+    } catch (error) {
+      console.error("Error connecting LinkedIn account:", error);
+      setNotification({
+        open: true,
+        message: error.message || "Failed to connect LinkedIn account. Please check your credentials and try again.",
+        severity: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Close notification
   const handleCloseNotification = () => {
     setNotification({
@@ -794,22 +873,61 @@ const SocialMediaAccounts = () => {
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    startIcon={<LinkedInIcon />}
-                    onClick={() => redirectToLinkedInAuth()}
-                    sx={{
-                      py: 1.5,
-                      backgroundColor: '#0A66C2',
-                      '&:hover': {
-                        backgroundColor: '#0850a0'
-                      }
-                    }}
-                  >
-                    Connect LinkedIn Account
-                  </Button>
+                  <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+                    <Typography variant="h6" gutterBottom>
+                      <LinkedInIcon sx={{ color: '#0A66C2', mr: 1, verticalAlign: 'middle' }} />
+                      Connect LinkedIn Account
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Enter your LinkedIn credentials to connect your account
+                    </Typography>
+                    
+                    <TextField
+                      fullWidth
+                      label="LinkedIn Email"
+                      variant="outlined"
+                      margin="normal"
+                      name="linkedinUsername"
+                      value={currentAccount.linkedinUsername || ''}
+                      onChange={(e) => setCurrentAccount({
+                        ...currentAccount,
+                        linkedinUsername: e.target.value
+                      })}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      label="LinkedIn Password"
+                      variant="outlined"
+                      margin="normal"
+                      name="linkedinPassword"
+                      type="password"
+                      value={currentAccount.linkedinPassword || ''}
+                      onChange={(e) => setCurrentAccount({
+                        ...currentAccount,
+                        linkedinPassword: e.target.value
+                      })}
+                    />
+                    
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      size="large"
+                      startIcon={<LinkedInIcon />}
+                      onClick={handleLinkedInDirectLogin}
+                      sx={{
+                        mt: 2,
+                        py: 1.5,
+                        backgroundColor: '#0A66C2',
+                        '&:hover': {
+                          backgroundColor: '#0850a0'
+                        }
+                      }}
+                    >
+                      Connect LinkedIn Account
+                    </Button>
+                  </Paper>
                 </Grid>
                 
                 <Grid item xs={12}>
