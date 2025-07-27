@@ -167,6 +167,8 @@ const SocialMediaAccounts = () => {
   // State for accounts data
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [twitterLoading, setTwitterLoading] = useState(false);
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
   const [error, setError] = useState("");
   
   // State for form
@@ -408,7 +410,7 @@ const SocialMediaAccounts = () => {
         return;
       }
       
-      setLoading(true);
+      setTwitterLoading(true);
       
       // Call the backend API to authenticate with Twitter
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/twitter/direct-login`, {
@@ -457,7 +459,7 @@ const SocialMediaAccounts = () => {
         severity: "error"
       });
     } finally {
-      setLoading(false);
+      setTwitterLoading(false);
     }
   };
 
@@ -567,7 +569,7 @@ const SocialMediaAccounts = () => {
         return;
       }
       
-      setLoading(true);
+      setLinkedinLoading(true);
       
       // Call the backend API to authenticate with LinkedIn
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/linkedin/direct-login`, {
@@ -616,7 +618,7 @@ const SocialMediaAccounts = () => {
         severity: "error"
       });
     } finally {
-      setLoading(false);
+      setLinkedinLoading(false);
     }
   };
 
@@ -856,8 +858,9 @@ const SocialMediaAccounts = () => {
                       variant="contained"
                       fullWidth
                       size="large"
-                      startIcon={<TwitterIcon />}
+                      startIcon={twitterLoading ? null : <TwitterIcon />}
                       onClick={handleTwitterDirectLogin}
+                      disabled={twitterLoading}
                       sx={{
                         mt: 2,
                         py: 1.5,
@@ -867,7 +870,7 @@ const SocialMediaAccounts = () => {
                         }
                       }}
                     >
-                      Connect Twitter Account
+                      {twitterLoading ? <CircularProgress size={24} color="inherit" /> : "Connect Twitter Account"}
                     </Button>
                   </Paper>
                 </Grid>
@@ -914,8 +917,9 @@ const SocialMediaAccounts = () => {
                       variant="contained"
                       fullWidth
                       size="large"
-                      startIcon={<LinkedInIcon />}
+                      startIcon={linkedinLoading ? null : <LinkedInIcon />}
                       onClick={handleLinkedInDirectLogin}
+                      disabled={linkedinLoading}
                       sx={{
                         mt: 2,
                         py: 1.5,
@@ -925,7 +929,7 @@ const SocialMediaAccounts = () => {
                         }
                       }}
                     >
-                      Connect LinkedIn Account
+                      {linkedinLoading ? <CircularProgress size={24} color="inherit" /> : "Connect LinkedIn Account"}
                     </Button>
                   </Paper>
                 </Grid>
