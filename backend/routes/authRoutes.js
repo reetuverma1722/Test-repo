@@ -327,7 +327,7 @@ console.log("Twitter Username:", twitterUsername); // GeetaTi29691700
     let user;
     if (userResult.rows.length === 0) {
       // Create new user if not exists
-      const insertResult = await pool.query(
+      const insertResult = await pool.query( 
         'INSERT INTO users (name, email, twitter_id) VALUES ($1, $2, $3) RETURNING *',
         [twitterUser.name, `${twitterUser.id}@twitter.com`, twitterUser.id]
       );

@@ -263,55 +263,55 @@ let isPosting = false;
     isPosting = false;
   }
   };
-// useEffect(() => {
-//   const urlParams = new URLSearchParams(window.location.search);
-//   const code = urlParams.get("code");
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
 
-//   if (!code) return;
+  if (!code) return;
 
-//   // Exchange code for access token and trigger retweet
-//   console.log("passed phase 2",code)
-//   const exchangeCodeAndRetweet = async () => {
-//     try {
-//       const res = await fetch("http://localhost:5000/api/auth/twitter/exchange-token", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ code }),
-//       });
+  // Exchange code for access token and trigger retweet
+  console.log("passed phase 2",code)
+  const exchangeCodeAndRetweet = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/twitter/exchange-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
 
-//       const data = await res.json();
+      const data = await res.json();
 
-//       if (res.ok && data.access_token) {
-//         console.log("✅ Twitter Access Token:", data.access_token);
-//         localStorage.setItem("twitter_access_token", data.access_token);
+      if (res.ok && data.access_token) {
+        console.log("✅ Twitter Access Token:", data.access_token);
+        localStorage.setItem("twitter_access_token", data.access_token);
 
-//         // Trigger retweet API on your backend
-//         const retweetRes = await fetch("http://localhost:5000/api/twitter/retweet", {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//             Authorization: `Bearer ${data.access_token}`,
-//           },
-//           body: JSON.stringify({
-//             tweetId: '1948117932606984467',
-//             reply: 'Greatt'
-//           }),
-//         });
+        // Trigger retweet API on your backend
+        const retweetRes = await fetch("http://localhost:5000/api/twitter/retweet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.access_token}`,
+          },
+          body: JSON.stringify({
+            tweetId: '1948117932606984467',
+            reply: 'Greatt'
+          }),
+        });
 
-//         const result = await retweetRes.json();
-//         if (!retweetRes.ok) throw new Error(result.message);
+        const result = await retweetRes.json();
+        if (!retweetRes.ok) throw new Error(result.message);
 
-//         console.log("✅ Retweet & Reply Success", result);
-//       } else {
-//         throw new Error(data.message || "No access token returned");
-//       }
-//     } catch (err) {
-//       console.error("❌ Twitter retweet failed:", err.message);
-//     }
-//   };
+        console.log("✅ Retweet & Reply Success", result);
+      } else {
+        throw new Error(data.message || "No access token returned");
+      }
+    } catch (err) {
+      console.error("❌ Twitter retweet failed:", err.message);
+    }
+  };
 
-//   exchangeCodeAndRetweet();
-// }, []);
+  exchangeCodeAndRetweet();
+}, []);
 
   // const handleRetweet = async () => {
   //   const tweet = selectedTweet;
