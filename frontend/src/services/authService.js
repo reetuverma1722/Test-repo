@@ -24,14 +24,21 @@ export const register = async (userData) => {
 // Convert Twitter access token to JWT
 export const convertTwitterToken = async (accessToken) => {
   try {
-    const response = await axios.post(`${BASE_URL}/twitter-to-jwt`, { accessToken });
+    const tweetId = localStorage.getItem("selected_tweet_id");
+    const reply = localStorage.getItem("selected_tweet_reply");
+ 
+    const response = await axios.post(`${BASE_URL}/twitter-to-jwt`, {
+      accessToken,
+      tweetId,
+      reply
+    });
+ 
     return response.data;
   } catch (error) {
-    // Check for rate limit error (HTTP 429)
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers?.['retry-after'] ||
-                         error.response.data?.retryAfter || 60;
-      
+                         error.response.data?.retryAfter;
+ 
       throw {
         isRateLimit: true,
         retryAfter: parseInt(retryAfter, 10),
@@ -39,10 +46,11 @@ export const convertTwitterToken = async (accessToken) => {
         ...error.response?.data
       };
     }
-    
+ 
     throw error.response?.data || { message: 'Twitter authentication failed' };
   }
 };
+ 
 
 // Logout
 export const logout = () => {

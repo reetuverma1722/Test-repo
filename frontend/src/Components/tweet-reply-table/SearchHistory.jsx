@@ -1,3 +1,6 @@
+
+
+
 import React, { useEffect, useState } from "react";
 import {
   getAllAccounts,
@@ -34,11 +37,13 @@ import axios from "axios";
 
 const SearchHistory = () => {
   const [history, setHistory] = useState([]);
+  const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [search, setSearch] = useState("");
   const [accessToken, setAccessToken] = useState("");
-  const [tweetText, setTweetText] = useState("");
+ const [tweetId, setTweetId] = useState("");  
+const [reply, setReply] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedTweet, setSelectedTweet] = useState(null);
   const [editedReply, setEditedReply] = useState("");
@@ -55,11 +60,14 @@ const SearchHistory = () => {
       }
       const res = await axios.get(url);
       setHistory(res.data);
+      setTweetId(res.data.id);
+      setReply(res.data.reply)
+      console.log("res999",res.data)
     } catch (err) {
       console.error("Error fetching history:", err.message);
     }
   };
-
+let isPosting = false;
   useEffect(() => {
     fetchHistory(selectedAccountId);
     fetchAccounts();
@@ -80,7 +88,7 @@ const SearchHistory = () => {
 
       // Set default selected account if available
       if (response.data && response.data.length > 0) {
-        setSelectedAccountId(response.data[0].accountId);
+        setSelectedAccountId(response.data[0].id);
       }
     } catch (err) {
       console.error("Error fetching accounts:", err);
@@ -88,7 +96,7 @@ const SearchHistory = () => {
       setLoadingAccounts(false);
     }
   };
-
+  
   const handleDelete = async (tweetId) => {
     try {
       await axios.delete(`http://localhost:5000/api/search/delete/${tweetId}`);
@@ -113,41 +121,7 @@ const SearchHistory = () => {
     }
   };
 
-  // const handlePost = async (tweetId, replyText) => {
-  //   try {
-  //     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
-  //     const res = await axios.post("http://localhost:5000/api/post-reply", {
-  //       tweetUrl,
-  //       replyText,
-  //     });
 
-  //     if (res.data.success) {
-  //       alert("✅ Reply posted!");
-  //     } else {
-  //       alert("❌ Failed to post reply");
-  //     }
-  //   } catch (err) {
-  //     console.error("Reply post failed:", err.message);
-  //   }
-  // };
-  const token = localStorage.getItem("twitter_access_token");
-  const handlePost11 = async (tweetId, replyText, token) => {
-    try {
-      const res = await axios.post("http://localhost:5000/api/post-reply", {
-        tweetId,
-        replyText,
-        accessToken: token,
-      });
-
-      if (res.data.message === "Reply posted!") {
-        alert("✅ Reply posted!");
-      } else {
-        alert("❌ Failed to post reply");
-      }
-    } catch (err) {
-      console.error("Reply post failed:", err?.response?.data || err.message);
-    }
-  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -165,17 +139,7 @@ const SearchHistory = () => {
     }
   }, []);
 
-  // const handlePost = async () => {
-  //   try {
-  //     const response = await axios.post("http://localhost:5000/api/auth/tweet", {
-  //       tweetText:"hello",
-  //       accessToken:token,
-  //     });
-  //     alert("Tweeted: " + response.data.data.text);
-  //   } catch (error) {
-  //     console.error("Tweet Error:", error.response?.data || error.message);
-  //   }
-  // };
+ 
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedIds([]);
@@ -196,12 +160,7 @@ const SearchHistory = () => {
       item.keyword.toLowerCase().includes(search.toLowerCase()) ||
       item.text.toLowerCase().includes(search.toLowerCase())
   );
-  const handlePost = (tweet) => {
-    setSelectedTweet(tweet);
-    setEditedReply(tweet.reply || "");
-    setIsEditing(false);
-    setOpen(true);
-  };
+
 
   const handleEdit = (tweet) => {
     setSelectedTweet(tweet);
@@ -233,103 +192,53 @@ const SearchHistory = () => {
     }
   };
 
-  const handleRetweet = async () => {
-    const tweet = selectedTweet;
-    const tweetReply = editedReply;
-
-    if (!tweet || !selectedAccountId) {
-      alert("Please select an account and ensure tweet data is available");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-
+const redirectToTwitter = () => {
+      if (isPosting) return;
+      isPosting = true;
     try {
-      // First, post the reply if needed
-      // if (tweetReply) {
-      //   const access_token = localStorage.getItem("twitter_access_token");
-        
-      //   if (!access_token) {
-      //     alert("Twitter access token not found. Please login with Twitter.");
-      //     return;
-      //   }
-
-      //   try {
-      //     const response = await fetch("http://localhost:5000/api/postReply", {
-      //       method: "POST",
-      //       headers: {
-      //         "Content-Type": "application/json",
-      //         Authorization: `Bearer ${access_token}`,
-      //       },
-      //       body: JSON.stringify({
-      //         tweetId: tweet.id,
-      //         reply: tweetReply,
-      //         accountId: selectedAccountId,
-      //       }),
-      //     });
-
-      //     const data = await response.json();
-
-      //     if (!response.ok) {
-      //       alert("Error posting reply: " + data.message);
-      //       return;
-      //     }
-      //   } catch (error) {
-      //     console.error("Tweet reply error:", error);
-      //     alert("Failed to post reply.");
-      //     return;
-      //   }
-      // }
-
-      // Then add to post history
-      const postData = {
-        accountId: selectedAccountId,
-        tweetId: tweet.id,
-        tweetText: tweet.text,
-        tweetUrl: tweet.tweet_url,
-        reply: tweetReply,
-        keywordId: tweet.keyword_id,
-        keyword: tweet.keyword,
-        likeCount: tweet.like_count,
-        retweetCount: tweet.retweet_count
-      };
-       console.log("posting............")
-      const result = await addFromSearch(postData, token);
-      
-      if (result.success) {
-        alert("Post added to history successfully!");
-        setOpen(false); // close modal
-      } else {
-        alert("Error adding to post history: " + result.message);
-      }
+      const clientId = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
+     
+      const redirectUri = encodeURIComponent(
+        "http://localhost:5000/api/auth/twitter/callback"
+      );
+      const scope = encodeURIComponent(
+       'tweet.read tweet.write users.read offline.access'
+      );
+      console.log("phase 1")
+      // Generate a more unique state with timestamp to help with rate limiting
+      const state = `state_${Date.now()}`; // Random string in production for CSRF protection
+      const codeChallenge = "challenge"; // For now, static; later use real PKCE
+ 
+      const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
+ 
+      // Add a small delay before redirecting to avoid rapid successive requests
+      setTimeout(() => {
+        window.location.href = twitterAuthUrl;
+      }, 500);
     } catch (error) {
-      console.error("Error adding to post history:", error);
-      alert("Failed to add post to history.");
-    }
+      console.error("Error redirecting to Twitter:", error);
+      setError("Failed to connect to Twitter. Please try again later.");
+    }finally {
+    isPosting = false;
+  }
   };
+ 
+   const handlePost = (tweet) => {
+  setSelectedTweet(tweet);
+  setEditedReply(tweet.reply || "");
+ 
+  // Remove old values (optional, just for clarity)
+  localStorage.removeItem("selected_tweet_id");
+  localStorage.removeItem("selected_tweet_reply");
+ 
+  // Set new values
+  localStorage.setItem("selected_tweet_id", tweet.id);
+  localStorage.setItem("selected_tweet_reply", tweet.reply || "");
+ 
+  setIsEditing(false);
+  setOpen(true);
+};
 
-  //   const handleRetweet = () => {
-  //   const tweetId = selectedTweet?.id;
-  //   const tweetReply = editedReply;
-
-  //   if (!tweetId || !tweetReply) {
-  //     alert("Tweet or reply is missing");
-  //     return;
-  //   }
-
-  //   const access_token = localStorage.getItem("twitter_access_token");
-
-  //   if (!access_token) {
-  //     alert("Access token not found. Please login with Twitter.");
-  //     return;
-  //   }
-
-  //   // Pass data via query parameters to backend
-  //   const url = `http://localhost:3000?twitterId=${encodeURIComponent(access_token)}&tweetId=${tweetId}&reply=${encodeURIComponent(tweetReply)}`;
-
-  //   console.log("Redirecting to:", url);
-  //   window.location.href = url;
-  // };
   return (
     <Paper
       elevation={3}
@@ -969,7 +878,7 @@ const SearchHistory = () => {
             Cancel
           </Button>
           <Button
-            onClick={isEditing ? handleSaveEdit : handleRetweet}
+           onClick={isEditing ? handleSaveEdit : redirectToTwitter}
             variant="contained"
             startIcon={isEditing ? <EditIcon /> : <Search />}
             sx={{

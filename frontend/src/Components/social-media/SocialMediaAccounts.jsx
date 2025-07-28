@@ -74,93 +74,9 @@ const SocialMediaAccounts = () => {
   }, []);
   
   // Function to redirect to Twitter OAuth
-  const redirectToTwitterAuth = () => {
-    try {
-      // Use the state variable instead of reading from localStorage again
-      const userId = currentUser?.id;
-      
-      if (!userId) {
-        // Show a more helpful error message
-        setError("You must be logged in to connect a Twitter account. Please log out and log back in if you're seeing this message.");
-        return;
-      }
-      
-      // Use the same callback URL that's registered with Twitter
-      // We'll differentiate the flow using the state parameter
-      const redirectUri = encodeURIComponent(TWITTER_CALLBACK_URL);
-      
-      // Include the userId and timestamp in the state parameter to make it unique
-      // This helps prevent rate limiting by ensuring each request has a unique state
-      const timestamp = Date.now();
-      const stateWithUserId = `${TWITTER_STATE}_${userId}_${timestamp}`;
-      
-      const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${TWITTER_SCOPE}&state=${stateWithUserId}&code_challenge=${TWITTER_CODE_CHALLENGE}&code_challenge_method=plain`;
-      
-      // Add a small delay before redirecting to avoid rapid successive requests
-      setNotification({
-        open: true,
-        message: "Connecting to Twitter...",
-        severity: "info"
-      });
-      
-      setTimeout(() => {
-        window.location.href = twitterAuthUrl;
-      }, 1000);
-    } catch (error) {
-      console.error("Error redirecting to Twitter:", error);
-      setError("Failed to connect to Twitter. Please try again later.");
-    }
-  };
+ 
   
-  // Function to redirect to LinkedIn OAuth
-  const redirectToLinkedInAuth = () => {
-    try {
-      // Use the state variable instead of reading from localStorage again
-      const userId = currentUser?.id;
-      
-      if (!userId) {
-        // Show a more helpful error message
-        setError("You must be logged in to connect a LinkedIn account. Please log out and log back in if you're seeing this message.");
-        return;
-      }
-      
-      // We're already using LINKEDIN_REDIRECT_URI which is properly encoded
-      
-      // Include the userId and timestamp in the state parameter to make it unique
-      // This helps prevent rate limiting by ensuring each request has a unique state
-      const timestamp = Date.now();
-      const stateWithUserId = `${LINKEDIN_STATE}_${userId}_${timestamp}`;
-      
-      // Create the LinkedIn OAuth URL with actual credentials
-      const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${LINKEDIN_REDIRECT_URI}&scope=${LINKEDIN_SCOPE}&state=${stateWithUserId}`;
-      
-      // Add a small delay before redirecting to avoid rapid successive requests
-      setNotification({
-        open: true,
-        message: "Connecting to LinkedIn...",
-        severity: "info"
-      });
-      
-      // Set a timeout to handle the case where LinkedIn OAuth takes too long
-      const timeoutId = setTimeout(() => {
-        setNotification({
-          open: true,
-          message: "LinkedIn connection is taking longer than expected. Please try again.",
-          severity: "warning"
-        });
-      }, 10000); // 10 seconds timeout
-      
-      // Store the timeout ID in localStorage so we can clear it if the user returns
-      localStorage.setItem('linkedinTimeoutId', timeoutId);
-      
-      setTimeout(() => {
-        window.location.href = linkedinAuthUrl;
-      }, 1000);
-    } catch (error) {
-      console.error("Error redirecting to LinkedIn:", error);
-      setError("Failed to connect to LinkedIn. Please try again later.");
-    }
-  };
+
 
 
   

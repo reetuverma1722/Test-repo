@@ -54,16 +54,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // ✅ Generate JWT Token
+  
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET || 'secretkey', // fallback secret
+      process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '1h' }
     );
 
     res.status(200).json({
       message: 'Login successful',
-      token, // ✅ Send token to client
+      token, 
       user,
     });
   } catch (err) {
@@ -145,12 +145,20 @@ router.get("/twitter/callback", async (req, res) => {
       }
     }
 
+    // Get code_verifier from cookie or request body
+    // In a production app, you would use a secure cookie or session to store this
+    // For now, we'll use a hardcoded value that matches what the frontend is using
+    // This is a temporary solution until we implement proper PKCE
+    const code_verifier = "challenge";
+    
+    console.log("Using code_verifier:", code_verifier);
+    
     const params = new URLSearchParams({
       code,
       grant_type: "authorization_code",
       client_id: TWITTER_CLIENT_ID,
       redirect_uri: TWITTER_CALLBACK_URL,
-      code_verifier: "challenge", // should match code_challenge from frontend
+      code_verifier: code_verifier,
     });
 
     console.log("Making token exchange request to Twitter API...");
@@ -167,7 +175,8 @@ router.get("/twitter/callback", async (req, res) => {
     }, {
       maxRetries: 5,
       initialDelay: 2000,
-      maxDelay: 30000
+      maxDelay: 30000,
+      forceDnsResolution: true // Enable DNS resolution fallback
     });
 
     console.log("Token exchange successful");
@@ -186,7 +195,8 @@ router.get("/twitter/callback", async (req, res) => {
         }
       }, {
         maxRetries: 3,
-        initialDelay: 1000
+        initialDelay: 1000,
+        forceDnsResolution: true // Enable DNS resolution fallback
       });
       console.log("Twitter user info fetched successfully");
       
@@ -263,7 +273,8 @@ router.post("/tweet", async (req, res) => {
       }
     }, {
       maxRetries: 3,
-      initialDelay: 1000
+      initialDelay: 1000,
+      forceDnsResolution: true // Enable DNS resolution fallback
     });
     console.log("Tweet posted successfully");
 
@@ -284,118 +295,435 @@ router.post("/tweet", async (req, res) => {
 });
 
 // Convert Twitter access token to JWT token
+ 
+// router.post("/twitter-to-jwt", async (req, res) => {
+//   const { accessToken } = req.body;
+ 
+//   if (!accessToken) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Twitter access token is required",
+//     });
+//   }
+ 
+//   try {
+//     // Step 1: Get Twitter user info
+//     console.log("Fetching Twitter user info...");
+//     const userResponse = await axiosWithRetry(
+//       {
+//         method: "get",
+//         url: "https://api.twitter.com/2/users/me",
+//         headers: {
+//           Authorization: `Bearer ${accessToken}`,
+//         },
+//       },
+//       {
+//         maxRetries: 3,
+//         initialDelay: 1000,
+//       }
+//     );
+ 
+//     const twitterUser = userResponse.data.data;
+//     const twitterId = twitterUser.id;
+//     const twitterUsername = twitterUser.username;
+ 
+//     if (!twitterId) {
+//       return res.status(400).json({ success: false, message: "Invalid Twitter token" });
+//     }
+ 
+//     // Step 2: Save or fetch user
+//     let userResult = await pool.query("SELECT * FROM users WHERE twitter_id = $1", [twitterId]);
+//     let user;
+ 
+//     if (userResult.rows.length === 0) {
+//       const insertResult = await pool.query(
+//         "INSERT INTO users (name, email, twitter_id) VALUES ($1, $2, $3) RETURNING *",
+//         [twitterUser.name, `${twitterId}@twitter.com`, twitterId]
+//       );
+//       user = insertResult.rows[0];
+//     } else {
+//       user = userResult.rows[0];
+//     }
+ 
+//     // Step 3: Save or update social_media_accounts
+//     const accountResult = await pool.query(
+//       "SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL",
+//       [user.id, "twitter", twitterId]
+//     );
+ 
+//     if (accountResult.rows.length === 0) {
+//       await pool.query(
+//         `INSERT INTO social_media_accounts
+//          (user_id, platform, account_id, account_name, access_token, refresh_token)
+//          VALUES ($1, $2, $3, $4, $5, $6)`,
+//         [user.id, "twitter", twitterId, twitterUser.name, accessToken, null]
+//       );
+//     } else {
+//       await pool.query(
+//         `UPDATE social_media_accounts
+//          SET access_token = $1, updated_at = CURRENT_TIMESTAMP
+//          WHERE user_id = $2 AND platform = $3 AND account_id = $4`,
+//         [accessToken, user.id, "twitter", twitterId]
+//       );
+//     }
+ 
+//     // Step 4: Generate JWT
+//     const token = jwt.sign(
+//       { id: user.id, twitter_id: twitterId },
+//       process.env.JWT_SECRET || "buzzly-secret-key",
+//       { expiresIn: "24h" }
+//     );
+ 
+//     // Step 5: Hardcoded Tweet Posting (Quote Tweet)
+//     const hardcodedTweetId = "1898446369674936755";
+//     const hardcodedReply = "Okk Rii";
+ 
+//     let tweetResponse = null;
+ 
+//     try {
+//       tweetResponse = await axios.post(
+//         "https://api.twitter.com/2/tweets",
+//         {
+//           text: hardcodedReply,
+//           quote_tweet_id: hardcodedTweetId,
+//         },
+//         {
+//           headers: {
+//             Authorization: `Bearer ${accessToken}`,
+//             "Content-Type": "application/json",
+//           },
+//         }
+//       );
+//       console.log("✅ Hardcoded quote tweet posted:", tweetResponse.data);
+//     } catch (postErr) {
+//       console.error("❌ Failed to post hardcoded tweet:", postErr.response?.data || postErr.message);
+//     }
+ 
+//     // Step 6: Final Response
+//     return res.json({
+//       success: true,
+//       token,
+//       user: {
+//         id: user.id,
+//         name: user.name,
+//         twitter_id: twitterId,
+//       },
+//       reposted: !!tweetResponse,
+//       tweet_response: tweetResponse?.data || null,
+//     });
+//   } catch (error) {
+//     console.error("Error converting Twitter token to JWT:", error);
+ 
+//     if (error.response && error.response.status === 429) {
+//       const retryAfter =
+//         error.response.headers?.["retry-after"] ||
+//         error.response.data?.retryAfter ||
+//         60;
+ 
+//       return res.status(429).json({
+//         success: false,
+//         message: "Twitter rate limit exceeded. Please try again later.",
+//         retryAfter,
+//         error: "rate_limit_exceeded",
+//       });
+//     }
+ 
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to authenticate with Twitter",
+//       error: error.message,
+//       details: error.response?.data || "No additional details",
+//     });
+//   }
+// });
+ 
 router.post("/twitter-to-jwt", async (req, res) => {
-  const { accessToken } = req.body;
-  
+   const { accessToken, tweetId, reply } = req.body;
+ 
   if (!accessToken) {
-    return res.status(400).json({ success: false, message: "Twitter access token is required" });
-  }
-  
-  try {
-    // Get user info from Twitter API
-    console.log("Fetching Twitter user info for JWT conversion...");
-    const userResponse = await axiosWithRetry({
-      method: 'get',
-      url: "https://api.twitter.com/2/users/me",
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    }, {
-      maxRetries: 3,
-      initialDelay: 1000
+    return res.status(400).json({
+      success: false,
+      message: "Twitter access token is required",
     });
-    console.log("Twitter user info fetched successfully for JWT conversion");
-    
+  }
+ 
+  try {
+    // Step 1: Get Twitter user info
+    console.log("AccessToken received:", accessToken);
+    console.log("Tweet ID:", tweetId);
+    console.log("Reply to post:", reply);
+    console.log("Fetching Twitter user info...");
+    const userResponse = await axiosWithRetry(
+      {
+        method: "get",
+        url: "https://api.twitter.com/2/users/me",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+      {
+        maxRetries: 3,
+        initialDelay: 1000,
+      }
+    );
+ 
     const twitterUser = userResponse.data.data;
-    
-    if (!twitterUser || !twitterUser.id) {
+    const twitterId = twitterUser.id;
+    const twitterUsername = twitterUser.username;
+ 
+    if (!twitterId) {
       return res.status(400).json({ success: false, message: "Invalid Twitter token" });
     }
-    
-    // Check if user exists in our database
-    let userResult = await pool.query('SELECT * FROM users WHERE twitter_id = $1', [twitterUser.id]);
-    
+ 
+    // Step 2: Save or fetch user
+    let userResult = await pool.query("SELECT * FROM users WHERE twitter_id = $1", [twitterId]);
     let user;
+ 
     if (userResult.rows.length === 0) {
-      // Create new user if not exists
       const insertResult = await pool.query(
-        'INSERT INTO users (name, email, twitter_id) VALUES ($1, $2, $3) RETURNING *',
-        [twitterUser.name, `${twitterUser.id}@twitter.com`, twitterUser.id]
+        "INSERT INTO users (name, email, twitter_id) VALUES ($1, $2, $3) RETURNING *",
+        [twitterUser.name, `${twitterId}@twitter.com`, twitterId]
       );
       user = insertResult.rows[0];
     } else {
       user = userResult.rows[0];
     }
-    
-    // Check if this Twitter account is already in social_media_accounts table
+ 
+    // Step 3: Save or update social_media_accounts
     const accountResult = await pool.query(
-      'SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL',
-      [user.id, 'twitter', twitterUser.id]
+      "SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL",
+      [user.id, "twitter", twitterId]
     );
-    
-    // If account doesn't exist, add it
+ 
     if (accountResult.rows.length === 0) {
       await pool.query(
         `INSERT INTO social_media_accounts
          (user_id, platform, account_id, account_name, access_token, refresh_token)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [user.id, 'twitter', twitterUser.id, twitterUser.name, accessToken, null]
+        [user.id, "twitter", twitterId, twitterUser.name, accessToken, null]
       );
     } else {
-      // Update the access token if account exists
       await pool.query(
         `UPDATE social_media_accounts
          SET access_token = $1, updated_at = CURRENT_TIMESTAMP
          WHERE user_id = $2 AND platform = $3 AND account_id = $4`,
-        [accessToken, user.id, 'twitter', twitterUser.id]
+        [accessToken, user.id, "twitter", twitterId]
       );
     }
-    
-    // Generate JWT token
+ 
+    // Step 4: Generate JWT
     const token = jwt.sign(
-      { id: user.id, twitter_id: twitterUser.id },
-      process.env.JWT_SECRET || 'buzzly-secret-key',
-      { expiresIn: '24h' }
+      { id: user.id, twitter_id: twitterId },
+      process.env.JWT_SECRET || "buzzly-secret-key",
+      { expiresIn: "24h" }
     );
-    
-    res.json({
+ 
+    // Step 5: Hardcoded Tweet Posting (Quote Tweet)
+    const hardcodedTweetId = tweetId;
+    const hardcodedReply = reply;
+ 
+    let tweetResponse = null;
+ 
+    try {
+      tweetResponse = await axios.post(
+        "https://api.twitter.com/2/tweets",
+        {
+          text: hardcodedReply,
+          quote_tweet_id: hardcodedTweetId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("✅ Hardcoded quote tweet posted:", tweetResponse.data);
+    } catch (postErr) {
+      console.error("❌ Failed to post hardcoded tweet:", postErr.response?.data || postErr.message);
+    }
+ 
+    // Step 6: Final Response
+    return res.json({
       success: true,
       token,
       user: {
         id: user.id,
         name: user.name,
-        twitter_id: twitterUser.id
-      }
+        twitter_id: twitterId,
+      },
+      reposted: !!tweetResponse,
+      tweet_response: tweetResponse?.data || null,
     });
   } catch (error) {
     console.error("Error converting Twitter token to JWT:", error);
-    console.error("Error details:", error.response?.data || error.message);
-    console.error("Error stack:", error.stack);
-    
-    // Provide a more user-friendly error message for rate limiting
+ 
     if (error.response && error.response.status === 429) {
-      const retryAfter = error.response.headers && error.response.headers['retry-after']
-        ? parseInt(error.response.headers['retry-after'], 10)
-        : 60;
-        
-      console.log(`Twitter rate limit exceeded. Retry after: ${retryAfter} seconds`);
-      
+      const retryAfter =
+        error.response.headers?.["retry-after"] ||
+        error.response.data?.retryAfter ||
+        60;
+ 
       return res.status(429).json({
         success: false,
         message: "Twitter rate limit exceeded. Please try again later.",
-        retryAfter: retryAfter,
-        error: "rate_limit_exceeded"
+        retryAfter,
+        error: "rate_limit_exceeded",
       });
     }
-    
+ 
     res.status(500).json({
       success: false,
       message: "Failed to authenticate with Twitter",
       error: error.message,
-      details: error.response?.data || "No additional details"
+      details: error.response?.data || "No additional details",
     });
   }
 });
+ 
+
+//  router.post("/twitter-to-jwt", async (req, res) => {
+//   const { accessToken, tweetId, reply } = req.body;
+// console.log("reetu",accessToken,tweetId,reply)
+//   if (!accessToken) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Twitter access token is required",
+//     });
+//   }
+
+//   if (!tweetId || !reply) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Both tweetId and reply are required",
+//     });
+//   }
+
+//   try {
+//     // Step 1: Get Twitter user info
+//     console.log("Fetching Twitter user info...");
+//     const userResponse = await axiosWithRetry(
+//       {
+//         method: "get",
+//         url: "https://api.twitter.com/2/users/me",
+//         headers: {
+//           Authorization: `Bearer ${accessToken}`,
+//         },
+//       },
+//       { maxRetries: 3, initialDelay: 1000 }
+//     );
+
+//     const twitterUser = userResponse.data.data;
+//     const twitterId = twitterUser.id;
+//     const twitterUsername = twitterUser.username;
+
+//     if (!twitterId) {
+//       return res.status(400).json({ success: false, message: "Invalid Twitter token" });
+//     }
+
+//     // Step 2: Save or fetch user
+//     let userResult = await pool.query("SELECT * FROM users WHERE twitter_id = $1", [twitterId]);
+//     let user;
+
+//     if (userResult.rows.length === 0) {
+//       const insertResult = await pool.query(
+//         "INSERT INTO users (name, email, twitter_id) VALUES ($1, $2, $3) RETURNING *",
+//         [twitterUser.name, `${twitterId}@twitter.com`, twitterId]
+//       );
+//       user = insertResult.rows[0];
+//     } else {
+//       user = userResult.rows[0];
+//     }
+
+//     // Step 3: Save or update social_media_accounts
+//     const accountResult = await pool.query(
+//       "SELECT id FROM social_media_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL",
+//       [user.id, "twitter", twitterId]
+//     );
+
+//     if (accountResult.rows.length === 0) {
+//       await pool.query(
+//         `INSERT INTO social_media_accounts
+//          (user_id, platform, account_id, account_name, access_token, refresh_token)
+//          VALUES ($1, $2, $3, $4, $5, $6)`,
+//         [user.id, "twitter", twitterId, twitterUser.name, accessToken, null]
+//       );
+//     } else {
+//       await pool.query(
+//         `UPDATE social_media_accounts
+//          SET access_token = $1, updated_at = CURRENT_TIMESTAMP
+//          WHERE user_id = $2 AND platform = $3 AND account_id = $4`,
+//         [accessToken, user.id, "twitter", twitterId]
+//       );
+//     }
+
+//     // Step 4: Generate JWT
+//     const token = jwt.sign(
+//       { id: user.id, twitter_id: twitterId },
+//       process.env.JWT_SECRET || "buzzly-secret-key",
+//       { expiresIn: "24h" }
+//     );
+
+//     // Step 5: Post quote tweet using provided tweetId and reply
+//     let tweetResponse = null;
+
+//     try {
+//       tweetResponse = await axios.post(
+//         "https://api.twitter.com/2/tweets",
+//         {
+//           text: reply,
+//           quote_tweet_id: tweetId,
+//         },
+//         {
+//           headers: {
+//             Authorization: `Bearer ${accessToken}`,
+//             "Content-Type": "application/json",
+//           },
+//         }
+//       );
+//       console.log("✅ Quote tweet posted:", tweetResponse.data);
+//     } catch (postErr) {
+//       console.error("❌ Failed to post tweet:", postErr.response?.data || postErr.message);
+//     }
+
+//     // Step 6: Final Response
+//     return res.json({
+//       success: true,
+//       token,
+//       user: {
+//         id: user.id,
+//         name: user.name,
+//         twitter_id: twitterId,
+//       },
+//       reposted: !!tweetResponse,
+//       tweet_response: tweetResponse?.data || null,
+//     });
+//   } catch (error) {
+//     console.error("Error converting Twitter token to JWT:", error);
+
+//     if (error.response && error.response.status === 429) {
+//       const retryAfter =
+//         error.response.headers?.["retry-after"] ||
+//         error.response.data?.retryAfter ||
+//         60;
+
+//       return res.status(429).json({
+//         success: false,
+//         message: "Twitter rate limit exceeded. Please try again later.",
+//         retryAfter,
+//         error: "rate_limit_exceeded",
+//       });
+//     }
+
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to authenticate with Twitter",
+//       error: error.message,
+//       details: error.response?.data || "No additional details",
+//     });
+//   }
+// });
+
 
 // The Twitter connect callback is now handled in the main Twitter callback route
 
