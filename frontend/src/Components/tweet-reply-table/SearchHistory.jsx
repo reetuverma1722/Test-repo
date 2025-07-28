@@ -200,8 +200,12 @@ let isPosting = false;
   const handlePost = (tweet) => {
     setSelectedTweet(tweet);
     setEditedReply(tweet.reply || "");
+  localStorage.setItem("selected_tweet_id", tweet.id);
+  localStorage.setItem("selected_tweet_reply", tweet.reply || "");
+
     setIsEditing(false);
     setOpen(true);
+
   };
 
   const handleEdit = (tweet) => {
@@ -239,6 +243,7 @@ let isPosting = false;
       isPosting = true;
     try {
       const clientId = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
+      
       const redirectUri = encodeURIComponent(
         "http://localhost:5000/api/auth/twitter/callback"
       );

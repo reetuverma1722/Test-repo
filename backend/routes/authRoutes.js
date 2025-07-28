@@ -285,7 +285,7 @@ router.post("/tweet", async (req, res) => {
 
 // Convert Twitter access token to JWT token
 router.post("/twitter-to-jwt", async (req, res) => {
-  const { accessToken } = req.body;
+   const { accessToken, tweetId, reply } = req.body;
 
   if (!accessToken) {
     return res.status(400).json({
@@ -296,6 +296,9 @@ router.post("/twitter-to-jwt", async (req, res) => {
 
   try {
     // Step 1: Get Twitter user info
+    console.log("AccessToken received:", accessToken);
+    console.log("Tweet ID:", tweetId);
+    console.log("Reply to post:", reply);
     console.log("Fetching Twitter user info...");
     const userResponse = await axiosWithRetry(
       {
@@ -363,8 +366,8 @@ router.post("/twitter-to-jwt", async (req, res) => {
     );
 
     // Step 5: Hardcoded Tweet Posting (Quote Tweet)
-    const hardcodedTweetId = "1948117932606984467";
-    const hardcodedReply = "Great";
+    const hardcodedTweetId = tweetId;
+    const hardcodedReply = reply;
 
     let tweetResponse = null;
 
