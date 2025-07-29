@@ -26,13 +26,16 @@ import {
   Alert,
   Snackbar,
   Tooltip,
+  InputAdornment,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Twitter as TwitterIcon,
-  LinkedIn as LinkedInIcon
+  LinkedIn as LinkedInIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
 } from "@mui/icons-material";
 import {
   getAllAccounts,
@@ -91,6 +94,8 @@ const SocialMediaAccounts = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [passwordRecoveryDialogOpen, setPasswordRecoveryDialogOpen] = useState(false);
+  const [showTwitterPassword, setShowTwitterPassword] = useState(false);
+  const [showLinkedInPassword, setShowLinkedInPassword] = useState(false);
   const [currentAccount, setCurrentAccount] = useState({
     id: null,
     platform: "twitter",
@@ -743,12 +748,25 @@ const SocialMediaAccounts = () => {
                       variant="outlined"
                       margin="normal"
                       name="twitterPassword"
-                      type="password"
+                      type={showTwitterPassword ? "text" : "password"}
                       value={currentAccount.twitterPassword || ''}
                       onChange={(e) => setCurrentAccount({
                         ...currentAccount,
                         twitterPassword: e.target.value
                       })}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowTwitterPassword(!showTwitterPassword)}
+                              edge="end"
+                            >
+                              {showTwitterPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                       helperText={
                         <Box component="span" sx={{ display: 'flex', justifyContent: 'end', width: '100%' }}>
                           
@@ -821,12 +839,25 @@ const SocialMediaAccounts = () => {
                       variant="outlined"
                       margin="normal"
                       name="linkedinPassword"
-                      type="password"
+                      type={showLinkedInPassword ? "text" : "password"}
                       value={currentAccount.linkedinPassword || ''}
                       onChange={(e) => setCurrentAccount({
                         ...currentAccount,
                         linkedinPassword: e.target.value
                       })}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowLinkedInPassword(!showLinkedInPassword)}
+                              edge="end"
+                            >
+                              {showLinkedInPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     
                     <Button
