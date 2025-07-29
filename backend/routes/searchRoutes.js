@@ -457,18 +457,21 @@ await page.type('div[role="textbox"][data-testid="tweetTextarea_0"]', replyText)
 console.log("📝 Typed reply");
    await page.screenshot({ path: "erro6.png" });
 // 2. Wait for the reply button to become enabled
+
+// Wait for the "Reply" button to become enabled
 await page.waitForFunction(() => {
-  const btn = document.querySelector('button[data-testid="tweetButton"]');
-  return btn && !btn.disabled && btn.getAttribute('aria-disabled') !== "true";
+  const btn = document.querySelector('div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]');
+  return btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
 }, { timeout: 10000 });
+
 console.log("✅ Reply button is now enabled");
-   await page.screenshot({ path: "erro9.png" });
 
-// 3. Click the reply button
-await page.click('button[data-testid="tweetButton"]');
-console.log("📤 Reply posted successfully");
+// Click the reply button
+const replyBtn = await page.$('div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]');
+await replyBtn.click();
+console.log("posted")
 
-    await page.waitForTimeout(3000);
+   await new Promise(resolve => setTimeout(resolve, 3000));
   } catch (err) {
     console.error("❌ Puppeteer failed:", err.message);
     throw err;
