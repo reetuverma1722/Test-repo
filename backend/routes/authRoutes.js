@@ -1169,7 +1169,7 @@ router.post('/linkedin/direct-login', async (req, res) => {
 
   try {
     // Launch browser
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
 
     // Navigate to LinkedIn login page
@@ -1187,7 +1187,7 @@ router.post('/linkedin/direct-login', async (req, res) => {
     await page.click('button[type="submit"]');
     
     // Wait for navigation to complete
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 60000));
     
     // Check for login errors
     const loginError = await page.evaluate(() => {
