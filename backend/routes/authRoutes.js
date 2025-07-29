@@ -946,9 +946,12 @@ router.post('/twitter/direct-login', async (req, res) => {
     const actualAccountId = accountId || `twitter_${username}_${Date.now()}`;
     const actualAccountName = accountName || username;
     
+    // Hash the password before storing it
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
     await pool.query(
-      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name) VALUES ($1, $2, $3, $4)`,
-      [actualAccountId, userId, 'twitter', actualAccountName]
+      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name, password) VALUES ($1, $2, $3, $4, $5)`,
+      [actualAccountId, userId, 'twitter', actualAccountName, hashedPassword]
     );
 
     res.status(200).json({
@@ -1168,8 +1171,8 @@ router.post('/linkedin/direct-login', async (req, res) => {
   }
 
   try {
-    // Launch browser
-    const browser = await puppeteer.launch({ headless: false });
+    // Launch browser in headless mode
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
     // Navigate to LinkedIn login page
@@ -1220,10 +1223,13 @@ router.post('/linkedin/direct-login', async (req, res) => {
     const actualAccountId = accountId || `linkedin_${username}_${Date.now()}`;
     const actualAccountName = accountName || username;
     
+    // Hash the password before storing it
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
     await pool.query(
-      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name)
-       VALUES ($1, $2, $3, $4)`,
-      [actualAccountId, userId, 'linkedin', actualAccountName]
+      `INSERT INTO social_media_accounts (account_id, user_id, platform, account_name, password)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [actualAccountId, userId, 'linkedin', actualAccountName, hashedPassword]
     );
 
     res.status(200).json({
