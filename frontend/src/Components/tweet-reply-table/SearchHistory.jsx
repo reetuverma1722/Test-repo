@@ -132,12 +132,29 @@ let isPosting = false;
   //   }
   // };
   const token = localStorage.getItem("twitter_access_token");
-  const handlePost11 = async (tweetId, replyText, token) => {
+  // const handlePost11 = async (tweetId, replyText, token) => {
+  //   try {
+  //     const res = await axios.post("http://localhost:5000/api/post-reply", {
+  //       tweetId,
+  //       replyText,
+  //       accessToken: token,
+  //     });
+
+  //     if (res.data.message === "Reply posted!") {
+  //       alert("✅ Reply posted!");
+  //     } else {
+  //       alert("❌ Failed to post reply");
+  //     }
+  //   } catch (err) {
+  //     console.error("Reply post failed:", err?.response?.data || err.message);
+  //   }
+  // };
+const handlePost11 = async (tweetId, replyText,selectedAccountId) => {
     try {
-      const res = await axios.post("http://localhost:5000/api/post-reply", {
+      const res = await axios.post("http://localhost:5000/api/reply-to-tweet", {
         tweetId,
         replyText,
-        accessToken: token,
+        selectedAccountId:selectedAccountId
       });
 
       if (res.data.message === "Reply posted!") {
@@ -318,103 +335,40 @@ useEffect(() => {
   exchangeCodeAndRetweet();
 }, []);
 
-  // const handleRetweet = async () => {
-  //   const tweet = selectedTweet;
-  //   const tweetReply = editedReply;
+  const handleScrapeit = async () => {
+    
+    if (!selectedAccountId) {
+      alert("Please select an account to post from.");
+      return;
+    }
 
-  //   if (!tweet || !selectedAccountId) {
-  //     alert("Please select an account and ensure tweet data is available");
-  //     return;
-  //   }
+    try {
+      const tweetId = localStorage.getItem("selected_tweet_id");
+      const reply = localStorage.getItem("selected_tweet_reply") || editedReply;
+      if (!tweetId || !reply) {
+        alert("No tweet selected or reply text is empty.");
+        return;
+      }
 
-  //   const token = localStorage.getItem("token");
+      // Call the backend service to post the reply
+      await handlePost11(tweetId, reply,selectedAccountId);
 
-  //   try {
-  //     // First, post the reply if needed
-  //     // if (tweetReply) {
-  //     //   const access_token = localStorage.getItem("twitter_access_token");
-        
-  //     //   if (!access_token) {
-  //     //     alert("Twitter access token not found. Please login with Twitter.");
-  //     //     return;
-  //     //   }
+      // Optionally, you can also update the local history state
+      setHistory((prev) =>
+        prev.map((tweet) =>
+          tweet.id === tweetId ? { ...tweet, reply } : tweet
+        )
+      );
 
-  //     //   try {
-  //     //     const response = await fetch("http://localhost:5000/api/postReply", {
-  //     //       method: "POST",
-  //     //       headers: {
-  //     //         "Content-Type": "application/json",
-  //     //         Authorization: `Bearer ${access_token}`,
-  //     //       },
-  //     //       body: JSON.stringify({
-  //     //         tweetId: tweet.id,
-  //     //         reply: tweetReply,
-  //     //         accountId: selectedAccountId,
-  //     //       }),
-  //     //     });
+      setOpen(false);
+      alert("Reply posted successfully!");
+    } catch (error) {
+      console.error("Error posting reply:", error);
+      alert("Failed to post reply. Please try again later.");
+    }
 
-  //     //     const data = await response.json();
+  }
 
-  //     //     if (!response.ok) {
-  //     //       alert("Error posting reply: " + data.message);
-  //     //       return;
-  //     //     }
-  //     //   } catch (error) {
-  //     //     console.error("Tweet reply error:", error);
-  //     //     alert("Failed to post reply.");
-  //     //     return;
-  //     //   }
-  //     // }
-
-  //     // Then add to post history
-  //     const postData = {
-  //       accountId: selectedAccountId,
-  //       tweetId: tweet.id,
-  //       tweetText: tweet.text,
-  //       tweetUrl: tweet.tweet_url,
-  //       reply: tweetReply,
-  //       keywordId: tweet.keyword_id,
-  //       keyword: tweet.keyword,
-  //       likeCount: tweet.like_count,
-  //       retweetCount: tweet.retweet_count
-  //     };
-  //      console.log("posting............")
-  //     const result = await addFromSearch(postData, token);
-      
-  //     if (result.success) {
-  //       alert("Post added to history successfully!");
-  //       setOpen(false); // close modal
-  //     } else {
-  //       alert("Error adding to post history: " + result.message);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error adding to post history:", error);
-  //     alert("Failed to add post to history.");
-  //   }
-  // };
-
-  //   const handleRetweet = () => {
-  //   const tweetId = selectedTweet?.id;
-  //   const tweetReply = editedReply;
-
-  //   if (!tweetId || !tweetReply) {
-  //     alert("Tweet or reply is missing");
-  //     return;
-  //   }
-
-  //   const access_token = localStorage.getItem("twitter_access_token");
-
-  //   if (!access_token) {
-  //     alert("Access token not found. Please login with Twitter.");
-  //     return;
-  //   }
-
-  //   // Pass data via query parameters to backend
-  //   const url = `http://localhost:3000?twitterId=${encodeURIComponent(access_token)}&tweetId=${tweetId}&reply=${encodeURIComponent(tweetReply)}`;
-
-  //   console.log("Redirecting to:", url);
-  //   window.location.href = url;
-  // };
   return (
     <Paper
       elevation={3}
@@ -1054,7 +1008,7 @@ useEffect(() => {
             Cancel
           </Button>
           <Button
-            onClick={isEditing ? handleSaveEdit : redirectToTwitter}
+            onClick={isEditing ? handleSaveEdit : handleScrapeit}
             variant="contained"
             startIcon={isEditing ? <EditIcon /> : <Search />}
             sx={{

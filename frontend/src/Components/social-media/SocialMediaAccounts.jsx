@@ -285,10 +285,14 @@ const SocialMediaAccounts = () => {
       accountName: "",
       accessToken: "",
       refreshToken: "",
-      tokenExpiresAt: null
+      tokenExpiresAt: null,
+        twitterUsername: "",
+        twitterPassword: ""
+      
     });
     setIsEditing(false);
     setFormOpen(true);
+    console.log(currentAccount)
   };
 
   // Open form for editing account
@@ -304,6 +308,7 @@ const SocialMediaAccounts = () => {
     });
     setIsEditing(true);
     setFormOpen(true);
+    console.log(currentAccount)
   };
 
   // Open delete confirmation dialog
@@ -326,6 +331,13 @@ const SocialMediaAccounts = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      
+      // Console log the data being sent to backend
+      console.log('=== Data being sent to backend ===');
+      console.log('Current Account Data:', JSON.stringify(currentAccount, null, 2));
+      console.log('Is Editing:', isEditing);
+      console.log('Twitter Password included:', !!currentAccount.twitterPassword);
+      console.log('================================');
       
       if (isEditing) {
         await updateAccount(currentAccount.id, currentAccount, token);
@@ -405,25 +417,26 @@ const SocialMediaAccounts = () => {
       
       setLoading(true);
       
-      // Call the backend API to authenticate with Twitter
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/twitter/direct-login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          username: currentAccount.twitterUsername,
-          password: currentAccount.twitterPassword,
-          userId: userId
-        })
-      });
+      // Prepare the account data to be sent to backend
+      const accountData = {
+        platform: 'twitter',
+        accountId: currentAccount.twitterUsername,
+        accountName: currentAccount.twitterUsername,
+        accessToken: '', // Will be set by backend if needed
+        refreshToken: '', // Will be set by backend if needed
+        tokenExpiresAt: null,
+        twitterPassword: currentAccount.twitterPassword
+      };
       
-      const data = await response.json();
+      // Console log the data being sent to backend
+      console.log('=== Twitter Direct Login - Data being sent to backend ===');
+      console.log('Account Data:', JSON.stringify(accountData, null, 2));
+      console.log('User ID:', userId);
+      console.log('========================================================');
       
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to connect Twitter account');
-      }
+      // Call the backend API to add the account directly
+      const token = localStorage.getItem("token");
+      await addAccount(accountData, token);
       
       // Clear the form
       setCurrentAccount({

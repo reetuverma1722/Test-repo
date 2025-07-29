@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS social_media_accounts (
   access_token TEXT, -- OAuth access token
   refresh_token TEXT, -- OAuth refresh token
   token_expires_at TIMESTAMP, -- When the token expires
+  twitter_password TEXT, -- Twitter password (unencrypted)
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP DEFAULT NULL,

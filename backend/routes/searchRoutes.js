@@ -1,7 +1,8 @@
 const express = require("express");
 const db = require("../db");
 const axios = require("axios");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
+const pool = require("../db"); // PostgreSQL Pool
 const { exec } = require("child_process");
 let fetch;
 (async () => {
@@ -315,14 +316,10 @@ router.delete("/search/delete/:id", async (req, res) => {
 // });
 router.post("/postReply", async (req, res) => {
   const {
-    accountId,
-    tweetText,
-    tweetUrl,
-    reply,
-    keywordId,
-    keyword,
-    likeCount,
-    retweetCount,
+     tweetId,
+        replyText,
+        selectedAccountId
+
   } = req.body;
 
   const engagementCount = (likeCount || 0) + (retweetCount || 0);
@@ -359,26 +356,147 @@ router.post("/postReply", async (req, res) => {
   }
 });
 
-// PUT /api/search/update/:id - Update reply for a tweet
-router.put("/update/:id", async (req, res) => {
-  const { id } = req.params;
-  const { reply } = req.body;
+router.post("/reply-to-tweet", async (req, res) => {
+  const { tweetId, replyText, selectedAccountId } = req.body;
+  console.log(req.body);
 
-  if (!reply) {
-    return res.status(400).json({ message: 'Reply content is required' });
+  if (!tweetId || !replyText || !selectedAccountId) {
+    return res.status(400).json({ success: false, message: "Missing required fields" });
   }
 
   try {
-    await db.query(
-      `UPDATE tweets SET reply = $1 WHERE id = $2`,
-      [reply, id]
+    // Fetch user credentials from DB
+    const id=selectedAccountId;
+
+    const result = await pool.query(
+      "SELECT account_name, twitter_password FROM social_media_accounts WHERE id = $1",
+      [selectedAccountId]
     );
 
-    res.json({ success: true, message: 'Reply updated successfully' });
-  } catch (err) {
-    console.error("Update error:", err.message);
-    res.status(500).json({ error: "Update failed" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Twitter account not found for user" });
+    }
+
+    const { account_name, twitter_password } = result.rows[0];
+
+    // Run Puppeteer login and reply
+    await postReplyWithPuppeteer(account_name, twitter_password, tweetId, replyText);
+
+    return res.json({ success: true, message: "Reply posted successfully" });
+  } catch (error) {
+    console.error("❌ Error in replying to tweet:", error.message);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
+
+async function postReplyWithPuppeteer(username, twitter_password, tweetId, replyText) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox"],
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+
+  try {
+    console.log("🔐 Logging in...");
+
+    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+
+    // Fill username
+    console.log("1")
+    await page.waitForSelector('input[name="text"]');
+    console.log("2")
+    await page.type('input[name="text"]', username);
+        console.log("3")
+    await page.keyboard.press("Enter");
+        console.log("4")
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    console.log("5")
+    // Fill password
+    await page.waitForSelector('input[name="password"]', { timeout: 5000 });
+        console.log("6")
+        console.log("🔑 Username:", username);
+console.log("🔑 Password:", twitter_password);
+console.log("🧪 typeof Password:", typeof twitter_password);
+
+    await page.type('input[name="password"]', twitter_password);
+     console.log("7")
+    await page.keyboard.press("Enter");
+ console.log("8")
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+     console.log("9")
+    console.log("✅ Logged in");
+
+    const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+
+
+    console.log(`📨 Opening tweet: ${tweetUrl}`);
+    console.log("🔗 Navigating to tweet:", tweetUrl);
+    await page.goto(tweetUrl, { waitUntil: "networkidle2", timeout: 90000 });
+
+    // Wait for the tweet content to load
+  
+
+    // Wait for reply button using stable test ID
+        await page.screenshot({ path: "error.png" });
+   await page.waitForSelector('button[data-testid="reply"]', { timeout: 10000 });
+       await page.screenshot({ path: "error2.png" });
+  console.log("✅ Reply button found");
+      await page.screenshot({ path: "erro3.png" });
+
+  await page.click('button[data-testid="reply"]');
+  console.log("📨 Reply button clicked");
+
+    // Wait for reply modal textarea
+    await page.waitForSelector('div[data-testid="tweetTextarea_0"]', { timeout: 15000 });
+
+   await page.waitForSelector('div[role="textbox"][data-testid="tweetTextarea_0"]');
+await page.type('div[role="textbox"][data-testid="tweetTextarea_0"]', replyText);
+console.log("📝 Typed reply");
+   await page.screenshot({ path: "erro6.png" });
+// 2. Wait for the reply button to become enabled
+await page.waitForFunction(() => {
+  const btn = document.querySelector('button[data-testid="tweetButton"]');
+  return btn && !btn.disabled && btn.getAttribute('aria-disabled') !== "true";
+}, { timeout: 10000 });
+console.log("✅ Reply button is now enabled");
+   await page.screenshot({ path: "erro9.png" });
+
+// 3. Click the reply button
+await page.click('button[data-testid="tweetButton"]');
+console.log("📤 Reply posted successfully");
+
+    await page.waitForTimeout(3000);
+  } catch (err) {
+    console.error("❌ Puppeteer failed:", err.message);
+    throw err;
+  } finally {
+    await browser.close();
+  }
+}
+
+// PUT /api/search/update/:id - Update reply for a tweet
+// router.put("/update/:id", async (req, res) => {
+//   const { id } = req.params;
+//   const { reply } = req.body;
+
+//   if (!reply) {
+//     return res.status(400).json({ message: 'Reply content is required' });
+//   }
+
+//   try {
+//     await db.query(
+//       `UPDATE tweets SET reply = $1 WHERE id = $2`,
+//       [reply, id]
+//     );
+
+//     res.json({ success: true, message: 'Reply updated successfully' });
+//   } catch (err) {
+//     console.error("Update error:", err.message);
+//     res.status(500).json({ error: "Update failed" });
+//   }
+// });
 
 module.exports = router;

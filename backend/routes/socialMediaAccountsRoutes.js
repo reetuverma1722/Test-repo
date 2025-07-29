@@ -113,37 +113,46 @@ router.get('/accounts/:platform', checkAuth, async (req, res) => {
 router.post('/accounts', checkAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt } = req.body;
+    const { platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt, twitterPassword } = req.body;
+    
+    // Console log the data passed to backend
+    console.log('=== Data passed to backend when adding new account ===');
+    console.log('User ID:', userId);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Twitter Password included:', !!twitterPassword);
+    console.log('===================================================');
     
     if (!platform || !accountId || !accountName) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Platform, account ID, and account name are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Platform, account ID, and account name are required'
       });
     }
     
     // Check if account already exists
     const existingAccount = await pool.query(
-      `SELECT id FROM social_media_accounts 
+      `SELECT id FROM social_media_accounts
        WHERE user_id = $1 AND platform = $2 AND account_id = $3 AND deleted_at IS NULL`,
       [userId, platform, accountId]
     );
     
     if (existingAccount.rows.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This account is already connected' 
+      return res.status(400).json({
+        success: false,
+        message: 'This account is already connected'
       });
     }
     
     const result = await pool.query(
-      `INSERT INTO social_media_accounts 
-       (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, platform, account_id AS "accountId", account_name AS "accountName", 
+      `INSERT INTO social_media_accounts
+       (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, twitter_password)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, platform, account_id AS "accountId", account_name AS "accountName",
        created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [userId, platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt]
+      [userId, platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt, twitterPassword]
     );
+    
+    console.log('Account successfully added to database:', result.rows[0]);
     
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
