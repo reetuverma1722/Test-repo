@@ -93,28 +93,28 @@
 //       let query = `SELECT * FROM tweets WHERE keyword = $1`;
 //       const params = [keyword];
 //       let paramIndex = 2;
-      
+
 //       // Only add conditions for parameters that are provided
 //       if (minLikes > 0) {
 //         query += ` AND like_count >= $${paramIndex}`;
 //         params.push(minLikes);
 //         paramIndex++;
 //       }
-      
+
 //       if (minRetweets > 0) {
 //         query += ` AND retweet_count >= $${paramIndex}`;
 //         params.push(minRetweets);
 //         paramIndex++;
 //       }
-      
+
 //       if (minFollowers > 0) {
 //         query += ` AND followers_count >= $${paramIndex}`;
 //         params.push(minFollowers);
 //         paramIndex++;
 //       }
-      
+
 //       query += ` ORDER BY created_at DESC`;
-      
+
 //       console.log("DB Query:", query, "Params:", params);
 //       const cached = await db.query(query, params);
 
@@ -162,7 +162,6 @@
 // const bookmarks = Number((metricsLabel.match(/(\d+)\s+bookmark/))?.[1]) || 0;
 // const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
 
-
 //     if (!id || !text) return null;
 
 //     // Extract author information if available
@@ -185,7 +184,6 @@
 //     };
 //   }).filter(Boolean);
 // });
-
 
 //       for (const tweet of scrapedTweets) {
 //         const reply = await generateReply(tweet.text);
@@ -329,9 +327,9 @@
 
 //   try {
 //     const insertQuery = `
-//       INSERT INTO post_history 
+//       INSERT INTO post_history
 //         (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id)
-//       VALUES 
+//       VALUES
 //         ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7)
 //       RETURNING id
 //     `;
@@ -382,7 +380,6 @@
 // });
 
 // module.exports = router;
-
 
 const express = require("express");
 const db = require("../db");
@@ -480,28 +477,28 @@ router.get("/search", async (req, res) => {
       let query = `SELECT * FROM tweets WHERE keyword = $1`;
       const params = [keyword];
       let paramIndex = 2;
-      
+
       // Only add conditions for parameters that are provided
       if (minLikes > 0) {
         query += ` AND like_count >= $${paramIndex}`;
         params.push(minLikes);
         paramIndex++;
       }
-      
+
       if (minRetweets > 0) {
         query += ` AND retweet_count >= $${paramIndex}`;
         params.push(minRetweets);
         paramIndex++;
       }
-      
+
       if (minFollowers > 0) {
         query += ` AND followers_count >= $${paramIndex}`;
         params.push(minFollowers);
         paramIndex++;
       }
-      
+
       query += ` ORDER BY created_at DESC`;
-      
+
       console.log("DB Query:", query, "Params:", params);
       const cached = await db.query(query, params);
 
@@ -530,49 +527,60 @@ router.get("/search", async (req, res) => {
       }
 
       const scrapedTweets = await page.evaluate(() => {
-  const articles = document.querySelectorAll("article");
+        const articles = document.querySelectorAll("article");
 
-  return Array.from(articles).map((article) => {
-    const text = article.querySelector("div[lang]")?.innerText;
-    const idMatch = article
-      .querySelector('a[href*="/status/"]')
-      ?.getAttribute("href")
-      ?.match(/status\/(\d+)/);
-    const id = idMatch ? idMatch[1] : null;
+        return Array.from(articles)
+          .map((article) => {
+            const text = article.querySelector("div[lang]")?.innerText;
+            const idMatch = article
+              .querySelector('a[href*="/status/"]')
+              ?.getAttribute("href")
+              ?.match(/status\/(\d+)/);
+            const id = idMatch ? idMatch[1] : null;
 
-    const metricsLabel = article.querySelector('[role="group"]')?.getAttribute("aria-label") || "";
+            const metricsLabel =
+              article
+                .querySelector('[role="group"]')
+                ?.getAttribute("aria-label") || "";
 
-    // Extract values using regex
-   const replies = Number((metricsLabel.match(/(\d+)\s+repl/))?.[1]) || 0;
-const retweets = Number((metricsLabel.match(/(\d+)\s+repost/))?.[1]) || 0;
-const likes = Number((metricsLabel.match(/(\d+)\s+like/))?.[1]) || 0;
-const bookmarks = Number((metricsLabel.match(/(\d+)\s+bookmark/))?.[1]) || 0;
-const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
+            // Extract values using regex
+            const replies =
+              Number(metricsLabel.match(/(\d+)\s+repl/)?.[1]) || 0;
+            const retweets =
+              Number(metricsLabel.match(/(\d+)\s+repost/)?.[1]) || 0;
+            const likes = Number(metricsLabel.match(/(\d+)\s+like/)?.[1]) || 0;
+            const bookmarks =
+              Number(metricsLabel.match(/(\d+)\s+bookmark/)?.[1]) || 0;
+            const views = Number(metricsLabel.match(/(\d+)\s+view/)?.[1]) || 0;
 
+            if (!id || !text) return null;
 
-    if (!id || !text) return null;
+            // Extract author information if available
+            const authorElement = article.querySelector(
+              'div[data-testid="User-Name"]'
+            );
+            const followersText = authorElement?.innerText || "";
+            // Try to extract followers count from author info
+            const followersMatch = followersText.match(
+              /(\d+(?:[,.]\d+)*)\s*Followers/i
+            );
+            const followers = followersMatch
+              ? parseInt(followersMatch[1].replace(/[,.]/g, ""))
+              : 0;
 
-    // Extract author information if available
-    const authorElement = article.querySelector('div[data-testid="User-Name"]');
-    const followersText = authorElement?.innerText || '';
-    // Try to extract followers count from author info
-    const followersMatch = followersText.match(/(\d+(?:[,.]\d+)*)\s*Followers/i);
-    const followers = followersMatch ?
-      parseInt(followersMatch[1].replace(/[,.]/g, '')) : 0;
-
-    return {
-      id,
-      text,
-      reply_count: replies,
-      retweet_count: retweets,
-      like_count: likes,
-      bookmark_count: bookmarks,
-      view_count: views,
-      followers_count: followers,
-    };
-  }).filter(Boolean);
-});
-
+            return {
+              id,
+              text,
+              reply_count: replies,
+              retweet_count: retweets,
+              like_count: likes,
+              bookmark_count: bookmarks,
+              view_count: views,
+              followers_count: followers,
+            };
+          })
+          .filter(Boolean);
+      });
 
       for (const tweet of scrapedTweets) {
         const reply = await generateReply(tweet.text);
@@ -602,8 +610,12 @@ const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
           (minFollowers === 0 || tweet.followers_count >= minFollowers)
       );
 
-      console.log(`Filtered tweets: ${filtered.length} out of ${scrapedTweets.length}`);
-      console.log(`Filtering criteria: minLikes=${minLikes}, minRetweets=${minRetweets}, minFollowers=${minFollowers}`);
+      console.log(
+        `Filtered tweets: ${filtered.length} out of ${scrapedTweets.length}`
+      );
+      console.log(
+        `Filtering criteria: minLikes=${minLikes}, minRetweets=${minRetweets}, minFollowers=${minFollowers}`
+      );
 
       // Add filtered tweets to result
       allTweets.push(...filtered.slice(0, maxResults));
@@ -628,9 +640,9 @@ router.get("/search/history", async (req, res) => {
       FROM tweets
       ORDER BY created_at DESC
     `);
-    const formattedData = result.rows.map(post => ({
+    const formattedData = result.rows.map((post) => ({
       ...post,
-      tweet_url: `https://twitter.com/i/web/status/${post.id}`
+      tweet_url: `https://twitter.com/i/web/status/${post.id}`,
     }));
 
     res.json(formattedData);
@@ -657,16 +669,13 @@ router.put("/update/:id", async (req, res) => {
   const { reply } = req.body;
 
   if (!reply) {
-    return res.status(400).json({ message: 'Reply content is required' });
+    return res.status(400).json({ message: "Reply content is required" });
   }
 
   try {
-    await db.query(
-      `UPDATE tweets SET reply = $1 WHERE id = $2`,
-      [reply, id]
-    );
+    await db.query(`UPDATE tweets SET reply = $1 WHERE id = $2`, [reply, id]);
 
-    res.json({ success: true, message: 'Reply updated successfully' });
+    res.json({ success: true, message: "Reply updated successfully" });
   } catch (err) {
     console.error("Update error:", err.message);
     res.status(500).json({ error: "Update failed" });
@@ -724,14 +733,14 @@ router.put("/update/:id", async (req, res) => {
 // });
 router.post("/postReply", async (req, res) => {
   const {
-     tweetId,
-     replyText,
-     selectedAccountId,
-     tweetText,
-     tweetUrl,
-     keywordId,
-     likeCount = 0,
-     retweetCount = 0
+    tweetId,
+    replyText,
+    selectedAccountId,
+    tweetText,
+    tweetUrl,
+    keywordId,
+    likeCount = 0,
+    retweetCount = 0,
   } = req.body;
 
   const engagementCount = (likeCount || 0) + (retweetCount || 0);
@@ -746,7 +755,7 @@ router.post("/postReply", async (req, res) => {
     `;
 
     const values = [
-      tweetText || '',
+      tweetText || "",
       tweetUrl || `https://twitter.com/i/web/status/${tweetId}`,
       engagementCount,
       likeCount || 0,
@@ -773,12 +782,14 @@ router.post("/reply-to-tweet", async (req, res) => {
   console.log(req.body);
 
   if (!tweetId || !replyText || !selectedAccountId) {
-    return res.status(400).json({ success: false, message: "Missing required fields" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing required fields" });
   }
 
   try {
     // Fetch user credentials from DB
-    const id=selectedAccountId;
+    const id = selectedAccountId;
 
     const result = await pool.query(
       "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
@@ -786,30 +797,71 @@ router.post("/reply-to-tweet", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Twitter account not found for user" });
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Twitter account not found for user",
+        });
     }
 
-    const { account_name,password } = result.rows[0];
+    const { account_name, password } = result.rows[0];
 
-    // Run Puppeteer login and reply
-    await postReplyWithPuppeteer(account_name,password, tweetId, replyText);
+    // Run Puppeteer login and reply - now returns a result object
+    const postResult = await postReplyWithPuppeteer(
+      account_name,
+      password,
+      tweetId,
+      replyText
+    );
 
-    return res.json({ success: true, message: "Reply posted successfully" });
+    if (postResult.success) {
+      return res.json({
+        success: true,
+        message: "Reply posted successfully",
+        details: postResult.details || {},
+      });
+    } else {
+      // If posting failed but didn't throw an exception
+      return res.status(400).json({
+        success: false,
+        message: "Failed to post reply",
+        error: postResult.error || "Unknown error",
+      });
+    }
   } catch (error) {
     console.error("❌ Error in replying to tweet:", error.message);
-    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to post reply",
+      error: error.message,
+    });
   }
 });
 
-
-async function postReplyWithPuppeteer(username, twitter_password, tweetId, replyText) {
+async function postReplyWithPuppeteer(
+  username,
+  twitter_password,
+  tweetId,
+  replyText
+) {
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox"],
+    headless: true, // Change to false to see what's happening
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-web-security",
+    ],
+    defaultViewport: null,
   });
 
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800 });
+  let result = {
+    success: false,
+    error: null,
+    details: {},
+  };
 
   try {
     console.log("🔐 Logging in...");
@@ -817,77 +869,163 @@ async function postReplyWithPuppeteer(username, twitter_password, tweetId, reply
     await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
     // Fill username
-    console.log("1")
+    console.log("1");
     await page.waitForSelector('input[name="text"]');
-    console.log("2")
+    console.log("2");
     await page.type('input[name="text"]', username);
-        console.log("3")
+    console.log("3");
     await page.keyboard.press("Enter");
-        console.log("4")
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log("4");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    console.log("5")
+    console.log("5");
     // Fill password
     await page.waitForSelector('input[name="password"]', { timeout: 5000 });
-        console.log("6")
-        console.log("🔑 Username:", username);
-console.log("🔑 Password:", twitter_password);
-console.log("🧪 typeof Password:", typeof twitter_password);
+    console.log("6");
+    console.log("🔑 Username:", username);
+    console.log("🔑 Password:", twitter_password);
+    console.log("🧪 typeof Password:", typeof twitter_password);
 
     await page.type('input[name="password"]', twitter_password);
-     console.log("7")
+    console.log("7");
     await page.keyboard.press("Enter");
- console.log("8")
+    console.log("8");
     await page.waitForNavigation({ waitUntil: "networkidle2" });
-     console.log("9")
+    console.log("9");
     console.log("✅ Logged in");
 
     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
-
 
     console.log(`📨 Opening tweet: ${tweetUrl}`);
     console.log("🔗 Navigating to tweet:", tweetUrl);
     await page.goto(tweetUrl, { waitUntil: "networkidle2", timeout: 90000 });
 
-    // Wait for the tweet content to load
-  
+    // Take a screenshot of the tweet page
+    await page.screenshot({ path: "tweet-page.png" });
 
     // Wait for reply button using stable test ID
-        await page.screenshot({ path: "error.png" });
-   await page.waitForSelector('button[data-testid="reply"]', { timeout: 10000 });
-       await page.screenshot({ path: "error2.png" });
-  console.log("✅ Reply button found");
-      await page.screenshot({ path: "erro3.png" });
+    await page.waitForSelector('button[data-testid="reply"]', {
+      timeout: 10000,
+    });
+    console.log("✅ Reply button found");
+    await page.screenshot({ path: "reply-button-found.png" });
 
-  await page.click('button[data-testid="reply"]');
-  console.log("📨 Reply button clicked");
+    await page.click('button[data-testid="reply"]');
+    console.log("📨 Reply button clicked");
 
     // Wait for reply modal textarea
-    await page.waitForSelector('div[data-testid="tweetTextarea_0"]', { timeout: 15000 });
+    await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
+      timeout: 15000,
+    });
+    await page.waitForSelector(
+      'div[role="textbox"][data-testid="tweetTextarea_0"]'
+    );
+    await page.type(
+      'div[role="textbox"][data-testid="tweetTextarea_0"]',
+      replyText
+    );
+    console.log("📝 Typed reply");
+    await page.screenshot({ path: "reply-typed.png" });
 
-   await page.waitForSelector('div[role="textbox"][data-testid="tweetTextarea_0"]');
-await page.type('div[role="textbox"][data-testid="tweetTextarea_0"]', replyText);
-console.log("📝 Typed reply");
-   await page.screenshot({ path: "erro6.png" });
-// 2. Wait for the reply button to become enabled
+    // Wait for the "Reply" button to become enabled
+    await page.waitForFunction(
+      () => {
+        const btn = document.querySelector(
+          'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+        );
+        return (
+          btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
+        );
+      },
+      { timeout: 10000 }
+    );
 
-// Wait for the "Reply" button to become enabled
-await page.waitForFunction(() => {
-  const btn = document.querySelector('div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]');
-  return btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
-}, { timeout: 10000 });
+    console.log("✅ Reply button is now enabled");
 
-console.log("✅ Reply button is now enabled");
+    // Click the reply button
+    const replyBtn = await page.$(
+      'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+    );
+    await replyBtn.click();
+    console.log("Clicked reply button, waiting for confirmation...");
+    await page.screenshot({ path: "erro7.png" });
+    console.log("posted");
+    await replyBtn.click();
+    // Increase timeout to allow Twitter to process the reply
+    await new Promise((resolve) => setTimeout(resolve, 10000));
 
-// Click the reply button
-const replyBtn = await page.$('div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]');
-await replyBtn.click();
-console.log("posted")
+    // Take a screenshot after posting
+    await page.screenshot({ path: "after-posting.png" });
 
-   await new Promise(resolve => setTimeout(resolve, 3000));
+    // Verify that the tweet was actually posted
+    try {
+      // Look for success indicators
+      const successIndicator = await page.evaluate(() => {
+        // Check for success toast or notification
+        const successToast =
+          document.body.textContent.includes("Your Tweet was sent") ||
+          document.body.textContent.includes("Reply posted");
+
+        // Check if the reply dialog is closed (another indicator of success)
+        const replyDialogClosed = !document.querySelector('div[role="dialog"]');
+
+        // Check for any error messages
+        const errorMessages =
+          document.body.innerText.match(
+            /error|failed|couldn't post|try again/i
+          ) || [];
+
+        return {
+          successToast,
+          replyDialogClosed,
+          errorMessages,
+        };
+      });
+
+      if (successIndicator.successToast || successIndicator.replyDialogClosed) {
+        console.log(
+          "✅ Tweet successfully posted! Indicators:",
+          successIndicator
+        );
+        result.success = true;
+        result.details = {
+          successIndicators: successIndicator,
+        };
+      } else if (successIndicator.errorMessages.length > 0) {
+        console.error(
+          "❌ Error messages found:",
+          successIndicator.errorMessages
+        );
+        result.success = false;
+        result.error = `Tweet posting failed: ${successIndicator.errorMessages.join(
+          ", "
+        )}`;
+      } else {
+        console.log("⚠️ No success indicators found, but no error either");
+        // Take another screenshot to see the current state
+        await page.screenshot({ path: "verification-state.png" });
+
+        // In this case, we'll assume it worked since there's no error
+        result.success = true;
+        result.details = {
+          warning: "No explicit success indicators found, but no errors either",
+        };
+      }
+    } catch (verifyError) {
+      console.error("❌ Error verifying tweet post:", verifyError.message);
+      result.success = false;
+      result.error = `Failed to verify if tweet was posted: ${verifyError.message}`;
+    }
+
+    // Wait a bit longer to ensure everything is processed
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    return result;
   } catch (err) {
     console.error("❌ Puppeteer failed:", err.message);
-    throw err;
+    result.success = false;
+    result.error = err.message;
+    return result;
   } finally {
     await browser.close();
   }
