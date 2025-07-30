@@ -31,6 +31,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { AddTaskOutlined, RemoveRedEye, Search } from "@mui/icons-material";
 import axios from "axios";
+import SuccessPopup from "../dialog/successPopup";
 
 const SearchHistory = () => {
   const [history, setHistory] = useState([]);
@@ -1126,53 +1127,8 @@ useEffect(() => {
       </Dialog>
 
       {/* Error Popup */}
-      <Dialog
-        open={errorPopup}
-        onClose={() => setErrorPopup(false)}
-        sx={{
-          '& .MuiDialog-paper': {
-            borderRadius: '16px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
-            maxWidth: '400px',
-            margin: 'auto',
-          }
-        }}
-      >
-        <Box
-          sx={{
-            backgroundColor: '#36f45fff',
-            color: 'white',
-            p: 3,
-            textAlign: 'center',
-            position: 'relative',
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            Posted
-          </Typography>
-          <Typography variant="body1">
-            { "Posted Succeessfully"}
-          </Typography>
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '100%',
-              height: '100%',
-              opacity: 0.1,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              pointerEvents: 'none',
-            }}
-          >
-            <DeleteIcon sx={{ fontSize: '120px' }} />
-          </Box>
-        </Box>
-      </Dialog>
+    <SuccessPopup  open={errorPopup}
+        onClose={() => setErrorPopup(false)}/>
     </Paper>
   );
 };
