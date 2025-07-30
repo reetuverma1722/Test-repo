@@ -208,7 +208,7 @@ const PostHistory = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {getPlatformIcon(account.platform)}
                     <Typography>
-                      {account.accountName} (@{account.account_handle})
+                      {account.accountName}
                     </Typography>
                   </Box>
                 </MenuItem>
@@ -260,7 +260,7 @@ const PostHistory = () => {
                 <TableCell>Keyword</TableCell>
                 <TableCell>Posted At</TableCell>
                 <TableCell>Engagement</TableCell>
-                <TableCell>Last Fetched</TableCell>
+                <TableCell>Last Posted</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>

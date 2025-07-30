@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -26,13 +27,16 @@ import {
   Alert,
   Snackbar,
   Tooltip,
+  InputAdornment,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Twitter as TwitterIcon,
-  LinkedIn as LinkedInIcon
+  LinkedIn as LinkedInIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
 } from "@mui/icons-material";
 import {
   getAllAccounts,
@@ -164,12 +168,16 @@ const SocialMediaAccounts = () => {
   // State for accounts data
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [twitterLoading, setTwitterLoading] = useState(false);
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
   const [error, setError] = useState("");
   
   // State for form
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [passwordRecoveryDialogOpen, setPasswordRecoveryDialogOpen] = useState(false);
+  const [showTwitterPassword, setShowTwitterPassword] = useState(false);
+  const [showLinkedInPassword, setShowLinkedInPassword] = useState(false);
   const [currentAccount, setCurrentAccount] = useState({
     id: null,
     platform: "twitter",
@@ -179,7 +187,9 @@ const SocialMediaAccounts = () => {
     refreshToken: "",
     tokenExpiresAt: null,
     twitterUsername: "",
-    twitterPassword: ""
+    twitterPassword: "",
+    linkedinUsername: "",
+    linkedinPassword: ""
   });
   
   // State for delete confirmation
@@ -415,7 +425,7 @@ const SocialMediaAccounts = () => {
         return;
       }
       
-      setLoading(true);
+      setTwitterLoading(true);
       
       // Prepare the account data to be sent to backend
       const accountData = {
@@ -465,7 +475,7 @@ const SocialMediaAccounts = () => {
         severity: "error"
       });
     } finally {
-      setLoading(false);
+      setTwitterLoading(false);
     }
   };
 
@@ -552,6 +562,80 @@ const SocialMediaAccounts = () => {
       setLoading(false);
       setPasswordRecoveryDialogOpen(false);
     });
+  };
+
+  // Handle direct LinkedIn login with username and password
+  const handleLinkedInDirectLogin = async () => {
+    try {
+      // Validate inputs
+      if (!currentAccount.linkedinUsername || !currentAccount.linkedinPassword) {
+        setNotification({
+          open: true,
+          message: "Please enter both LinkedIn email and password",
+          severity: "error"
+        });
+        return;
+      }
+      
+      // Get the current user ID
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        setError("You must be logged in to connect a LinkedIn account. Please log out and log back in if you're seeing this message.");
+        return;
+      }
+      
+      setLinkedinLoading(true);
+      
+      // Call the backend API to authenticate with LinkedIn
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/linkedin/direct-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          username: currentAccount.linkedinUsername,
+          password: currentAccount.linkedinPassword,
+          userId: userId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to connect LinkedIn account');
+      }
+      
+      // Clear the form
+      setCurrentAccount({
+        ...currentAccount,
+        linkedinUsername: '',
+        linkedinPassword: ''
+      });
+      
+      // Refresh the accounts list
+      await fetchAccounts();
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        message: "LinkedIn account connected successfully",
+        severity: "success"
+      });
+      
+      // Close the form
+      setFormOpen(false);
+    } catch (error) {
+      console.error("Error connecting LinkedIn account:", error);
+      setNotification({
+        open: true,
+        message: error.message || "Failed to connect LinkedIn account. Please check your credentials and try again.",
+        severity: "error"
+      });
+    } finally {
+      setLinkedinLoading(false);
+    }
   };
 
   // Close notification
@@ -759,12 +843,25 @@ const SocialMediaAccounts = () => {
                       variant="outlined"
                       margin="normal"
                       name="twitterPassword"
-                      type="password"
+                      type={showTwitterPassword ? "text" : "password"}
                       value={currentAccount.twitterPassword || ''}
                       onChange={(e) => setCurrentAccount({
                         ...currentAccount,
                         twitterPassword: e.target.value
                       })}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowTwitterPassword(!showTwitterPassword)}
+                              edge="end"
+                            >
+                              {showTwitterPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                       helperText={
                         <Box component="span" sx={{ display: 'flex', justifyContent: 'end', width: '100%' }}>
                           
@@ -790,8 +887,9 @@ const SocialMediaAccounts = () => {
                       variant="contained"
                       fullWidth
                       size="large"
-                      startIcon={<TwitterIcon />}
+                      startIcon={twitterLoading ? null : <TwitterIcon />}
                       onClick={handleTwitterDirectLogin}
+                      disabled={twitterLoading}
                       sx={{
                         mt: 2,
                         py: 1.5,
@@ -801,19 +899,71 @@ const SocialMediaAccounts = () => {
                         }
                       }}
                     >
-                      Connect Twitter Account
+                      {twitterLoading ? <CircularProgress size={24} color="inherit" /> : "Connect Twitter Account"}
                     </Button>
                   </Paper>
                 </Grid>
                 
                 <Grid item xs={12}>
+                  <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+                    <Typography variant="h6" gutterBottom>
+                      <LinkedInIcon sx={{ color: '#0A66C2', mr: 1, verticalAlign: 'middle' }} />
+                      Connect LinkedIn Account
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Enter your LinkedIn credentials to connect your account
+                    </Typography>
+                    
+                    <TextField
+                      fullWidth
+                      label="LinkedIn Email"
+                      variant="outlined"
+                      margin="normal"
+                      name="linkedinUsername"
+                      value={currentAccount.linkedinUsername || ''}
+                      onChange={(e) => setCurrentAccount({
+                        ...currentAccount,
+                        linkedinUsername: e.target.value
+                      })}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      label="LinkedIn Password"
+                      variant="outlined"
+                      margin="normal"
+                      name="linkedinPassword"
+                      type={showLinkedInPassword ? "text" : "password"}
+                      value={currentAccount.linkedinPassword || ''}
+                      onChange={(e) => setCurrentAccount({
+                        ...currentAccount,
+                        linkedinPassword: e.target.value
+                      })}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowLinkedInPassword(!showLinkedInPassword)}
+                              edge="end"
+                            >
+                              {showLinkedInPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    
                   <Button
                     variant="contained"
                     fullWidth
                     size="large"
-                    startIcon={<LinkedInIcon />}
-                    onClick={() => redirectToLinkedInAuth()}
+                      startIcon={linkedinLoading ? null : <LinkedInIcon />}
+                      onClick={handleLinkedInDirectLogin}
+                      disabled={linkedinLoading}
                     sx={{
+                        mt: 2,
                       py: 1.5,
                       backgroundColor: '#0A66C2',
                       '&:hover': {
@@ -821,8 +971,9 @@ const SocialMediaAccounts = () => {
                       }
                     }}
                   >
-                    Connect LinkedIn Account
+                      {linkedinLoading ? <CircularProgress size={24} color="inherit" /> : "Connect LinkedIn Account"}
                   </Button>
+                  </Paper>
                 </Grid>
                 
                 <Grid item xs={12}>

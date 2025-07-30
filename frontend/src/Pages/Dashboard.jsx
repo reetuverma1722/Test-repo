@@ -29,6 +29,7 @@ import {
   DialogActions,
   TextField,
   Alert,
+  InputAdornment,
 } from "@mui/material";
 import {
   CloseOutlined,
@@ -48,6 +49,8 @@ import {
   RemoveRedEye as ViewIcon,
   TrendingUp as TrendingUpIcon,
   PostAdd as PostAddIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -87,6 +90,9 @@ const Dashboard = () => {
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -133,8 +139,7 @@ const Dashboard = () => {
   };
 
   // Fetch all keywords
-  const fetchAllKeywords = async () => {
-    debugger
+  const fetchAllKeywords = async () => { 
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get("http://localhost:5000/api/keywords", {
@@ -518,32 +523,71 @@ const Dashboard = () => {
               <TextField
                 margin="dense"
                 label="Current Password"
-                type="password"
+                type={showCurrentPassword ? "text" : "password"}
                 fullWidth
                 variant="outlined"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 sx={{ mb: 2 }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle current password visibility"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        edge="end"
+                      >
+                        {showCurrentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
               <TextField
                 margin="dense"
                 label="New Password"
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 fullWidth
                 variant="outlined"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 sx={{ mb: 2 }}
                 helperText="Password must be at least 8 characters with letters and numbers"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle new password visibility"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        edge="end"
+                      >
+                        {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
               <TextField
                 margin="dense"
                 label="Confirm New Password"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 fullWidth
                 variant="outlined"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle confirm password visibility"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </>
           )}
@@ -1227,7 +1271,7 @@ const Dashboard = () => {
                         // When "All Accounts" is selected, set selectedAccount to null
                         setSelectedAccount(e.target.value === '' ? null : e.target.value);
                         // Refetch posts when account changes
-                        setTimeout(() => fetchAllPosts(), 100);
+                        // setTimeout(() => fetchAllPosts(), 100);
                       }}
                       disabled={loadingAccounts}
                       fullWidth
