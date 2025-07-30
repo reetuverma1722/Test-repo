@@ -382,14 +382,6 @@ router.post('/accounts', checkAuth, async (req, res) => {
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('Twitter Password included:', !!twitterPassword);
     console.log('===================================================');
-    const { platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt, twitterPassword } = req.body;
-    
-    // Console log the data passed to backend
-    console.log('=== Data passed to backend when adding new account ===');
-    console.log('User ID:', userId);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    console.log('Twitter Password included:', !!twitterPassword);
-    console.log('===================================================');
     
     if (!platform || !accountId || !accountName) {
       return res.status(400).json({

@@ -389,8 +389,6 @@ const db = require("../db");
 const axios = require("axios");
 const puppeteer = require("puppeteer");
 const pool = require("../db"); // PostgreSQL Pool
-const puppeteer = require("puppeteer");
-const pool = require("../db"); // PostgreSQL Pool
 const { exec } = require("child_process");
 let fetch;
 (async () => {
@@ -504,7 +502,7 @@ router.get("/search", async (req, res) => {
       
       query += ` ORDER BY created_at DESC`;
       
-      console.log("DB Query:", query, "Params:", params);
+      console.log("DB Query........:", query, "Params:", params);
       const cached = await db.query(query, params);
 
       if (cached.rows.length > 0) {
@@ -513,6 +511,7 @@ router.get("/search", async (req, res) => {
       }
 
       // 3. Scrape if not in cache
+      console.log("not found")
       const wsEndpoint = await launchChromeIfNeeded();
       const browser = await puppeteer.connect({
         browserWSEndpoint: wsEndpoint,
@@ -520,17 +519,51 @@ router.get("/search", async (req, res) => {
       });
 
       const page = await browser.newPage();
+
+      console.log("1")
+      console.log("🔐 Logging in...");
+
+    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+
+    // Fill username
+    console.log("1")
+    const username="@GeetaTi29691700";
+    const twitter_password = "qss@2025#"
+    await page.waitForSelector('input[name="text"]');
+    console.log("2")
+    await page.type('input[name="text"]', username);
+        console.log("3")
+    await page.keyboard.press("Enter");
+        console.log("4")
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    console.log("5")
+    // Fill password
+    await page.waitForSelector('input[name="password"]', { timeout: 5000 });
+        console.log("6")
+        console.log("🔑 Username:", username);
+console.log("🔑 Password:", twitter_password);
+console.log("🧪 typeof Password:", typeof twitter_password);
+
+    await page.type('input[name="password"]', twitter_password);
+     console.log("7")
+    await page.keyboard.press("Enter");
+ console.log("8")
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+     console.log("9")
+    console.log("✅ Logged in");
       const searchQuery = encodeURIComponent(keyword);
       await page.goto(
         `https://twitter.com/search?q=${searchQuery}&src=typed_query`,
         { waitUntil: "domcontentloaded" }
       );
-
+      console.log("2")
       for (let i = 0; i < 10; i++) {
         await page.evaluate(() => window.scrollBy(0, window.innerHeight));
         await new Promise((res) => setTimeout(res, 1500));
       }
-
+console.log("#")
+  await page.screenshot({ path: "erro3.png" });
       const scrapedTweets = await page.evaluate(() => {
   const articles = document.querySelectorAll("article");
 
@@ -574,7 +607,8 @@ const views = Number((metricsLabel.match(/(\d+)\s+view/))?.[1]) || 0;
     };
   }).filter(Boolean);
 });
-
+ await page.screenshot({ path: "erro4.png" });
+  console.log("scrapedTweets:", scrapedTweets.length);
 
       for (const tweet of scrapedTweets) {
         const reply = await generateReply(tweet.text);
