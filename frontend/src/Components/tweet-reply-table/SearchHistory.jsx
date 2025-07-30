@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState } from "react";
 import {
   getAllAccounts,
@@ -42,8 +39,7 @@ const SearchHistory = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [search, setSearch] = useState("");
   const [accessToken, setAccessToken] = useState("");
- const [tweetId, setTweetId] = useState("");  
-const [reply, setReply] = useState("");
+  const [tweetText, setTweetText] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedTweet, setSelectedTweet] = useState(null);
   const [editedReply, setEditedReply] = useState("");
@@ -60,9 +56,6 @@ const [reply, setReply] = useState("");
       }
       const res = await axios.get(url);
       setHistory(res.data);
-      setTweetId(res.data.id);
-      setReply(res.data.reply)
-      console.log("res999",res.data)
     } catch (err) {
       console.error("Error fetching history:", err.message);
     }
@@ -121,7 +114,58 @@ let isPosting = false;
     }
   };
 
+  // const handlePost = async (tweetId, replyText) => {
+  //   try {
+  //     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+  //     const res = await axios.post("http://localhost:5000/api/post-reply", {
+  //       tweetUrl,
+  //       replyText,
+  //     });
 
+  //     if (res.data.success) {
+  //       alert("✅ Reply posted!");
+  //     } else {
+  //       alert("❌ Failed to post reply");
+  //     }
+  //   } catch (err) {
+  //     console.error("Reply post failed:", err.message);
+  //   }
+  // };
+  const token = localStorage.getItem("twitter_access_token");
+  // const handlePost11 = async (tweetId, replyText, token) => {
+  //   try {
+  //     const res = await axios.post("http://localhost:5000/api/post-reply", {
+  //       tweetId,
+  //       replyText,
+  //       accessToken: token,
+  //     });
+
+  //     if (res.data.message === "Reply posted!") {
+  //       alert("✅ Reply posted!");
+  //     } else {
+  //       alert("❌ Failed to post reply");
+  //     }
+  //   } catch (err) {
+  //     console.error("Reply post failed:", err?.response?.data || err.message);
+  //   }
+  // };
+const handlePost11 = async (tweetId, replyText,selectedAccountId) => {
+    try {
+      const res = await axios.post("http://localhost:5000/api/reply-to-tweet", {
+        tweetId,
+        replyText,
+        selectedAccountId:selectedAccountId
+      });
+
+      if (res.data.message === "Reply posted!") {
+        alert("✅ Reply posted!");
+      } else {
+        alert("❌ Failed to post reply");
+      }
+    } catch (err) {
+      console.error("Reply post failed:", err?.response?.data || err.message);
+    }
+  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -139,7 +183,17 @@ let isPosting = false;
     }
   }, []);
 
- 
+  // const handlePost = async () => {
+  //   try {
+  //     const response = await axios.post("http://localhost:5000/api/auth/tweet", {
+  //       tweetText:"hello",
+  //       accessToken:token,
+  //     });
+  //     alert("Tweeted: " + response.data.data.text);
+  //   } catch (error) {
+  //     console.error("Tweet Error:", error.response?.data || error.message);
+  //   }
+  // };
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedIds([]);
@@ -160,7 +214,16 @@ let isPosting = false;
       item.keyword.toLowerCase().includes(search.toLowerCase()) ||
       item.text.toLowerCase().includes(search.toLowerCase())
   );
+  const handlePost = (tweet) => {
+    setSelectedTweet(tweet);
+    setEditedReply(tweet.reply || "");
+  localStorage.setItem("selected_tweet_id", tweet.id);
+  localStorage.setItem("selected_tweet_reply", tweet.reply || "");
 
+    setIsEditing(false);
+    setOpen(true);
+
+  };
 
   const handleEdit = (tweet) => {
     setSelectedTweet(tweet);
@@ -192,12 +255,12 @@ let isPosting = false;
     }
   };
 
-const redirectToTwitter = () => {
+  const redirectToTwitter = () => {
       if (isPosting) return;
       isPosting = true;
     try {
-      const clientId = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
-     
+      const clientId = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
+      
       const redirectUri = encodeURIComponent(
         "http://localhost:5000/api/auth/twitter/callback"
       );
@@ -208,9 +271,9 @@ const redirectToTwitter = () => {
       // Generate a more unique state with timestamp to help with rate limiting
       const state = `state_${Date.now()}`; // Random string in production for CSRF protection
       const codeChallenge = "challenge"; // For now, static; later use real PKCE
- 
+
       const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
- 
+
       // Add a small delay before redirecting to avoid rapid successive requests
       setTimeout(() => {
         window.location.href = twitterAuthUrl;
@@ -222,22 +285,89 @@ const redirectToTwitter = () => {
     isPosting = false;
   }
   };
- 
-   const handlePost = (tweet) => {
-  setSelectedTweet(tweet);
-  setEditedReply(tweet.reply || "");
- 
-  // Remove old values (optional, just for clarity)
-  localStorage.removeItem("selected_tweet_id");
-  localStorage.removeItem("selected_tweet_reply");
- 
-  // Set new values
-  localStorage.setItem("selected_tweet_id", tweet.id);
-  localStorage.setItem("selected_tweet_reply", tweet.reply || "");
- 
-  setIsEditing(false);
-  setOpen(true);
-};
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
+
+  if (!code) return;
+
+  // Exchange code for access token and trigger retweet
+  console.log("passed phase 2",code)
+  const exchangeCodeAndRetweet = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/twitter/exchange-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.access_token) {
+        console.log("✅ Twitter Access Token:", data.access_token);
+        localStorage.setItem("twitter_access_token", data.access_token);
+
+        // Trigger retweet API on your backend
+        const retweetRes = await fetch("http://localhost:5000/api/twitter/retweet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.access_token}`,
+          },
+          body: JSON.stringify({
+            tweetId: '1948117932606984467',
+            reply: 'Greatt'
+          }),
+        });
+
+        const result = await retweetRes.json();
+        if (!retweetRes.ok) throw new Error(result.message);
+
+        console.log("✅ Retweet & Reply Success", result);
+      } else {
+        throw new Error(data.message || "No access token returned");
+      }
+    } catch (err) {
+      console.error("❌ Twitter retweet failed:", err.message);
+    }
+  };
+
+  exchangeCodeAndRetweet();
+}, []);
+
+  const handleScrapeit = async () => {
+    
+    if (!selectedAccountId) {
+      alert("Please select an account to post from.");
+      return;
+    }
+
+    try {
+      const tweetId = localStorage.getItem("selected_tweet_id");
+      const reply = localStorage.getItem("selected_tweet_reply") || editedReply;
+      if (!tweetId || !reply) {
+        alert("No tweet selected or reply text is empty.");
+        return;
+      }
+
+      // Call the backend service to post the reply
+      await handlePost11(tweetId, reply,selectedAccountId);
+
+      // Optionally, you can also update the local history state
+      setHistory((prev) =>
+        prev.map((tweet) =>
+          tweet.id === tweetId ? { ...tweet, reply } : tweet
+        )
+      );
+
+      setOpen(false);
+      alert("Reply posted successfully!");
+    } catch (error) {
+      console.error("Error posting reply:", error);
+      alert("Failed to post reply. Please try again later.");
+    }
+
+  }
 
   return (
     <Paper
@@ -878,7 +1008,7 @@ const redirectToTwitter = () => {
             Cancel
           </Button>
           <Button
-           onClick={isEditing ? handleSaveEdit : redirectToTwitter}
+            onClick={isEditing ? handleSaveEdit : handleScrapeit}
             variant="contained"
             startIcon={isEditing ? <EditIcon /> : <Search />}
             sx={{
