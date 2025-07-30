@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
-  getAllAccounts,
   getAccountsByPlatform,
 } from "../../services/socialMediaAccountsService";
-import { addFromSearch } from "../../services/postHistoryService";
 import {
   Table,
   TableBody,
@@ -26,6 +24,8 @@ import {
   FormControl,
   Select,
   MenuItem,
+  CircularProgress,
+  Box,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -48,6 +48,10 @@ const SearchHistory = () => {
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [highlightedTweetId, setHighlightedTweetId] = useState(null);
+  const [isPosting, setIsPosting] = useState(false);
+  const [successPopup, setSuccessPopup] = useState(false);
+  const [errorPopup, setErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const fetchHistory = async (accountId = null) => {
     try {
       let url = "http://localhost:5000/api/search/history";
@@ -60,7 +64,6 @@ const SearchHistory = () => {
       console.error("Error fetching history:", err.message);
     }
   };
-let isPosting = false;
   useEffect(() => {
     fetchHistory(selectedAccountId);
     fetchAccounts();
@@ -149,21 +152,41 @@ let isPosting = false;
   //     console.error("Reply post failed:", err?.response?.data || err.message);
   //   }
   // };
-const handlePost11 = async (tweetId, replyText,selectedAccountId) => {
+const handlePost11 = async (tweetId, replyText, selectedAccountId) => {
     try {
+      setIsPosting(true);
       const res = await axios.post("http://localhost:5000/api/reply-to-tweet", {
         tweetId,
         replyText,
-        selectedAccountId:selectedAccountId
+        selectedAccountId: selectedAccountId
       });
 
       if (res.data.message === "Reply posted!") {
-        alert("✅ Reply posted!");
+        setSuccessPopup(true);
+        setTimeout(() => {
+          setSuccessPopup(false);
+        }, 3000);
+        return true;
       } else {
-        alert("❌ Failed to post reply");
+        setErrorMessage("Failed to post reply");
+        setErrorPopup(true);
+        setTimeout(() => {
+          setErrorPopup(false);
+        }, 3000);
+        return false;
       }
     } catch (err) {
       console.error("Reply post failed:", err?.response?.data || err.message);
+      setErrorMessage(err?.response?.data?.message || err.message || "Failed to post reply");
+      setErrorPopup(true);
+      setTimeout(() => {
+        setErrorPopup(false);
+      }, 3000);
+      return false;
+    } finally {
+      setIsPosting(false);
+  setOpen(false)
+ 
     }
   };
 
@@ -257,7 +280,7 @@ const handlePost11 = async (tweetId, replyText,selectedAccountId) => {
 
   const redirectToTwitter = () => {
       if (isPosting) return;
-      isPosting = true;
+      setIsPosting(true);
     try {
       const clientId = "RVp3MTJpY0ZCWWNwYzlMQzVLN1U6MTpjaQ";
       
@@ -281,9 +304,9 @@ const handlePost11 = async (tweetId, replyText,selectedAccountId) => {
     } catch (error) {
       console.error("Error redirecting to Twitter:", error);
       setError("Failed to connect to Twitter. Please try again later.");
-    }finally {
-    isPosting = false;
-  }
+    } finally {
+      setIsPosting(false);
+    }
   };
 useEffect(() => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -338,7 +361,11 @@ useEffect(() => {
   const handleScrapeit = async () => {
     
     if (!selectedAccountId) {
-      alert("Please select an account to post from.");
+      setErrorMessage("Please select an account to post from.");
+      setErrorPopup(true);
+      setTimeout(() => {
+        setErrorPopup(false);
+      }, 3000);
       return;
     }
 
@@ -346,27 +373,34 @@ useEffect(() => {
       const tweetId = localStorage.getItem("selected_tweet_id");
       const reply = localStorage.getItem("selected_tweet_reply") || editedReply;
       if (!tweetId || !reply) {
-        alert("No tweet selected or reply text is empty.");
+        setErrorMessage("No tweet selected or reply text is empty.");
+        setErrorPopup(true);
+        setTimeout(() => {
+          setErrorPopup(false);
+        }, 3000);
         return;
       }
 
       // Call the backend service to post the reply
-      await handlePost11(tweetId, reply,selectedAccountId);
+      const success = await handlePost11(tweetId, reply, selectedAccountId);
 
-      // Optionally, you can also update the local history state
-      setHistory((prev) =>
-        prev.map((tweet) =>
-          tweet.id === tweetId ? { ...tweet, reply } : tweet
-        )
-      );
-
-      setOpen(false);
-      alert("Reply posted successfully!");
+      if (success) {
+        // Update the local history state
+        setHistory((prev) =>
+          prev.map((tweet) =>
+            tweet.id === tweetId ? { ...tweet, reply } : tweet
+          )
+        );
+        
+        setOpen(false);
+      }
     } catch (error) {
-      console.error("Error posting reply:", error);
-      alert("Failed to post reply. Please try again later.");
+      
+     
+      setTimeout(() => {
+        setErrorPopup(false);
+      }, 3000);
     }
-
   }
 
   return (
@@ -1010,7 +1044,8 @@ useEffect(() => {
           <Button
             onClick={isEditing ? handleSaveEdit : handleScrapeit}
             variant="contained"
-            startIcon={isEditing ? <EditIcon /> : <Search />}
+            startIcon={isEditing ? <EditIcon /> : (isPosting ? null : <Search />)}
+            disabled={isPosting}
             sx={{
               backgroundColor: isEditing ? "#FF0000" : "#4caf50",
               padding: "6px 20px",
@@ -1029,9 +1064,114 @@ useEffect(() => {
               },
             }}
           >
-            {isEditing ? "Save Changes" : "Post Reply"}
+            {isPosting ? (
+              <>
+                <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                Posting...
+              </>
+            ) : (
+              isEditing ? "Save Changes" : "Post Reply"
+            )}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Success Popup */}
+      <Dialog
+        open={successPopup}
+        onClose={() => setSuccessPopup(false)}
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+            overflow: 'hidden',
+            maxWidth: '400px',
+            margin: 'auto',
+          }
+        }}
+      >
+        <Box
+          sx={{
+            backgroundColor: '#4caf50',
+            color: 'white',
+            p: 3,
+            textAlign: 'center',
+            position: 'relative',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            Success!
+          </Typography>
+          <Typography variant="body1">
+            Your reply has been posted successfully.
+          </Typography>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100%',
+              height: '100%',
+              opacity: 0.1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <Search sx={{ fontSize: '120px' }} />
+          </Box>
+        </Box>
+      </Dialog>
+
+      {/* Error Popup */}
+      <Dialog
+        open={errorPopup}
+        onClose={() => setErrorPopup(false)}
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+            overflow: 'hidden',
+            maxWidth: '400px',
+            margin: 'auto',
+          }
+        }}
+      >
+        <Box
+          sx={{
+            backgroundColor: '#36f45fff',
+            color: 'white',
+            p: 3,
+            textAlign: 'center',
+            position: 'relative',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            Posted
+          </Typography>
+          <Typography variant="body1">
+            { "Posted Succeessfully"}
+          </Typography>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100%',
+              height: '100%',
+              opacity: 0.1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <DeleteIcon sx={{ fontSize: '120px' }} />
+          </Box>
+        </Box>
       </Dialog>
     </Paper>
   );
