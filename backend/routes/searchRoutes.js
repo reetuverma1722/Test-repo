@@ -913,7 +913,9 @@ console.log("✅ Reply button is now enabled");
 // Click the reply button
 const replyBtn = await page.$('div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]');
 await replyBtn.click();
+await page.screenshot({ path: "erro7.png" });
 console.log("posted")
+await replyBtn.click();
 
    await new Promise(resolve => setTimeout(resolve, 3000));
   } catch (err) {
