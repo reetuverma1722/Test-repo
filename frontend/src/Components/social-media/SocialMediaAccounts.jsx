@@ -287,10 +287,10 @@ const SocialMediaAccounts = () => {
   };
 
   // Open form for adding new account
-  const handleAddAccount = () => {
+  const handleAddAccount = (platform) => {
     setCurrentAccount({
       id: null,
-      platform: "twitter",
+      platform: platform,
       accountId: "",
       accountName: "",
       accessToken: "",
@@ -651,13 +651,32 @@ const SocialMediaAccounts = () => {
       {/* Header and Actions */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h6">Social Media Accounts</Typography>
-        <Box>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddAccount}
+            startIcon={<TwitterIcon />}
+            onClick={() => handleAddAccount("twitter")}
+            sx={{
+              backgroundColor: "#1DA1F2",
+              '&:hover': {
+                backgroundColor: "#0d8bd9"
+              }
+            }}
           >
-            Add Account
+            Add Twitter Account
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<LinkedInIcon />}
+            onClick={() => handleAddAccount("linkedin")}
+            sx={{
+              backgroundColor: "#0A66C2",
+              '&:hover': {
+                backgroundColor: "#0850a0"
+              }
+            }}
+          >
+            Add LinkedIn Account
           </Button>
         </Box>
       </Box>
@@ -713,14 +732,7 @@ const SocialMediaAccounts = () => {
                   <TableCell>{account.accountName}</TableCell>
                   <TableCell>{account.accountId}</TableCell>
                   <TableCell align="center">
-                    <Tooltip title="Edit">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditAccount(account)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                   
                     <Tooltip title="Delete">
                       <IconButton
                         size="small"
@@ -740,7 +752,7 @@ const SocialMediaAccounts = () => {
       {/* Add/Edit Account Form Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {isEditing ? "Edit Account" : "Connect Social Media Account"}
+          {isEditing ? "Edit Account" : `Connect ${currentAccount.platform === "twitter" ? "Twitter" : "LinkedIn"} Account`}
         </DialogTitle>
         <DialogContent>
           {isEditing ? (
@@ -795,180 +807,159 @@ const SocialMediaAccounts = () => {
               </Grid>
             </Grid>
           ) : (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body1" gutterBottom>
-                Connect your social media accounts to manage them in one place. Choose a platform to connect:
-              </Typography>
+            <Box >
               
-              <Grid container spacing={3} sx={{ mt: 2 }}>
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
-                    <Typography variant="h6" gutterBottom>
-                      <TwitterIcon sx={{ color: '#1DA1F2', mr: 1, verticalAlign: 'middle' }} />
-                      Connect Twitter Account
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      Enter your Twitter credentials to connect your account
-                    </Typography>
-                    
-                    <TextField
-                      fullWidth
-                      label="Twitter Username or Email"
-                      variant="outlined"
-                      margin="normal"
-                      name="twitterUsername"
-                      value={currentAccount.twitterUsername || ''}
-                      onChange={(e) => setCurrentAccount({
-                        ...currentAccount,
-                        twitterUsername: e.target.value
-                      })}
-                    />
-                    
-                    <TextField
-                      fullWidth
-                      label="Twitter Password"
-                      variant="outlined"
-                      margin="normal"
-                      name="twitterPassword"
-                      type={showTwitterPassword ? "text" : "password"}
-                      value={currentAccount.twitterPassword || ''}
-                      onChange={(e) => setCurrentAccount({
-                        ...currentAccount,
-                        twitterPassword: e.target.value
-                      })}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              aria-label="toggle password visibility"
-                              onClick={() => setShowTwitterPassword(!showTwitterPassword)}
-                              edge="end"
-                            >
-                              {showTwitterPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                      helperText={
-                        <Box component="span" sx={{ display: 'flex', justifyContent: 'end', width: '100%' }}>
-                          
-                          <Typography
-                            variant="text"
-                            size="small"
-                            onClick={handleForgotPassword}
-                            sx={{
-                              p: 0,
-                              minWidth: 'auto',
-                              textTransform: 'none',
-                              fontSize: '0.75rem',
-                              color: 'black',
-                            }}
-                          >
-                            Forgot password?
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      size="large"
-                      startIcon={twitterLoading ? null : <TwitterIcon />}
-                      onClick={handleTwitterDirectLogin}
-                      disabled={twitterLoading}
-                      sx={{
-                        mt: 2,
-                        py: 1.5,
-                        backgroundColor: '#1DA1F2',
-                        '&:hover': {
-                          backgroundColor: '#0d8bd9'
-                        }
-                      }}
-                    >
-                      {twitterLoading ? <CircularProgress size={24} color="inherit" /> : "Connect Twitter Account"}
-                    </Button>
-                  </Paper>
-                </Grid>
+              <Grid container spacing={3}>
+                {currentAccount.platform === "twitter" && (
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+                      <Typography variant="h6" gutterBottom>
+                        <TwitterIcon sx={{ color: '#1DA1F2', mr: 1, verticalAlign: 'middle' }} />
+                        Connect Twitter Account
+                      </Typography>
+                      
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        Enter your Twitter credentials to connect your account
+                      </Typography>
+                      
+                      <TextField
+                        fullWidth
+                        label="Twitter Username or Email"
+                        variant="outlined"
+                        margin="normal"
+                        name="twitterUsername"
+                        value={currentAccount.twitterUsername || ''}
+                        onChange={(e) => setCurrentAccount({
+                          ...currentAccount,
+                          twitterUsername: e.target.value
+                        })}
+                      />
+                      
+                      <TextField
+                        fullWidth
+                        label="Twitter Password"
+                        variant="outlined"
+                        margin="normal"
+                        name="twitterPassword"
+                        type={showTwitterPassword ? "text" : "password"}
+                        value={currentAccount.twitterPassword || ''}
+                        onChange={(e) => setCurrentAccount({
+                          ...currentAccount,
+                          twitterPassword: e.target.value
+                        })}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle password visibility"
+                                onClick={() => setShowTwitterPassword(!showTwitterPassword)}
+                                edge="end"
+                              >
+                                {showTwitterPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                       
+                      />
+                      
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        startIcon={twitterLoading ? null : <TwitterIcon />}
+                        onClick={handleTwitterDirectLogin}
+                        disabled={twitterLoading}
+                        sx={{
+                          mt: 2,
+                          py: 1.5,
+                          backgroundColor: '#1DA1F2',
+                          '&:hover': {
+                            backgroundColor: '#0d8bd9'
+                          }
+                        }}
+                      >
+                        {twitterLoading ? <CircularProgress size={24} color="inherit" /> : "Connect Twitter Account"}
+                      </Button>
+                    </Paper>
+                  </Grid>
+                )}
                 
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
-                    <Typography variant="h6" gutterBottom>
-                      <LinkedInIcon sx={{ color: '#0A66C2', mr: 1, verticalAlign: 'middle' }} />
-                      Connect LinkedIn Account
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      Enter your LinkedIn credentials to connect your account
-                    </Typography>
-                    
-                    <TextField
-                      fullWidth
-                      label="LinkedIn Email"
-                      variant="outlined"
-                      margin="normal"
-                      name="linkedinUsername"
-                      value={currentAccount.linkedinUsername || ''}
-                      onChange={(e) => setCurrentAccount({
-                        ...currentAccount,
-                        linkedinUsername: e.target.value
-                      })}
-                    />
-                    
-                    <TextField
-                      fullWidth
-                      label="LinkedIn Password"
-                      variant="outlined"
-                      margin="normal"
-                      name="linkedinPassword"
-                      type={showLinkedInPassword ? "text" : "password"}
-                      value={currentAccount.linkedinPassword || ''}
-                      onChange={(e) => setCurrentAccount({
-                        ...currentAccount,
-                        linkedinPassword: e.target.value
-                      })}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              aria-label="toggle password visibility"
-                              onClick={() => setShowLinkedInPassword(!showLinkedInPassword)}
-                              edge="end"
-                            >
-                              {showLinkedInPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                      startIcon={linkedinLoading ? null : <LinkedInIcon />}
-                      onClick={handleLinkedInDirectLogin}
-                      disabled={linkedinLoading}
-                    sx={{
-                        mt: 2,
-                      py: 1.5,
-                      backgroundColor: '#0A66C2',
-                      '&:hover': {
-                        backgroundColor: '#0850a0'
-                      }
-                    }}
-                  >
-                      {linkedinLoading ? <CircularProgress size={24} color="inherit" /> : "Connect LinkedIn Account"}
-                  </Button>
-                  </Paper>
-                </Grid>
+                {currentAccount.platform === "linkedin" && (
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+                      <Typography variant="h6" gutterBottom>
+                        <LinkedInIcon sx={{ color: '#0A66C2', mr: 1, verticalAlign: 'middle' }} />
+                        Connect LinkedIn Account
+                      </Typography>
+                      
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        Enter your LinkedIn credentials to connect your account
+                      </Typography>
+                      
+                      <TextField
+                        fullWidth
+                        label="LinkedIn Email"
+                        variant="outlined"
+                        margin="normal"
+                        name="linkedinUsername"
+                        value={currentAccount.linkedinUsername || ''}
+                        onChange={(e) => setCurrentAccount({
+                          ...currentAccount,
+                          linkedinUsername: e.target.value
+                        })}
+                      />
+                      
+                      <TextField
+                        fullWidth
+                        label="LinkedIn Password"
+                        variant="outlined"
+                        margin="normal"
+                        name="linkedinPassword"
+                        type={showLinkedInPassword ? "text" : "password"}
+                        value={currentAccount.linkedinPassword || ''}
+                        onChange={(e) => setCurrentAccount({
+                          ...currentAccount,
+                          linkedinPassword: e.target.value
+                        })}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle password visibility"
+                                onClick={() => setShowLinkedInPassword(!showLinkedInPassword)}
+                                edge="end"
+                              >
+                                {showLinkedInPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                      
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        startIcon={linkedinLoading ? null : <LinkedInIcon />}
+                        onClick={handleLinkedInDirectLogin}
+                        disabled={linkedinLoading}
+                        sx={{
+                          mt: 2,
+                          py: 1.5,
+                          backgroundColor: '#0A66C2',
+                          '&:hover': {
+                            backgroundColor: '#0850a0'
+                          }
+                        }}
+                      >
+                        {linkedinLoading ? <CircularProgress size={24} color="inherit" /> : "Connect LinkedIn Account"}
+                      </Button>
+                    </Paper>
+                  </Grid>
+                )}
                 
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    You can connect multiple accounts from the same platform. This allows you to post from different accounts.
-                  </Alert>
-                </Grid>
+                
               </Grid>
             </Box>
           )}
