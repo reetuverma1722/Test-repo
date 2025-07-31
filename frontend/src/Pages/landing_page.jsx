@@ -13,7 +13,7 @@ const LandingPage = () => {
     <div className="oask-container">
       <header className="header">
         <div className="logo-container">
-          <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo" />
+          {/* <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo" /> */}
           <h1>Buzzly AI - Optimize, Achieve, Scale, Keep Growing</h1>
         </div>
         <p>
@@ -81,9 +81,9 @@ const LandingPage = () => {
             },
           ].map(({ icon, title, text, number }) => (
             <div className="methodology-step" key={title}>
-              <div className="step-number">{number}</div>
+              {/* <div className="step-number">{number}</div> */}
               <div className="step-content">
-                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#BE1212' /></div>
+                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#4896a1' /></div>
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>
@@ -121,7 +121,7 @@ const LandingPage = () => {
             },
           ].map(({ icon, title, text }, index) => (
             <div className="feature-card" key={title}>
-              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#BE1212' /></div>
+              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#4896a1' /></div>
               <h3>{title}</h3>
               <p>{text}</p>
             </div>
@@ -180,7 +180,7 @@ const LandingPage = () => {
         <div className="footer-content">
           <div className="footer-logo">
             <div className="footer-logo-container">
-              <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo-footer" />
+              {/* <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo-footer" /> */}
               <h3>Buzzly AI</h3>
             </div>
             <p>Optimize, Achieve, Scale, Keep Growing</p>

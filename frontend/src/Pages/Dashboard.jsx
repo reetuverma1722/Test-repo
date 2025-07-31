@@ -30,6 +30,7 @@ import {
   TextField,
   Alert,
   InputAdornment,
+  colors,
 } from "@mui/material";
 import {
   CloseOutlined,
@@ -880,18 +881,35 @@ const Dashboard = () => {
           }}
         >
           <Toolbar sx={{ justifyContent: "space-between", height: 48 }}>
-            <Typography
-              variant="h6"
-              noWrap
-              sx={{
-                fontWeight: 600,
-                letterSpacing: "0.5px",
-                fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                color: "text.primary",
-              }}
-            >
-              Buzzly
-            </Typography>
+          <Typography
+  variant="h6"
+  noWrap
+  sx={{
+    display: 'flex',
+    alignItems: 'center',
+    fontWeight: 600,
+    letterSpacing: '0.5px',
+    fontSize: { xs: '1.1rem', sm: '1.4rem' },
+    marginTop:'20px',
+   
+  }}
+>
+  <div className="logo-container" style={{ display: 'flex', alignItems: 'center' }}>
+    <img
+      src="/images/Buzly.png"
+      alt="Buzly Logo"
+      className="buzly-logo"
+      style={{
+        height: '1.5em',     // Scales with text
+        marginRight: '0.1em',
+        verticalAlign: 'middle',
+      // Match the image tone
+      }}
+    />
+    <span style={{  fontWeight: 600 }}>uzzly</span>
+  </div>
+</Typography>
+
             <Box
               sx={{
                 display: "flex",
@@ -1010,14 +1028,14 @@ const Dashboard = () => {
                   <Typography
                     variant="h4"
                     sx={{
-                      fontWeight: 700,
+                      fontWeight: 600,
                       mb: 0.5,
-                      color: "#a71900ff",
+                      color: "#4896a1",
                     }}
                   >
                     Social Media Dashboard
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography variant="body1" color="text.secondary" sx={{fontSize:'0.9rem'}}>
                     Discover and engage with relevant social media content
                   </Typography>
                 </Box>
