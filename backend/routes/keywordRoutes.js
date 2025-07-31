@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 // Middleware to check authentication
 const checkAuth = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1] || localStorage.getItem('token');
+    const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
       // For development purposes, allow requests without a token
@@ -142,7 +142,8 @@ router.post('/keywords', checkAuth, async (req, res) => {
         'SELECT id FROM social_media_accounts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
         [accountId, userId]
       );
-      
+      console.log('Checking account ID:', accountId, 'for user ID:', userId);
+
       if (accountCheck.rows.length === 0) {
         return res.status(400).json({ success: false, message: 'Invalid account ID' });
       }

@@ -13,13 +13,21 @@ const defaultHeaders = {
 
 export const apiPost = async (endpoint, data, token = null) => {
   try {
+    const headers = {
+      ...defaultHeaders,
+      // Always include Authorization header, even with a dummy token for development
+      Authorization: `Bearer ${token || 'dummy-token'}`,
+    };
+    
+    // Add user data from localStorage if available
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      headers['X-User-Data'] = userStr;
+    }
+    
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        ...defaultHeaders,
-        // Always include Authorization header, even with a dummy token for development
-        Authorization: `Bearer ${token || 'dummy-token'}`,
-      },
+      headers,
       body: JSON.stringify(data),
     });
 

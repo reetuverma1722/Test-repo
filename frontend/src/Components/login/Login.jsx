@@ -13,8 +13,12 @@ import {
   Container,
   Card,
   CardContent,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import authService from "../../services/authService";
 import { useNavigate } from "react-router";
 import { GoogleLogin } from "@react-oauth/google";
@@ -27,6 +31,8 @@ const Login = ({ isPopup = false }) => {
   const [confirmPass, setConfirmPass] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   const toggleMode = () => {
@@ -54,7 +60,20 @@ const Login = ({ isPopup = false }) => {
 
       setSuccess(data.message);
 
-      if (!isRegister) {
+      if (isRegister) {
+        // After successful registration, automatically log in the user
+        try {
+          const loginData = await authService.login(email, password);
+          console.log("Logged in user:", loginData.user);
+          localStorage.setItem("user", JSON.stringify(loginData.user));
+          localStorage.setItem("token", loginData.token);
+          navigate("/dashboard");
+        } catch (loginErr) {
+          // If auto-login fails, show success message but don't navigate
+          console.error("Auto-login after registration failed:", loginErr);
+          setSuccess(data.message + " Please log in with your new credentials.");
+        }
+      } else {
         console.log("Logged in user:", data.user);
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("token", data.token);
@@ -101,19 +120,28 @@ const Login = ({ isPopup = false }) => {
   };
 
   const redirectToTwitter = () => {
-    const clientId = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
-    const redirectUri = encodeURIComponent(
-      "http://localhost:5000/api/auth/twitter/callback"
-    );
-    const scope = encodeURIComponent(
-     'tweet.read tweet.write users.read offline.access'
-    );
-    const state = "state"; // Random string in production for CSRF protection
-    const codeChallenge = "challenge"; // For now, static; later use real PKCE
+    try {
+      const clientId = "OEkyejYzcXlKVkZmX2RVekFFUFc6MTpjaQ";
+      const redirectUri = encodeURIComponent(
+        "http://localhost:5000/api/auth/twitter/callback"
+      );
+      const scope = encodeURIComponent(
+       'tweet.read tweet.write users.read offline.access'
+      );
+      // Generate a more unique state with timestamp to help with rate limiting
+      const state = `state_${Date.now()}`; // Random string in production for CSRF protection
+      const codeChallenge = "challenge"; // For now, static; later use real PKCE
 
-    const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
+      const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=plain`;
 
-    window.location.href = twitterAuthUrl;
+      // Add a small delay before redirecting to avoid rapid successive requests
+      setTimeout(() => {
+        window.location.href = twitterAuthUrl;
+      }, 500);
+    } catch (error) {
+      console.error("Error redirecting to Twitter:", error);
+      setError("Failed to connect to Twitter. Please try again later.");
+    }
   };
 
   return (
@@ -215,20 +243,46 @@ const Login = ({ isPopup = false }) => {
               />
               <TextField
                 label="Password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 size="medium"
                 fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
               {isRegister && (
                 <TextField
                   label="Confirm Password"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPass}
                   onChange={(e) => setConfirmPass(e.target.value)}
                   size="medium"
                   fullWidth
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle confirm password visibility"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               )}
               <Button
