@@ -26,6 +26,7 @@ import {
   MenuItem,
   CircularProgress,
   Box,
+  Stack,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -270,8 +271,8 @@ const handlePost11 = async (tweetId, replyText, selectedAccountId) => {
             : tweet
         )
       );
-
-      setOpen(false);
+    setIsEditing(false);
+  
       alert("Reply updated successfully!");
     } catch (error) {
       console.error("Error updating reply:", error);
@@ -702,20 +703,7 @@ useEffect(() => {
                       alignItems: "center",
                     }}
                   >
-                    <IconButton
-                      onClick={() => handleEdit(tweet)}
-                      sx={{
-                        backgroundColor: "rgba(152, 167, 167, 0.2)",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          backgroundColor: "rgba(255, 0, 0, 0.15)",
-                          transform: "scale(1.1)",
-                        },
-                      }}
-                      size="small"
-                    >
-                      <EditIcon fontSize="small" sx={{ color: "#8e9294ff" }} />
-                    </IconButton>
+                   
                     <IconButton
                       onClick={() => handleDelete(tweet.id)}
                       sx={{
@@ -894,7 +882,7 @@ useEffect(() => {
           </Typography>
 
           {/* Reply Input or Preview */}
-          {isEditing ? (
+          {/* {isEditing ? (
             <TextField
               fullWidth
               multiline
@@ -954,10 +942,98 @@ useEffect(() => {
             >
               {editedReply || "No reply content yet."}
             </Typography>
-          )}
+          )} */}
+{isEditing ? (
+  <>
+    <TextField
+      fullWidth
+      multiline
+      minRows={4}
+      value={editedReply}
+      onChange={(e) => setEditedReply(e.target.value)}
+      placeholder="Enter your reply here..."
+      variant="outlined"
+      sx={{
+        mb: 2,
+        "& .MuiOutlinedInput-root": {
+          borderRadius: "8px",
+          transition: "all 0.3s",
+          fontSize: "0.95rem",
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#FF0000",
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#FF0000",
+            borderWidth: "2px",
+          },
+        },
+      }}
+    />
 
-          {/* Select Account (only if not editing) */}
-          {!isEditing && (
+    <Stack direction="row" spacing={2}>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSaveEdit}
+      >
+        Save
+      </Button>
+      <Button
+        variant="outlined"
+        color="secondary"
+        onClick={() => setIsEditing(false)}
+      >
+        Cancel
+      </Button>
+    </Stack>
+  </>
+) : (
+  <>
+    <Typography
+      variant="body1"
+      sx={{
+        mb: 2,
+        p: 3,
+        border: "1px solid #e0e0e0",
+        borderRadius: 2,
+        backgroundColor: "#f9f9f9",
+        minHeight: "120px",
+        fontSize: "0.95rem",
+        lineHeight: 1.6,
+        position: "relative",
+        "&::before": {
+          content: '"“"',
+          position: "absolute",
+          top: "8px",
+          left: "12px",
+          fontSize: "24px",
+          color: "#bdbdbd",
+          fontFamily: "Georgia, serif",
+        },
+        "&::after": {
+          content: '"”"',
+          position: "absolute",
+          bottom: "8px",
+          right: "12px",
+          fontSize: "24px",
+          color: "#bdbdbd",
+          fontFamily: "Georgia, serif",
+        },
+      }}
+    >
+      {editedReply || "No reply content yet."}
+    </Typography>
+
+   <Tooltip title="Edit Reply">
+      <IconButton onClick={() => setIsEditing(true)} sx={{float:"right",marginBottom:"10px"}}>
+        <EditIcon />
+      </IconButton>
+    </Tooltip>
+  </>
+)}
+
+         
+          
             <>
               <Typography
                 variant="subtitle1"
@@ -1018,7 +1094,7 @@ useEffect(() => {
                 </Select>
               </FormControl>
             </>
-          )}
+         
         </DialogContent>
 
         <DialogActions
@@ -1045,22 +1121,19 @@ useEffect(() => {
           <Button
             onClick={isEditing ? handleSaveEdit : handleScrapeit}
             variant="contained"
-            startIcon={isEditing ? <EditIcon /> : (isPosting ? null : <Search />)}
+           
             disabled={isPosting}
             sx={{
-              backgroundColor: isEditing ? "#FF0000" : "#4caf50",
+              backgroundColor:"#4caf50",
               padding: "6px 20px",
               borderRadius: "8px",
               fontWeight: 600,
-              boxShadow: isEditing
-                ? "0 4px 12px rgba(255, 0, 0, 0.2)"
-                : "0 4px 12px rgba(76, 175, 80, 0.2)",
+              boxShadow: "0 4px 12px rgba(76, 175, 80, 0.2)",
               transition: "all 0.3s ease",
               "&:hover": {
-                backgroundColor: isEditing ? "#E00000" : "#43a047",
-                boxShadow: isEditing
-                  ? "0 6px 16px rgba(255, 0, 0, 0.3)"
-                  : "0 6px 16px rgba(76, 175, 80, 0.3)",
+                backgroundColor:"#43a047",
+                boxShadow:
+                  "0 6px 16px rgba(76, 175, 80, 0.3)",
                 transform: "translateY(-2px)",
               },
             }}
@@ -1071,7 +1144,7 @@ useEffect(() => {
                 Posting...
               </>
             ) : (
-              isEditing ? "Save Changes" : "Post Reply"
+              "Post Reply"
             )}
           </Button>
         </DialogActions>

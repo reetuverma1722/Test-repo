@@ -401,7 +401,7 @@ async function generateReply(tweetContent) {
   const response = await axios.post(
     "https://openrouter.ai/api/v1/chat/completions",
     {
-      model: "mistralai/mixtral-8x7b-instruct", // or other free model
+      model: "meta-llama/llama-3-8b-instruct",
       messages: [
         {
           role: "user",
