@@ -298,13 +298,13 @@ const Dashboard = () => {
   };
 
   // Handle post submission
-  const handlePostSubmit = async () => {
+ const handlePostSubmit = async () => {
     if (!selectedTweet || !editedReply) {
       return;
     }
-
+ 
     setIsPosting(true);
-
+ 
     try {
       // Call the API to post the reply
       const response = await axios.post(
@@ -315,7 +315,7 @@ const Dashboard = () => {
           selectedAccountId: selectedAccount,
         }
       );
-
+ 
       if (response.data.success) {
         // After successful posting, add to post history
         try {
@@ -329,16 +329,16 @@ const Dashboard = () => {
             retweetCount: selectedTweet.retweet_count,
             keywordId: null // We don't have keyword ID in this context
           });
-          
+         
           console.log("Post added to history successfully");
         } catch (historyError) {
           console.error("Error adding post to history:", historyError);
           // Don't show this error to the user since the reply was posted successfully
         }
-        
+       
         // Show success message
         alert("Reply posted successfully!");
-
+ 
         // Close the dialog
         setPostDialogOpen(false);
       } else {
@@ -353,6 +353,7 @@ const Dashboard = () => {
       setIsPosting(false);
     }
   };
+ 
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
