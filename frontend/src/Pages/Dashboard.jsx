@@ -30,6 +30,7 @@ import {
   TextField,
   Alert,
   InputAdornment,
+  colors,
 } from "@mui/material";
 import {
   CloseOutlined,
@@ -53,6 +54,10 @@ import {
   VisibilityOff as VisibilityOffIcon,
   AddTaskOutlined,
   Edit as EditIcon,
+  Favorite as FavoriteIcon,
+  Replay as ReplyIcon,
+  People as PeopleIcon,
+  
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -1266,18 +1271,35 @@ const Dashboard = () => {
           }}
         >
           <Toolbar sx={{ justifyContent: "space-between", height: 48 }}>
-            <Typography
-              variant="h6"
-              noWrap
-              sx={{
-                fontWeight: 600,
-                letterSpacing: "0.5px",
-                fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                color: "text.primary",
-              }}
-            >
-              Buzzly
-            </Typography>
+          <Typography
+  variant="h6"
+  noWrap
+  sx={{
+    display: 'flex',
+    alignItems: 'center',
+    fontWeight: 600,
+    letterSpacing: '0.5px',
+    fontSize: { xs: '1.1rem', sm: '1.4rem' },
+    marginTop:'20px',
+   
+  }}
+>
+  <div className="logo-container" style={{ display: 'flex', alignItems: 'center' }}>
+    <img
+      src="/images/Buzly.png"
+      alt="Buzly Logo"
+      className="buzly-logo"
+      style={{
+        height: '1.5em',     // Scales with text
+        marginRight: '0.1em',
+        verticalAlign: 'middle',
+      // Match the image tone
+      }}
+    />
+    <span style={{  fontWeight: 600 }}>uzzly</span>
+  </div>
+</Typography>
+
             <Box
               sx={{
                 display: "flex",
@@ -1404,14 +1426,14 @@ const Dashboard = () => {
                   <Typography
                     variant="h4"
                     sx={{
-                      fontWeight: 700,
+                      fontWeight: 600,
                       mb: 0.5,
-                      color: "#a71900ff",
+                      color: "#4896a1",
                     }}
                   >
                     Social Media Dashboard
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography variant="body1" color="text.secondary" sx={{fontSize:'0.9rem'}}>
                     Discover and engage with relevant social media content
                   </Typography>
                 </Box>
@@ -1447,7 +1469,8 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background: "#fef2f2",
+                      background: "#e5efee",
+                      width:"40vw",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1459,7 +1482,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#f44336",
+                          bgcolor: "#4896A0",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -1517,7 +1540,8 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background: "#fef2f2",
+                      width:"40vw",
+                      background: "#e5efee",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1529,7 +1553,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#f44336",
+                          bgcolor: "#4896A0",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -1585,10 +1609,12 @@ const Dashboard = () => {
               <Paper
                 elevation={0}
                 variant="outlined"
+
                 sx={{
                   p: 3,
                   mb: 4,
                   borderRadius: 3,
+                  width:"82vw",
                   background: "rgba(255, 255, 255, 0.8)",
                   backdropFilter: "blur(10px)",
                 }}
@@ -1599,6 +1625,7 @@ const Dashboard = () => {
                     justifyContent: "space-between",
                     alignItems: "center",
                     mb: 2,
+                    
                   }}
                 >
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1726,190 +1753,284 @@ const Dashboard = () => {
                         item
                         xs={12}
                         sm={6}
+                        lg={4}
                         key={i}
-                        sx={{ maxWidth: "400px" }}
                       >
                         <Card
                           elevation={0}
                           sx={{
-                            borderRadius: 3,
+                            borderRadius: 4,
                             overflow: "hidden",
-                            border: "1px solid rgba(0,0,0,0.08)",
+                            border: "1px solid #e5e7eb",
                             transition: "all 0.3s ease",
                             height: "100%",
-                            width: "100%",
+                            width: "18vw",
+                            backgroundColor: "#fafafa",
+                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                             "&:hover": {
-                              transform: "translateY(-5px)",
-                              boxShadow: "0 12px 20px -8px rgba(0,0,0,0.15)",
+                              transform: "translateY(-4px)",
+                              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+                              borderColor: "#d1d5db",
                             },
                           }}
                         >
-                          <Box
-                            sx={{
-                              height: 6,
-                              width: "100%",
-                              background:
-                                "linear-gradient(90deg, #f3dddc, #eb8270)",
-                            }}
-                          />
-                          <CardContent sx={{ p: 3 }}>
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                mb: 2,
-                                display: "-webkit-box",
-                                WebkitLineClamp: 4,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                minHeight: "5.5rem",
-                              }}
-                            >
-                              {tweet.text}
-                            </Typography>
-                            <Divider sx={{ my: 2 }} />
+                          <CardContent sx={{ p: 0, height: "100%" }}>
+                            {/* User Profile Section */}
                             <Box
                               sx={{
                                 display: "flex",
-                                flexDirection: "column",
-                                gap: 1,
+                                alignItems: "center",
+                                gap: 2,
+                                p: 3,
+                                pb: 2,
+                              }}
+                            >
+                              <Avatar
+                                sx={{
+                                  width: 48,
+                                  height: 48,
+                                  backgroundColor: "#E5EFEE",
+                                  fontSize: "1.2rem",
+                                  fontWeight: 600,
+                                  border: "2px solid #ffffff",
+                                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.2)",
+                                }}
+                              >
+                                {tweet?.author_name?.charAt(0)?.toUpperCase() || "U"}
+                              </Avatar>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                  variant="subtitle1"
+                                  sx={{
+                                    fontWeight: 600,
+                                    fontSize: "1rem",
+                                    color: "#1a1a1a",
+                                    lineHeight: 1.3,
+                                    mb: 0.5,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {tweet?.author_name || "Unknown User"}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: "#666666",
+                                    fontSize: "0.875rem",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  @{tweet?.author_username || "username"}
+                                </Typography>
+                              </Box>
+                            </Box>
+
+                            {/* Tweet Content */}
+                            <Box sx={{ px: 3, pb: 2 }}>
+                              <Typography
+                                variant="body1"
+                                sx={{
+                                  fontSize: "0.96rem",
+                                  lineHeight: 1.6,
+                                  color: "#363535ff",
+                                  fontWeight: 400,
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 4,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  minHeight: "6.4rem",
+                                  mb: 3,
+                                }}
+                              >
+                                {tweet.text}
+                              </Typography>
+                            </Box>
+
+                            {/* Stats Row */}
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                px: 3,
+                                py: 2,
+                                backgroundColor: "#f8f9fa",
+                                borderTop: "1px solid #e5e7eb",
                               }}
                             >
                               <Box
                                 sx={{
                                   display: "flex",
                                   alignItems: "center",
-                                  justifyContent: "space-between",
+                                  gap: 3,
                                 }}
                               >
                                 <Box
                                   sx={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 2,
+                                    gap: 0.5,
                                   }}
                                 >
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      fontWeight: 500,
-                                      color: "text.primary",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        fontWeight: "bold",
-                                        color: "#f44336",
+                               
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
                                       }}
                                     >
-                                      {tweet?.like_count}
-                                    </span>{" "}
-                                    Likes
-                                  </Typography>
+                                      <FavoriteIcon sx={{ fontSize: "18px", color:"#21808D" ,mt:"0.8rem"}}  />
+                                    </Typography>
+                                
                                   <Typography
-                                    variant="body2"
+                                    variant="caption"
                                     sx={{
-                                      fontWeight: 500,
-                                      color: "text.primary",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
+                                      fontSize: "0.75rem",
+                                      fontWeight: 600,
+                                      color: "#1a1a1a",
                                     }}
                                   >
-                                    <span
-                                      style={{
-                                        fontWeight: "bold",
-                                        color: "#f44336",
-                                      }}
-                                    >
-                                      {tweet?.retweet_count}
-                                    </span>{" "}
-                                    Retweets
+                                    {tweet?.like_count || 0}
                                   </Typography>
                                 </Box>
-                                <Tooltip title="View Post Details">
-                                  <IconButton
-                                    href={`https://x.com/i/web/status/${tweet.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    size="small"
+
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                  }}
+                                >
+                                 
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                       <ReplyIcon sx={{ fontSize: "18px", color:"#21808D",mt:"0.8rem" }}  />
+                                    </Typography>
+                              
+                                  <Typography
+                                    variant="caption"
                                     sx={{
-                                      backgroundColor:
-                                        "rgba(244, 67, 54, 0.08)",
-                                      transition: "all 0.2s",
-                                      "&:hover": {
-                                        backgroundColor:
-                                          "rgba(244, 67, 54, 0.15)",
-                                        transform: "scale(1.1)",
-                                      },
+                                      fontSize: "0.75rem",
+                                      fontWeight: 600,
+                                      color: "#1a1a1a",
                                     }}
                                   >
-                                    <ViewIcon
-                                      fontSize="small"
-                                      sx={{ color: "#f44336" }}
-                                    />
-                                  </IconButton>
-                                </Tooltip>
+                                    {tweet?.retweet_count || 0}
+                                  </Typography>
+                                </Box>
+
+                            
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                  }}
+                                >
+                                 
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                     <PeopleIcon sx={{ fontSize: "18px", color:"#21808D",mt:"0.8rem" }}  />
+                                    </Typography>
+                                
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontSize: "0.75rem",
+                                      fontWeight: 600,
+                                      color: "#1a1a1a",
+                                    }}
+                                  >
+                                    {tweet?.followers_count || 0}
+                                  </Typography>
+                                </Box>
                               </Box>
 
-                              <Box
+                              <Tooltip title="View on X">
+                                <IconButton
+                                  href={`https://x.com/i/web/status/${tweet.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="small"
+                                  sx={{
+                                    width: 32,
+                                    height: 32,
+                                    backgroundColor: "#ffffff",
+                                    border: "1px solid #21808D",
+                                    transition: "all 0.2s",
+                                    "&:hover": {
+                                      backgroundColor: "#21808db0",
+                                      borderColor: "#d1d5db",
+                                      transform: "scale(1.05)",
+                                    },
+                                  }}
+                                >
+                                  <ViewIcon
+                                    fontSize="small"
+                                    sx={{ color: "#21808D", fontSize: "16px" }}
+                                  />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+
+                            {/* Timestamp */}
+                            <Box
+                              sx={{
+                                px: 3,
+                                py: 1.5,
+                                backgroundColor: "#f8f9fa",
+                                borderTop: "1px solid #e5e7eb",
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
                                 sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  mt: 1,
+                                  fontSize: "0.75rem",
+                                  color: "#999999",
+                                  fontStyle: "italic",
                                 }}
                               >
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 500,
-                                    color: "text.secondary",
-                                    fontSize: "0.8rem",
-                                  }}
-                                >
-                                  <span style={{ fontWeight: "bold" }}>
-                                    {tweet?.followers_count || 0}
-                                  </span>{" "}
-                                  Followers
-                                </Typography>
+                                Fetched {getTimeAgo(tweet?.created_at)}
+                              </Typography>
+                            </Box>
 
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    color: "text.secondary",
-                                    fontSize: "0.8rem",
-                                    fontStyle: "italic",
-                                  }}
-                                >
-                                  Fetched {getTimeAgo(tweet?.created_at)}
-                                </Typography>
-                              </Box>
-
-                              {/* Post Button */}
+                            {/* Post Reply Button */}
+                            <Box sx={{ p: 3, pt: 2 }}>
                               <Button
                                 variant="contained"
-                                size="small"
-                                startIcon={<EditIcon />}
+                                size="medium"
+                                startIcon={<EditIcon sx={{ fontSize: "18px" }} />}
                                 onClick={() => handlePost(tweet)}
                                 sx={{
-                                  mt: 2,
                                   width: "100%",
-                                  borderRadius: 2,
-                                  backgroundColor: "#f44336",
-                                  color: "white",
+                                  borderRadius: 3,
+                                  backgroundColor: "#1a1a1a",
+                                  color: "#ffffff",
                                   fontWeight: 600,
+                                  fontSize: "0.875rem",
                                   textTransform: "none",
-                                  boxShadow:
-                                    "0 2px 8px rgba(244, 67, 54, 0.25)",
+                                  py: 1.5,
+                                  boxShadow: "0 2px 8px rgba(26, 26, 26, 0.15)",
                                   "&:hover": {
-                                    backgroundColor: "#d32f2f",
-                                    boxShadow:
-                                      "0 4px 12px rgba(244, 67, 54, 0.35)",
-                                    transform: "translateY(-2px)",
+                                    backgroundColor: "#000000",
+                                    boxShadow: "0 4px 16px rgba(26, 26, 26, 0.25)",
+                                    transform: "translateY(-1px)",
                                   },
                                   transition: "all 0.2s ease",
                                 }}

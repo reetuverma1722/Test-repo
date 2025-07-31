@@ -22,10 +22,16 @@
   }
 }
 
-/* Legacy support for any components still using CSS variables */
+/* Updated CSS variables for font-focused theme */
 :root {
-  --brand-color: #BE1212;
-  --brand-font: 'Source Sans Pro', sans-serif;
+  --primary-text: #1a1a1a;
+  --secondary-text: #666666;
+  --tertiary-text: #999999;
+  --accent-color: #2563eb;
+  --background: #ffffff;
+  --surface: #f8f9fa;
+  --border: #e5e7eb;
+  --primary-font: 'fkGroteskNeue', 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* Animation for logo if needed */
