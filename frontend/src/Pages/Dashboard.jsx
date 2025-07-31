@@ -312,6 +312,25 @@ const Dashboard = () => {
       );
 
       if (response.data.success) {
+        // After successful posting, add to post history
+        try {
+          await axios.post("http://localhost:5000/api/postReply", {
+            tweetId: selectedTweet.id,
+            tweetText: selectedTweet.text,
+            tweetUrl: `https://twitter.com/i/web/status/${selectedTweet.id}`,
+            replyText: editedReply,
+            selectedAccountId: selectedAccount,
+            likeCount: selectedTweet.like_count,
+            retweetCount: selectedTweet.retweet_count,
+            keywordId: null // We don't have keyword ID in this context
+          });
+          
+          console.log("Post added to history successfully");
+        } catch (historyError) {
+          console.error("Error adding post to history:", historyError);
+          // Don't show this error to the user since the reply was posted successfully
+        }
+        
         // Show success message
         alert("Reply posted successfully!");
 

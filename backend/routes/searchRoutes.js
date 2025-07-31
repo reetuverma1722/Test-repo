@@ -743,7 +743,9 @@ router.post("/postReply", async (req, res) => {
     retweetCount = 0,
   } = req.body;
 
-  const engagementCount = (likeCount || 0) + (retweetCount || 0);
+  // Initialize engagement metrics to 0 for new replies
+  // This ensures we're tracking the engagement of the user's reply, not the original post
+  const engagementCount = 0;
 
   try {
     const insertQuery = `
@@ -755,11 +757,11 @@ router.post("/postReply", async (req, res) => {
     `;
 
     const values = [
-      tweetText || "",
+      replyText || "", // Store the reply text instead of the original tweet text
       tweetUrl || `https://twitter.com/i/web/status/${tweetId}`,
       engagementCount,
-      likeCount || 0,
-      retweetCount || 0,
+      0, // Initialize likes_count to 0
+      0, // Initialize retweets_count to 0
       keywordId || null,
       selectedAccountId,
     ];
@@ -778,7 +780,7 @@ router.post("/postReply", async (req, res) => {
 });
 
 router.post("/reply-to-tweet", async (req, res) => {
-  const { tweetId, replyText, selectedAccountId } = req.body;
+  const { tweetId, replyText, selectedAccountId, keywordId } = req.body;
   console.log(req.body);
 
   if (!tweetId || !replyText || !selectedAccountId) {
@@ -816,11 +818,48 @@ router.post("/reply-to-tweet", async (req, res) => {
     );
 
     if (postResult.success) {
-      return res.json({
-        success: true,
-        message: "Reply posted successfully",
-        details: postResult.details || {},
-      });
+      // Store the reply in post_history with initial engagement metrics set to 0
+      try {
+        const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+        
+        const insertQuery = `
+          INSERT INTO post_history
+            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id)
+          VALUES
+            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7)
+          RETURNING id
+        `;
+
+        const values = [
+          replyText,
+          tweetUrl,
+          0, // Initial engagement count
+          0, // Initial likes count
+          0, // Initial retweets count
+          keywordId || null,
+          selectedAccountId,
+        ];
+
+        const insertResult = await pool.query(insertQuery, values);
+        const postHistoryId = insertResult.rows[0].id;
+
+        return res.json({
+          success: true,
+          message: "Reply posted successfully",
+          details: {
+            ...postResult.details,
+            post_history_id: postHistoryId
+          },
+        });
+      } catch (dbError) {
+        console.error("Error saving reply to post history:", dbError);
+        // Still return success since the tweet was posted
+        return res.json({
+          success: true,
+          message: "Reply posted successfully, but failed to save to history",
+          details: postResult.details || {},
+        });
+      }
     } else {
       // If posting failed but didn't throw an exception
       return res.status(400).json({
@@ -1051,5 +1090,36 @@ async function postReplyWithPuppeteer(
 //     res.status(500).json({ error: "Update failed" });
 //   }
 // });
+
+// DELETE /api/history/:id - Delete a post from post history
+router.delete("/history/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `DELETE FROM post_history WHERE id = $1 RETURNING id`,
+      [id]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found in history'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Post successfully deleted from history',
+      id: result.rows[0].id
+    });
+  } catch (err) {
+    console.error("Delete error:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete post from history",
+      error: err.message
+    });
+  }
+});
 
 module.exports = router;

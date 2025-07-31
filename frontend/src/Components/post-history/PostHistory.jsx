@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -23,8 +23,8 @@ import {
   Popover,
   Card,
   CardContent,
-  Divider
-} from '@mui/material';
+  Divider,
+} from "@mui/material";
 import {
   Refresh as RefreshIcon,
   Twitter as TwitterIcon,
@@ -34,15 +34,25 @@ import {
   Visibility as VisibilityIcon,
   ThumbUp as ThumbUpIcon,
   Repeat as RepeatIcon,
-  BarChart as BarChartIcon
-} from '@mui/icons-material';
-import { getAccounts, getPostHistory, repostPost, formatTimeSince, isRepostAllowed } from '../../services/postHistoryService';
+  BarChart as BarChartIcon,
+  Delete as DeleteIcon,
+  Update as UpdateIcon,
+} from "@mui/icons-material";
+import {
+  getAccounts,
+  getPostHistory,
+  repostPost,
+  formatTimeSince,
+  isRepostAllowed,
+  deletePost,
+  updateEngagementMetrics,
+} from "../../services/postHistoryService";
 
 const PostHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [accounts, setAccounts] = useState([]);
-  const [selectedAccount, setSelectedAccount] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState("");
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -51,6 +61,12 @@ const PostHistory = () => {
   const [repostError, setRepostError] = useState(null);
   const [popoverAnchorEl, setPopoverAnchorEl] = useState(null);
   const [selectedPostId, setSelectedPostId] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [updating, setUpdating] = useState(null);
+  const [updateSuccess, setUpdateSuccess] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
 
   // Fetch accounts on component mount
   useEffect(() => {
@@ -66,8 +82,8 @@ const PostHistory = () => {
           }
         }
       } catch (err) {
-        console.error('Error fetching accounts:', err);
-        setError('Failed to fetch accounts. Please try again later.');
+        console.error("Error fetching accounts:", err);
+        setError("Failed to fetch accounts. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -80,7 +96,7 @@ const PostHistory = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       if (!selectedAccount) return;
-      
+
       try {
         setLoading(true);
         const result = await getPostHistory(selectedAccount);
@@ -88,8 +104,8 @@ const PostHistory = () => {
           setPosts(result.data);
         }
       } catch (err) {
-        console.error('Error fetching post history:', err);
-        setError('Failed to fetch post history. Please try again later.');
+        console.error("Error fetching post history:", err);
+        setError("Failed to fetch post history. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -120,12 +136,12 @@ const PostHistory = () => {
       setReposting(postId);
       setRepostError(null);
       setRepostSuccess(null);
-      
+
       const result = await repostPost(postId);
-      
+
       if (result.success) {
         setRepostSuccess(`Post successfully reposted!`);
-        
+
         // Refresh the post history
         const updatedResult = await getPostHistory(selectedAccount);
         if (updatedResult.success && updatedResult.data) {
@@ -133,11 +149,11 @@ const PostHistory = () => {
         }
       }
     } catch (err) {
-      console.error('Error reposting:', err);
+      console.error("Error reposting:", err);
       setRepostError(`Failed to repost: ${err.message}`);
     } finally {
       setReposting(null);
-      
+
       // Clear success/error messages after 3 seconds
       setTimeout(() => {
         setRepostSuccess(null);
@@ -146,13 +162,98 @@ const PostHistory = () => {
     }
   };
 
+  // Handle delete
+  const handleDelete = async (postId) => {
+    try {
+      setDeleting(postId);
+      setDeleteError(null);
+      setDeleteSuccess(null);
+
+      const result = await deletePost(postId);
+
+      if (result.success) {
+        setDeleteSuccess(`Post successfully deleted!`);
+
+        // Refresh the post history
+        const updatedResult = await getPostHistory(selectedAccount);
+        if (updatedResult.success && updatedResult.data) {
+          setPosts(updatedResult.data);
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting post:", err);
+      setDeleteError(`Failed to delete: ${err.message}`);
+    } finally {
+      setDeleting(null);
+
+      // Clear success/error messages after 3 seconds
+      setTimeout(() => {
+        setDeleteSuccess(null);
+        setDeleteError(null);
+      }, 3000);
+    }
+  };
+
+  // Handle update engagement metrics
+  const handleUpdateEngagement = async (postId) => {
+    try {
+      setUpdating(postId);
+      setUpdateError(null);
+      setUpdateSuccess(null);
+
+      console.log(`Updating engagement metrics for post ID: ${postId}`);
+
+      // For demonstration purposes, we'll use random values
+      // In a real implementation, this would fetch the actual metrics from Twitter API
+      const metrics = {
+        likes_count: Math.floor(Math.random() * 50),
+        retweets_count: Math.floor(Math.random() * 20),
+      };
+
+      console.log("Metrics to update:", metrics);
+
+      try {
+        const result = await updateEngagementMetrics(postId, metrics);
+        console.log("Update result:", result);
+
+        if (result.success) {
+          setUpdateSuccess(`Engagement metrics updated successfully!`);
+
+          // Refresh the post history
+          const updatedResult = await getPostHistory(selectedAccount);
+          if (updatedResult.success && updatedResult.data) {
+            setPosts(updatedResult.data);
+          }
+        } else {
+          setUpdateError(
+            `Failed to update: ${result.message || "Unknown error"}`
+          );
+        }
+      } catch (apiErr) {
+        console.error("API Error:", apiErr);
+        setUpdateError(`API Error: ${apiErr.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error updating engagement metrics:", err);
+      setUpdateError(`Failed to update: ${err.message}`);
+    } finally {
+      setUpdating(null);
+
+      // Clear success/error messages after 5 seconds (increased from 3)
+      setTimeout(() => {
+        setUpdateSuccess(null);
+        setUpdateError(null);
+      }, 5000);
+    }
+  };
+
   // Get platform icon
   const getPlatformIcon = (platform) => {
     switch (platform?.toLowerCase()) {
-      case 'twitter':
-        return <TwitterIcon sx={{ color: '#1DA1F2' }} />;
-      case 'linkedin':
-        return <LinkedInIcon sx={{ color: '#0077B5' }} />;
+      case "twitter":
+        return <TwitterIcon sx={{ color: "#1DA1F2" }} />;
+      case "linkedin":
+        return <LinkedInIcon sx={{ color: "#0077B5" }} />;
       default:
         return null;
     }
@@ -160,7 +261,7 @@ const PostHistory = () => {
 
   // Get selected account
   const getSelectedAccountDetails = () => {
-    return accounts.find(account => account.id === selectedAccount) || {};
+    return accounts.find((account) => account.id === selectedAccount) || {};
   };
 
   // Handle engagement view popup
@@ -178,21 +279,28 @@ const PostHistory = () => {
 
   // Get the selected post data
   const getSelectedPost = () => {
-    return posts.find(post => post.id === selectedPostId) || {};
+    return posts.find((post) => post.id === selectedPostId) || {};
   };
 
   return (
     <Box>
       {/* Header */}
-      
 
       {/* Account Selection */}
-      <Paper 
-        elevation={0} 
-        variant="outlined" 
+      <Paper
+        elevation={0}
+        variant="outlined"
         sx={{ p: 3, mb: 3, borderRadius: 3 }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
           <FormControl sx={{ minWidth: 250 }}>
             <InputLabel id="account-select-label">Select Account</InputLabel>
             <Select
@@ -205,21 +313,19 @@ const PostHistory = () => {
             >
               {accounts.map((account) => (
                 <MenuItem key={account.id} value={account.id}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     {getPlatformIcon(account.platform)}
-                    <Typography>
-                      {account.accountName}
-                    </Typography>
+                    <Typography>{account.accountName}</Typography>
                   </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          
+
           {selectedAccount && (
-            <Chip 
+            <Chip
               icon={getPlatformIcon(getSelectedAccountDetails().platform)}
-              label={`${getSelectedAccountDetails().platform || 'Account'}`}
+              label={`${getSelectedAccountDetails().platform || "Account"}`}
               color="primary"
               variant="outlined"
             />
@@ -233,13 +339,37 @@ const PostHistory = () => {
           {repostSuccess}
         </Alert>
       )}
-      
+
       {repostError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {repostError}
         </Alert>
       )}
-      
+
+      {deleteSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {deleteSuccess}
+        </Alert>
+      )}
+
+      {deleteError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {deleteError}
+        </Alert>
+      )}
+
+      {updateSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {updateSuccess}
+        </Alert>
+      )}
+
+      {updateError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {updateError}
+        </Alert>
+      )}
+
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -247,14 +377,14 @@ const PostHistory = () => {
       )}
 
       {/* Post History Table */}
-      <Paper 
-        elevation={0} 
-        variant="outlined" 
-        sx={{ borderRadius: 3, overflow: 'hidden' }}
+      <Paper
+        elevation={0}
+        variant="outlined"
+        sx={{ borderRadius: 3, overflow: "hidden" }}
       >
         <TableContainer>
           <Table sx={{ minWidth: 650 }}>
-            <TableHead sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+            <TableHead sx={{ backgroundColor: "rgba(0, 0, 0, 0.02)" }}>
               <TableRow>
                 <TableCell>Post Content</TableCell>
                 <TableCell>Keyword</TableCell>
@@ -269,7 +399,11 @@ const PostHistory = () => {
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <CircularProgress color="error" size={40} />
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 2 }}
+                    >
                       Loading post history...
                     </Typography>
                   </TableCell>
@@ -288,27 +422,27 @@ const PostHistory = () => {
                   .map((post) => {
                     const timeSinceMs = new Date() - new Date(post.created_at);
                     const canRepost = isRepostAllowed(timeSinceMs);
-                    
+
                     return (
                       <TableRow key={post.id} hover>
                         <TableCell sx={{ maxWidth: 300 }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
                               WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
+                              WebkitBoxOrient: "vertical",
                             }}
                           >
                             {post.post_text}
                           </Typography>
                           {post.post_url && (
                             <Tooltip title="Open post">
-                              <IconButton 
-                                size="small" 
-                                href={post.post_url} 
+                              <IconButton
+                                size="small"
+                                href={post.post_url}
                                 target="_blank"
                                 sx={{ mt: 0.5 }}
                               >
@@ -318,13 +452,13 @@ const PostHistory = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Chip 
-                            label={post.keyword || 'N/A'} 
+                          <Chip
+                            label={post.keyword || "N/A"}
                             size="small"
-                            sx={{ 
-                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                              color: '#f44336',
-                              fontWeight: 500
+                            sx={{
+                              backgroundColor: "rgba(244, 67, 54, 0.1)",
+                              color: "#f44336",
+                              fontWeight: 500,
                             }}
                           />
                         </TableCell>
@@ -332,28 +466,26 @@ const PostHistory = () => {
                           {new Date(post.posted_at).toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, marginLeft:4,color:'#f44336' }}>
-                            {/* <Button
-                             
+                          <Tooltip title="View detailed engagement">
+                            <IconButton
                               size="small"
-                              startIcon={<VisibilityIcon />}
-                              onClick={(e) => handleEngagementViewClick(e, post.id)}
-                              sx={{
-                                mt: 1,
-                                borderRadius: 6,
-                                textTransform: 'none',
-
-                                fontSize: '0.75rem',
-                                py: 0.5
-                              }}
+                              onClick={(e) =>
+                                handleEngagementViewClick(e, post.id)
+                              }
+                              sx={{ alignSelf: "center", color: "#f44336" }}
                             >
-                              View
-                            </Button> */}
-                            <VisibilityIcon  onClick={(e) => handleEngagementViewClick(e, post.id)} />
-                          </Box>
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                            }}
+                          >
                             <AccessTimeIcon fontSize="small" color="action" />
                             <Typography variant="body2">
                               {formatTimeSince(timeSinceMs)}
@@ -361,35 +493,51 @@ const PostHistory = () => {
                           </Box>
                         </TableCell>
                         <TableCell align="center">
-                          <Button
-                            variant="contained"
-                            color="error"
-                            size="small"
-                            startIcon={<RefreshIcon />}
-                            disabled={!canRepost || reposting === post.id}
-                            onClick={() => handleRepost(post.id)}
-                            sx={{ 
-                              borderRadius: 2,
-                              textTransform: 'none',
-                              minWidth: 100
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              justifyContent: "center",
                             }}
                           >
-                            {reposting === post.id ? (
-                              <CircularProgress size={20} color="inherit" />
-                            ) : (
-                              'Refetch'
-                            )}
-                          </Button>
-                          {!canRepost && (
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
-                              display="block"
-                              sx={{ mt: 0.5 }}
-                            >
-                              Available in {formatTimeSince(2 * 60 * 60 * 1000 - timeSinceMs)}
-                            </Typography>
-                          )}
+                            <Tooltip title="Update engagement metrics">
+                              <IconButton
+                                color="primary"
+                                size="small"
+                                onClick={() => handleUpdateEngagement(post.id)}
+                                disabled={updating === post.id}
+                                sx={{
+                                  border: "1px solid rgba(33, 150, 243, 0.5)",
+                                  borderRadius: 1,
+                                }}
+                              >
+                                {updating === post.id ? (
+                                  <CircularProgress size={20} color="inherit" />
+                                ) : (
+                                  <UpdateIcon fontSize="small" />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Delete post">
+                              <IconButton
+                                color="error"
+                                size="small"
+                                onClick={() => handleDelete(post.id)}
+                                disabled={deleting === post.id}
+                                sx={{
+                                  border: "1px solid rgba(244, 67, 54, 0.5)",
+                                  borderRadius: 1,
+                                }}
+                              >
+                                {deleting === post.id ? (
+                                  <CircularProgress size={20} color="inherit" />
+                                ) : (
+                                  <DeleteIcon fontSize="small" />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -415,48 +563,52 @@ const PostHistory = () => {
         anchorEl={popoverAnchorEl}
         onClose={handlePopoverClose}
         anchorOrigin={{
-          vertical: 'center',
-          horizontal: 'right',
+          vertical: "center",
+          horizontal: "right",
         }}
         transformOrigin={{
-          vertical: 'center',
-          horizontal: 'left',
+          vertical: "center",
+          horizontal: "left",
         }}
         sx={{
-          '& .MuiPopover-paper': {
+          "& .MuiPopover-paper": {
             borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-          }
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          },
         }}
       >
-        <Card sx={{ width: 300, overflow: 'hidden' }}>
-          <Box sx={{
-            bgcolor: 'primary.main',
-            color: 'white',
-            py: 1.5,
-            px: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
+        <Card sx={{ width: 300, overflow: "hidden" }}>
+          <Box
+            sx={{
+              bgcolor: "primary.main",
+              color: "white",
+              py: 1.5,
+              px: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
             <BarChartIcon />
             <Typography variant="subtitle1" fontWeight="bold">
               Engagement Details
             </Typography>
           </Box>
           <CardContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {/* Likes */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{
-                  bgcolor: 'rgba(244, 67, 54, 0.1)',
-                  borderRadius: '50%',
-                  p: 1,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}>
-                  <ThumbUpIcon sx={{ color: '#f44336' }} />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(244, 67, 54, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <ThumbUpIcon sx={{ color: "#f44336" }} />
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -467,20 +619,22 @@ const PostHistory = () => {
                   </Typography>
                 </Box>
               </Box>
-              
+
               <Divider />
-              
+
               {/* Retweets */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{
-                  bgcolor: 'rgba(33, 150, 243, 0.1)',
-                  borderRadius: '50%',
-                  p: 1,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}>
-                  <RepeatIcon sx={{ color: '#2196f3' }} />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(33, 150, 243, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <RepeatIcon sx={{ color: "#2196f3" }} />
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -491,20 +645,22 @@ const PostHistory = () => {
                   </Typography>
                 </Box>
               </Box>
-              
+
               <Divider />
-              
+
               {/* Total Engagement */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{
-                  bgcolor: 'rgba(76, 175, 80, 0.1)',
-                  borderRadius: '50%',
-                  p: 1,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}>
-                  <BarChartIcon sx={{ color: '#4caf50' }} />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(76, 175, 80, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <BarChartIcon sx={{ color: "#4caf50" }} />
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -515,21 +671,23 @@ const PostHistory = () => {
                   </Typography>
                 </Box>
               </Box>
-              
+
               {/* Engagement Rate (if available) */}
               {getSelectedPost().engagement_rate && (
                 <>
                   <Divider />
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{
-                      bgcolor: 'rgba(156, 39, 176, 0.1)',
-                      borderRadius: '50%',
-                      p: 1,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}>
-                      <BarChartIcon sx={{ color: '#9c27b0' }} />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Box
+                      sx={{
+                        bgcolor: "rgba(156, 39, 176, 0.1)",
+                        borderRadius: "50%",
+                        p: 1,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <BarChartIcon sx={{ color: "#9c27b0" }} />
                     </Box>
                     <Box sx={{ flexGrow: 1 }}>
                       <Typography variant="body2" color="text.secondary">

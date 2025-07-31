@@ -200,4 +200,58 @@ router.post('/add-from-search', checkAuth, async (req, res) => {
   }
 });
 
+// Update engagement metrics for a post
+router.put('/update-engagement/:id', checkAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const postId = req.params.id;
+    const { likes_count, retweets_count } = req.body;
+    
+    if (likes_count === undefined || retweets_count === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Likes count and retweets count are required'
+      });
+    }
+    
+    // Check if the post exists and belongs to the user
+    const postCheck = await pool.query(
+      `SELECT ph.id, ph.account_id
+       FROM post_history ph
+       JOIN social_media_accounts sma ON ph.account_id = sma.id
+       WHERE ph.id = $1 AND sma.user_id = $2 AND ph.deleted_at IS NULL`,
+      [postId, userId]
+    );
+    
+    if (postCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+    
+    // Calculate total engagement
+    const engagement_count = parseInt(likes_count) + parseInt(retweets_count);
+    
+    // Update the engagement metrics
+    await pool.query(
+      `UPDATE post_history
+       SET likes_count = $1, retweets_count = $2, engagement_count = $3, updated_at = NOW()
+       WHERE id = $4`,
+      [likes_count, retweets_count, engagement_count, postId]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Engagement metrics updated successfully',
+      data: {
+        id: postId,
+        likes_count,
+        retweets_count,
+        engagement_count
+      }
+    });
+  } catch (error) {
+    console.error('Error updating engagement metrics:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

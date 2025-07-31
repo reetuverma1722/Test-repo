@@ -24,7 +24,7 @@ app.use('/api', searchRoutes);
 app.use('/api', keywordRoutes);
 app.use('/api', socialMediaAccountsRoutes);
 app.use('/api', trendingRoutes);
-app.use('/api', postHistoryRoutes);
+app.use('/api', postHistoryRoutes); // This registers all routes in postHistoryRoutes.js under /api
 const PORT = process.env.PORT || 5000;
 app.get('/', async (req, res) => {
   const accessToken = req.query.twitterId;

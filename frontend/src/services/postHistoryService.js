@@ -93,6 +93,79 @@ export const repostPost = async (postId, token = null) => {
   return await apiPost(`/repost/${postId}`, {}, token);
 };
 
+// Delete a post from history
+export const deletePost = async (postId, token = null) => {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Always include Authorization header, even with a dummy token for development
+    headers.Authorization = `Bearer ${token || 'dummy-token'}`;
+    
+    const res = await fetch(`${BASE_URL}/history/${postId}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw new Error(result.message || 'API error');
+    }
+
+    return result;
+  } catch (err) {
+    throw new Error(err.message || 'Network error');
+  }
+};
+
+// Update engagement metrics for a post
+export const updateEngagementMetrics = async (postId, metrics, token = null) => {
+  try {
+    console.log(`Updating engagement metrics for post ID: ${postId}`, metrics);
+    
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Always include Authorization header, even with a dummy token for development
+    headers.Authorization = `Bearer ${token || 'dummy-token'}`;
+    
+    console.log('Request URL:', `${BASE_URL}/update-engagement/${postId}`);
+    console.log('Request headers:', headers);
+    
+    const res = await fetch(`${BASE_URL}/update-engagement/${postId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(metrics),
+    });
+
+    console.log('Response status:', res.status);
+    
+    const result = await res.json();
+    console.log('Response data:', result);
+
+    if (!res.ok) {
+      console.error('API error:', result);
+      return {
+        success: false,
+        message: result.message || `API error: ${res.status}`,
+        error: result
+      };
+    }
+
+    return result;
+  } catch (err) {
+    console.error('Network or parsing error:', err);
+    return {
+      success: false,
+      message: err.message || 'Network error',
+      error: err
+    };
+  }
+};
+
 // Add a post from search history to post_history
 export const addFromSearch = async (postData, token = null) => {
   return await apiPost('/add-from-search', postData, token);
@@ -126,7 +199,9 @@ export default {
   getAccounts,
   getPostHistory,
   repostPost,
+  deletePost,
   addFromSearch,
+  updateEngagementMetrics,
   formatTimeSince,
   isRepostAllowed
 };
