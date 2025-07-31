@@ -499,7 +499,7 @@ router.get("/search", async (req, res) => {
 
       query += ` ORDER BY created_at DESC`;
 
-      console.log("DB Query:", query, "Params:", params);
+    
       const cached = await db.query(query, params);
 
       if (cached.rows.length > 0) {

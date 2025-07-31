@@ -122,6 +122,8 @@ export const deletePost = async (postId, token = null) => {
 
 // Update engagement metrics for a post
 export const updateEngagementMetrics = async (postId, metrics, token = null) => {
+  // Ensure postId is a string
+  postId = String(postId);
   try {
     console.log(`Updating engagement metrics for post ID: ${postId}`, metrics);
     
