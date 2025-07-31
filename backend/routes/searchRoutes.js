@@ -880,7 +880,7 @@ async function postReplyWithPuppeteer(
 
     console.log("5");
     // Fill password
-    await page.waitForSelector('input[name="password"]', { timeout: 5000 });
+    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
     console.log("6");
     console.log("🔑 Username:", username);
     console.log("🔑 Password:", twitter_password);

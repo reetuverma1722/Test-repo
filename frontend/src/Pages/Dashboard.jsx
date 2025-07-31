@@ -51,6 +51,8 @@ import {
   PostAdd as PostAddIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  AddTaskOutlined,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -76,12 +78,40 @@ const Dashboard = () => {
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
-  
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   // Twitter accounts state
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
-  
+
+  // Update current time every minute to keep time displays fresh
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Function to format time difference as "X hours ago"
+  const getTimeAgo = (timestamp) => {
+    if (!timestamp) return "Unknown";
+
+    const fetchedTime = new Date(timestamp);
+    const diffMs = currentTime - fetchedTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60)
+      return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
+    if (diffHours < 24)
+      return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+    return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  };
+
   // Password change state
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -93,6 +123,12 @@ const Dashboard = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Post dialog state
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
+  const [selectedTweet, setSelectedTweet] = useState(null);
+  const [editedReply, setEditedReply] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,19 +142,18 @@ const Dashboard = () => {
   const fetchTwitterAccounts = async () => {
     setLoadingAccounts(true);
     try {
-      const response = await getAccountsByPlatform('twitter');
-      
+      const response = await getAccountsByPlatform("twitter");
+
       // Extract the data array from the response
       // The API returns { success: true, data: [...accounts] }
       const accounts = response.data || [];
-      
+
       console.log("Fetched Twitter accounts:", accounts);
       setTwitterAccounts(accounts);
-      
-      // Set the first account as selected by default if available
-      if (accounts.length > 0) {
-        setSelectedAccount(accounts[0].id);
-      }
+
+      // Don't set any account as selected by default
+      // This will show "All Accounts" as the default selection
+      setSelectedAccount(null);
     } catch (err) {
       console.error("Failed to fetch Twitter accounts", err);
       setTwitterAccounts([]); // Reset to empty array on error
@@ -126,12 +161,13 @@ const Dashboard = () => {
       setLoadingAccounts(false);
     }
   };
-  
+
   // Fetch keywords and Twitter accounts on component mount
   useEffect(() => {
     fetchTwitterAccounts();
+    fetchAllPosts(); // Automatically fetch posts when component mounts
   }, []);
-  
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     setLogoutOpen(false);
@@ -139,7 +175,7 @@ const Dashboard = () => {
   };
 
   // Fetch all keywords
-  const fetchAllKeywords = async () => { 
+  const fetchAllKeywords = async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get("http://localhost:5000/api/keywords", {
@@ -154,82 +190,143 @@ const Dashboard = () => {
     }
   };
 
-  const fetchAllPosts = async () => {
+  const fetchAllPosts = async (accountId = selectedAccount) => {
     setLoading(true);
     setTweets([]);
-  
+
     try {
       // First fetch all keywords
       const allKeywords = await fetchAllKeywords();
-      
+
       // Filter keywords by selected account if one is selected
-      const filteredKeywords = selectedAccount
-        ? allKeywords.filter(k => {
-            console.log("Comparing keyword account:", k.accountId, "with selected account:", selectedAccount);
+      const filteredKeywords = accountId
+        ? allKeywords.filter((k) => {
+            console.log(
+              "Comparing keyword account:",
+              k.accountId,
+              "with selected account:",
+              accountId
+            );
             // Convert both to strings for comparison to handle potential type mismatches
-            return String(k.accountId) === String(selectedAccount);
+            return String(k.accountId) === String(accountId);
           })
         : allKeywords;
-      
+
       console.log("All keywords:", allKeywords);
       console.log("Filtered keywords:", filteredKeywords);
-      console.log("Selected account:", selectedAccount);
-      
+      console.log("Selected account:", accountId);
+
       setKeywords(filteredKeywords);
-  
+
       if (filteredKeywords.length === 0) {
         setLoading(false);
         return;
       }
-  
+
       // Instead of using max values across all keywords, fetch posts for each keyword individually
       let allFetchedTweets = [];
-      
+
       // Process each keyword individually
       for (const keyword of filteredKeywords) {
         // Ensure we're using numeric values by explicitly converting to numbers
         const minLikes = Number(keyword.minLikes) || 0;
         const minRetweets = Number(keyword.minRetweets) || 0;
         const minFollowers = Number(keyword.minFollowers) || 0;
-        
-        console.log(`Fetching for keyword "${keyword.text}" with criteria:`,
-          { minLikes, minRetweets, minFollowers });
-        
+
+        console.log(`Fetching for keyword "${keyword.text}" with criteria:`, {
+          minLikes,
+          minRetweets,
+          minFollowers,
+        });
+
         // Build search URL for this specific keyword
         let searchUrl = `http://localhost:5000/api/search?keyword=${keyword.text}&minLikes=${minLikes}&minRetweets=${minRetweets}&minFollowers=${minFollowers}`;
-        
-        if (selectedAccount) {
-          searchUrl += `&accountId=${selectedAccount}`;
+
+        if (accountId) {
+          searchUrl += `&accountId=${accountId}`;
         }
-        
+
         console.log("Search URL for keyword:", searchUrl);
-        
+
         try {
           const res = await axios.get(searchUrl);
-          
+
           // Add keyword information to each tweet
-          const keywordTweets = (res.data.tweets || []).map(tweet => ({
+          const keywordTweets = (res.data.tweets || []).map((tweet) => ({
             ...tweet,
-            keyword: keyword.text
+            keyword: keyword.text,
           }));
-          
+
           allFetchedTweets = [...allFetchedTweets, ...keywordTweets];
         } catch (err) {
-          console.error(`Error fetching tweets for keyword "${keyword.text}":`, err);
+          console.error(
+            `Error fetching tweets for keyword "${keyword.text}":`,
+            err
+          );
         }
       }
-      
+
       // Remove duplicates (in case a tweet matches multiple keywords)
-      const uniqueTweets = Array.from(new Map(allFetchedTweets.map(tweet =>
-        [tweet.id, tweet])).values());
-      
-      console.log(`Fetched ${uniqueTweets.length} unique tweets across all keywords`);
+      const uniqueTweets = Array.from(
+        new Map(allFetchedTweets.map((tweet) => [tweet.id, tweet])).values()
+      );
+
+      console.log(
+        `Fetched ${uniqueTweets.length} unique tweets across all keywords`
+      );
       setTweets(uniqueTweets);
       // filteredTweets will be updated by the useEffect
     } catch (err) {
       console.error("Failed to fetch posts", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle post button click
+  const handlePost = (tweet) => {
+    setSelectedTweet(tweet);
+    setEditedReply(tweet.reply || "");
+    localStorage.setItem("selected_tweet_id", tweet.id);
+    localStorage.setItem("selected_tweet_reply", tweet.reply || "");
+    setPostDialogOpen(true);
+  };
+
+  // Handle post submission
+  const handlePostSubmit = async () => {
+    if (!selectedTweet || !editedReply) {
+      return;
+    }
+
+    setIsPosting(true);
+
+    try {
+      // Call the API to post the reply
+      const response = await axios.post(
+        "http://localhost:5000/api/reply-to-tweet",
+        {
+          tweetId: selectedTweet.id,
+          replyText: editedReply,
+          selectedAccountId: selectedAccount,
+        }
+      );
+
+      if (response.data.success) {
+        // Show success message
+        alert("Reply posted successfully!");
+
+        // Close the dialog
+        setPostDialogOpen(false);
+      } else {
+        alert(
+          "Failed to post reply: " + (response.data.message || "Unknown error")
+        );
+      }
+    } catch (error) {
+      console.error("Error posting reply:", error);
+      alert("Error posting reply: " + (error.message || "Unknown error"));
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -261,33 +358,35 @@ const Dashboard = () => {
   const validatePassword = () => {
     // Reset error
     setPasswordError("");
-    
+
     // Check if all fields are filled
     if (!currentPassword || !newPassword || !confirmPassword) {
       setPasswordError("All fields are required");
       return false;
     }
-    
+
     // Check if new password is at least 8 characters
     if (newPassword.length < 8) {
       setPasswordError("New password must be at least 8 characters long");
       return false;
     }
-    
+
     // Check if new password contains at least one number and one letter
     const hasNumber = /\d/.test(newPassword);
     const hasLetter = /[a-zA-Z]/.test(newPassword);
     if (!hasNumber || !hasLetter) {
-      setPasswordError("New password must contain at least one letter and one number");
+      setPasswordError(
+        "New password must contain at least one letter and one number"
+      );
       return false;
     }
-    
+
     // Check if passwords match
     if (newPassword !== confirmPassword) {
       setPasswordError("New passwords do not match");
       return false;
     }
-    
+
     return true;
   };
 
@@ -297,39 +396,42 @@ const Dashboard = () => {
     if (!validatePassword()) {
       return;
     }
-    
+
     setPasswordLoading(true);
-    
+
     try {
       // Get token from localStorage
       const token = localStorage.getItem("token");
-      
+
       // Make API call to change password
       const response = await axios.post(
         "http://localhost:5000/api/auth/change-password",
         {
           currentPassword,
-          newPassword
+          newPassword,
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
-      
+
       // Handle success
       setPasswordSuccess(true);
       setPasswordError("");
-      
+
       // Close dialog after 2 seconds
       setTimeout(() => {
         setPasswordDialogOpen(false);
       }, 2000);
-      
     } catch (error) {
       // Handle error
-      if (error.response && error.response.data && error.response.data.message) {
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
         setPasswordError(error.response.data.message);
       } else {
         setPasswordError("Failed to change password. Please try again.");
@@ -399,16 +501,16 @@ const Dashboard = () => {
 
   // Handle keyword toggle for filtering
   const handleKeywordToggle = (keywordText) => {
-    setSelectedKeywords(prev => {
+    setSelectedKeywords((prev) => {
       const isSelected = prev.includes(keywordText);
       const newSelected = isSelected
-        ? prev.filter(k => k !== keywordText)
+        ? prev.filter((k) => k !== keywordText)
         : [...prev, keywordText];
-      
+
       return newSelected;
     });
   };
-  
+
   // Update filtered tweets whenever tweets or selected keywords change
   useEffect(() => {
     if (selectedKeywords.length === 0) {
@@ -416,10 +518,12 @@ const Dashboard = () => {
       setFilteredTweets(tweets);
     } else {
       // Filter tweets that match any of the selected keywords
-      const filtered = tweets.filter(tweet => {
+      const filtered = tweets.filter((tweet) => {
         // Check if the tweet's keyword is in the selected keywords list
-        return selectedKeywords.some(keyword =>
-          tweet.keyword && tweet.keyword.toLowerCase() === keyword.toLowerCase()
+        return selectedKeywords.some(
+          (keyword) =>
+            tweet.keyword &&
+            tweet.keyword.toLowerCase() === keyword.toLowerCase()
         );
       });
       setFilteredTweets(filtered);
@@ -446,6 +550,251 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ display: "flex" }}>
+      {/* Post Dialog */}
+      <Dialog
+        open={postDialogOpen}
+        onClose={() => setPostDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontFamily: "var(--brand-font)",
+            fontSize: "1.3rem",
+            fontWeight: 600,
+            backgroundColor: "#f8f8f8",
+            borderBottom: "1px solid #eaeaea",
+            padding: "16px 24px",
+            position: "relative",
+          }}
+        >
+          Post Reply
+        </DialogTitle>
+        <DialogContent dividers sx={{ padding: "24px" }}>
+          {/* Original Tweet Content */}
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{
+              fontFamily: "var(--brand-font)",
+              fontSize: "1.05rem",
+              fontWeight: 600,
+              color: "#333",
+              display: "flex",
+              alignItems: "center",
+              "&::before": {
+                content: '""',
+                display: "inline-block",
+                width: "4px",
+                height: "16px",
+                backgroundColor: "#FF0000",
+                marginRight: "8px",
+                borderRadius: "2px",
+              },
+            }}
+          >
+            Original Post Content
+          </Typography>
+
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 3,
+              p: 2,
+              backgroundColor: "#f5f5f5",
+              borderRadius: "8px",
+              border: "1px solid #e0e0e0",
+              fontSize: "0.95rem",
+              lineHeight: 1.6,
+              fontStyle: "italic",
+            }}
+          >
+            {selectedTweet?.text || "No tweet content available."}
+          </Typography>
+
+          {/* Reply Input */}
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{
+              fontFamily: "var(--brand-font)",
+              fontSize: "1.05rem",
+              fontWeight: 600,
+              color: "#333",
+              display: "flex",
+              alignItems: "center",
+              mt: 2,
+              "&::before": {
+                content: '""',
+                display: "inline-block",
+                width: "4px",
+                height: "16px",
+                backgroundColor: "#4caf50",
+                marginRight: "8px",
+                borderRadius: "2px",
+              },
+            }}
+          >
+            Compose Professional Response
+           
+          </Typography>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
+            value={editedReply}
+            onChange={(e) => setEditedReply(e.target.value)}
+            placeholder="Compose a professional and concise response..."
+            variant="outlined"
+            inputProps={{ maxLength: 220 }}
+            helperText={`${editedReply.length}/220 characters ${
+              editedReply.length > 220 ? "(limit exceeded)" : ""
+            }`}
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "8px",
+                transition: "all 0.3s",
+                fontSize: "0.95rem",
+              },
+              "& .MuiFormHelperText-root": {
+                color: editedReply.length > 220 ? "#f44336" : "text.secondary",
+                fontWeight: editedReply.length > 220 ? 600 : 400,
+              },
+            }}
+          />
+          
+          {/* Premium member notice */}
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              mb: 2,
+              color: 'text.secondary',
+              bgcolor: 'rgba(244, 67, 54, 0.08)',
+              p: 1,
+              borderRadius: 1,
+              borderLeft: '3px solid #f44336'
+            }}
+          >
+            <strong>Note:</strong> Only premium members can post replies longer than 200 characters.
+            Non-premium users must keep replies within the 200 character limit.
+          </Typography>
+
+          {/* Account Selection */}
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{
+              fontFamily: "var(--brand-font)",
+              fontSize: "1rem",
+              mt: 2,
+              display: "flex",
+              alignItems: "center",
+              "&::before": {
+                content: '""',
+                display: "inline-block",
+                width: "4px",
+                height: "16px",
+                backgroundColor: "#4caf50",
+                marginRight: "8px",
+                borderRadius: "2px",
+              },
+            }}
+          >
+            <strong>Select Account:</strong>
+          </Typography>
+
+          <TextField
+            select
+            fullWidth
+            size="small"
+            label="Twitter Account"
+            value={selectedAccount || ""}
+            onChange={(e) => {
+              setSelectedAccount(e.target.value === "" ? null : e.target.value);
+            }}
+            disabled={loadingAccounts}
+            variant="outlined"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+              },
+            }}
+          >
+            <MenuItem value="">All Accounts</MenuItem>
+            {Array.isArray(twitterAccounts) &&
+              twitterAccounts.map((account) => (
+                <MenuItem key={account.id} value={account.id}>
+                  {account.accountName}
+                </MenuItem>
+              ))}
+          </TextField>
+        </DialogContent>
+
+        <DialogActions
+          sx={{ padding: "16px 24px", backgroundColor: "#f8f8f8" }}
+        >
+          <Button
+            onClick={() => setPostDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: "#9e9e9e",
+              color: "#757575",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handlePostSubmit}
+            variant="contained"
+            startIcon={isPosting ? null : <AddTaskOutlined />}
+            disabled={
+              isPosting || editedReply.length > 220 || !editedReply.trim()
+            }
+            sx={{
+              backgroundColor: "#4caf50",
+              padding: "6px 20px",
+              borderRadius: "8px",
+              fontWeight: 600,
+              boxShadow: "0 4px 12px rgba(76, 175, 80, 0.2)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                backgroundColor: "#43a047",
+                boxShadow: "0 6px 16px rgba(76, 175, 80, 0.3)",
+                transform: "translateY(-2px)",
+              },
+              "&.Mui-disabled": {
+                backgroundColor:
+                  editedReply.length > 220
+                    ? "rgba(244, 67, 54, 0.5)"
+                    : "rgba(0, 0, 0, 0.12)",
+              },
+            }}
+          >
+            {isPosting ? (
+              <>
+                <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                Posting...
+              </>
+            ) : (
+              "Post Reply"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Password Change Dialog */}
       <Dialog
         open={passwordDialogOpen}
@@ -454,47 +803,53 @@ const Dashboard = () => {
           sx: {
             borderRadius: 3,
             maxWidth: 400,
-            width: '100%',
-            p: 1
-          }
+            width: "100%",
+            p: 1,
+          },
         }}
       >
-        <DialogTitle sx={{
-          fontWeight: 600,
-          pb: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <VpnKeyIcon sx={{ color: '#f44336' }} />
+        <DialogTitle
+          sx={{
+            fontWeight: 600,
+            pb: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <VpnKeyIcon sx={{ color: "#f44336" }} />
           Change Password
         </DialogTitle>
         <IconButton
           aria-label="close"
           onClick={handlePasswordDialogClose}
           sx={{
-            position: 'absolute',
+            position: "absolute",
             right: 12,
             top: 12,
-            color: 'text.secondary',
+            color: "text.secondary",
           }}
         >
           <CloseOutlined />
         </IconButton>
         <DialogContent sx={{ pt: 1 }}>
           {passwordSuccess ? (
-            <Box sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              py: 2
-            }}>
-              <Avatar sx={{
-                bgcolor: '#4caf50',
-                mb: 2,
-                width: 60,
-                height: 60
-              }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                py: 2,
+              }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: "#4caf50",
+                  mb: 2,
+                  width: 60,
+                  height: 60,
+                }}
+              >
                 <CheckIcon sx={{ fontSize: 36 }} />
               </Avatar>
               <Typography variant="h6" sx={{ mb: 1 }}>
@@ -512,9 +867,9 @@ const Dashboard = () => {
                   sx={{
                     mb: 2,
                     borderRadius: 2,
-                    '& .MuiAlert-icon': {
-                      color: '#f44336'
-                    }
+                    "& .MuiAlert-icon": {
+                      color: "#f44336",
+                    },
                   }}
                 >
                   {passwordError}
@@ -534,10 +889,16 @@ const Dashboard = () => {
                     <InputAdornment position="end">
                       <IconButton
                         aria-label="toggle current password visibility"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        onClick={() =>
+                          setShowCurrentPassword(!showCurrentPassword)
+                        }
                         edge="end"
                       >
-                        {showCurrentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        {showCurrentPassword ? (
+                          <VisibilityOffIcon />
+                        ) : (
+                          <VisibilityIcon />
+                        )}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -561,7 +922,11 @@ const Dashboard = () => {
                         onClick={() => setShowNewPassword(!showNewPassword)}
                         edge="end"
                       >
-                        {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        {showNewPassword ? (
+                          <VisibilityOffIcon />
+                        ) : (
+                          <VisibilityIcon />
+                        )}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -580,10 +945,16 @@ const Dashboard = () => {
                     <InputAdornment position="end">
                       <IconButton
                         aria-label="toggle confirm password visibility"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         edge="end"
                       >
-                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        {showConfirmPassword ? (
+                          <VisibilityOffIcon />
+                        ) : (
+                          <VisibilityIcon />
+                        )}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -598,7 +969,7 @@ const Dashboard = () => {
               onClick={handlePasswordDialogClose}
               sx={{
                 borderRadius: 2,
-                color: 'text.secondary'
+                color: "text.secondary",
               }}
             >
               Cancel
@@ -611,13 +982,13 @@ const Dashboard = () => {
               sx={{
                 borderRadius: 2,
                 px: 3,
-                position: 'relative'
+                position: "relative",
               }}
             >
               {passwordLoading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                'Change Password'
+                "Change Password"
               )}
             </Button>
           </DialogActions>
@@ -829,9 +1200,7 @@ const Dashboard = () => {
                 },
 
                 "&:hover": {
-                  backgroundColor: location.pathname.includes(
-                    "/post-history"
-                  )
+                  backgroundColor: location.pathname.includes("/post-history")
                     ? "rgba(210, 25, 87, 0.29)"
                     : "rgba(119, 76, 76, 0.04)",
                   transform: "translateX(3px)",
@@ -852,9 +1221,7 @@ const Dashboard = () => {
                 primary="Post History"
                 primaryTypographyProps={{
                   fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes(
-                    "/post-history"
-                  )
+                  fontWeight: location.pathname.includes("/post-history")
                     ? 600
                     : 500,
                 }}
@@ -910,23 +1277,23 @@ const Dashboard = () => {
                   sx={{
                     width: 36,
                     height: 36,
-                    bgcolor: '#ff5858a1',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
+                    bgcolor: "#ff5858a1",
+                    color: "white",
+                    fontWeight: "bold",
+                    cursor: "pointer",
                     border: "2px solid rgba(255,255,255,0.8)",
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                    }
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      transform: "scale(1.05)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                    },
                   }}
                 >
                   {userEmail.charAt(0).toUpperCase()}
                 </Avatar>
               </Tooltip>
-              
+
               {/* User Profile Menu */}
               <Menu
                 anchorEl={anchorEl}
@@ -938,41 +1305,49 @@ const Dashboard = () => {
                   sx: {
                     borderRadius: 2,
                     minWidth: 250,
-                    overflow: 'visible',
+                    overflow: "visible",
                     mt: 1.5,
-                    '&:before': {
+                    "&:before": {
                       content: '""',
-                      display: 'block',
-                      position: 'absolute',
+                      display: "block",
+                      position: "absolute",
                       top: 0,
                       right: 14,
                       width: 10,
                       height: 10,
-                      bgcolor: 'background.paper',
-                      transform: 'translateY(-50%) rotate(45deg)',
+                      bgcolor: "background.paper",
+                      transform: "translateY(-50%) rotate(45deg)",
                       zIndex: 0,
                     },
                   },
                 }}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                transformOrigin={{ horizontal: "right", vertical: "top" }}
+                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               >
-                <Box sx={{ px: 2, py: 1.5, bgcolor: '#f5f5f5' }}>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: "#f5f5f5" }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                     User Profile
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <EmailIcon fontSize="small" sx={{ color: '#FF0000' }} />
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.secondary",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    <EmailIcon fontSize="small" sx={{ color: "#FF0000" }} />
                     {userEmail}
                   </Typography>
                 </Box>
                 <Divider />
                 <MenuItem onClick={handlePasswordChange} sx={{ py: 1.5 }}>
-                  <VpnKeyIcon sx={{ mr: 2, color: '#FF0000' }} />
+                  <VpnKeyIcon sx={{ mr: 2, color: "#FF0000" }} />
                   <Typography variant="body2">Change Password</Typography>
                 </MenuItem>
                 <MenuItem onClick={() => setLogoutOpen(true)} sx={{ py: 1.5 }}>
-                  <Logout sx={{ mr: 2, color: '#FF0000' }} />
+                  <Logout sx={{ mr: 2, color: "#FF0000" }} />
                   <Typography variant="body2">Logout</Typography>
                 </MenuItem>
               </Menu>
@@ -1199,39 +1574,53 @@ const Dashboard = () => {
                   backdropFilter: "blur(10px)",
                 }}
               >
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Your Keywords & Posts
                   </Typography>
-                  
+
                   {/* Twitter Account Selection */}
                   <Box sx={{ minWidth: 200 }}>
                     <TextField
                       select
                       size="small"
                       label="Twitter Account"
-                      value={selectedAccount || 'All Accounts'}
+                      value={selectedAccount || ""}
                       onChange={(e) => {
+                        const newAccountId =
+                          e.target.value === "" ? null : e.target.value;
+                        console.log(
+                          "Selected account changed to:",
+                          newAccountId
+                        );
                         // When "All Accounts" is selected, set selectedAccount to null
-                        setSelectedAccount(e.target.value === '' ? null : e.target.value);
-                        // Refetch posts when account changes
-                        // setTimeout(() => fetchAllPosts(), 100);
+                        setSelectedAccount(newAccountId);
+                        // Refetch posts when account changes - call directly without setTimeout
+                        fetchAllPosts(newAccountId);
                       }}
                       disabled={loadingAccounts}
                       fullWidth
                       variant="outlined"
                       sx={{
-                        '& .MuiOutlinedInput-root': {
+                        "& .MuiOutlinedInput-root": {
                           borderRadius: 2,
-                        }
+                        },
                       }}
                     >
                       <MenuItem value="">All Accounts</MenuItem>
-                      {Array.isArray(twitterAccounts) && twitterAccounts.map((account) => (
-                        <MenuItem key={account.id} value={account.id}>
-                          {account.accountName}
-                        </MenuItem>
-                      ))}
+                      {Array.isArray(twitterAccounts) &&
+                        twitterAccounts.map((account) => (
+                          <MenuItem key={account.id} value={account.id}>
+                            {account.accountName}
+                          </MenuItem>
+                        ))}
                     </TextField>
                   </Box>
                 </Box>
@@ -1239,7 +1628,9 @@ const Dashboard = () => {
                 {keywords.length > 0 ? (
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                     {keywords.map((keyword, index) => {
-                      const isSelected = selectedKeywords.includes(keyword.text);
+                      const isSelected = selectedKeywords.includes(
+                        keyword.text
+                      );
                       return (
                         <Chip
                           key={index}
@@ -1257,7 +1648,9 @@ const Dashboard = () => {
                             cursor: "pointer",
                             "&:hover": {
                               boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
-                              backgroundColor: isSelected ? "#e53935" : "#f5f5f5",
+                              backgroundColor: isSelected
+                                ? "#e53935"
+                                : "#f5f5f5",
                             },
                           }}
                         />
@@ -1359,76 +1752,151 @@ const Dashboard = () => {
                             <Box
                               sx={{
                                 display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
+                                flexDirection: "column",
+                                gap: 1,
                               }}
                             >
                               <Box
                                 sx={{
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 2,
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 2,
+                                  }}
+                                >
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      fontWeight: 500,
+                                      color: "text.primary",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontWeight: "bold",
+                                        color: "#f44336",
+                                      }}
+                                    >
+                                      {tweet?.like_count}
+                                    </span>{" "}
+                                    Likes
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      fontWeight: 500,
+                                      color: "text.primary",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontWeight: "bold",
+                                        color: "#f44336",
+                                      }}
+                                    >
+                                      {tweet?.retweet_count}
+                                    </span>{" "}
+                                    Retweets
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="View Post Details">
+                                  <IconButton
+                                    href={`https://x.com/i/web/status/${tweet.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    sx={{
+                                      backgroundColor:
+                                        "rgba(244, 67, 54, 0.08)",
+                                      transition: "all 0.2s",
+                                      "&:hover": {
+                                        backgroundColor:
+                                          "rgba(244, 67, 54, 0.15)",
+                                        transform: "scale(1.1)",
+                                      },
+                                    }}
+                                  >
+                                    <ViewIcon
+                                      fontSize="small"
+                                      sx={{ color: "#f44336" }}
+                                    />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  mt: 1,
                                 }}
                               >
                                 <Typography
                                   variant="body2"
                                   sx={{
                                     fontWeight: 500,
-                                    color: "text.primary",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
+                                    color: "text.secondary",
+                                    fontSize: "0.8rem",
                                   }}
                                 >
-                                  <span
-                                    style={{
-                                      fontWeight: "bold",
-                                      color: "#f44336",
-                                    }}
-                                  >
-                                    {tweet?.like_count}
+                                  <span style={{ fontWeight: "bold" }}>
+                                    {tweet?.followers_count || 0}
                                   </span>{" "}
-                                  Likes
+                                  Followers
                                 </Typography>
+
                                 <Typography
                                   variant="body2"
                                   sx={{
-                                    fontWeight: 500,
-                                    color: "text.primary",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
+                                    color: "text.secondary",
+                                    fontSize: "0.8rem",
+                                    fontStyle: "italic",
                                   }}
                                 >
-                                  <span
-                                    style={{
-                                      fontWeight: "bold",
-                                      color: "#f44336",
-                                    }}
-                                  >
-                                    {tweet?.retweet_count}
-                                  </span>{" "}
-                                  Retweets
+                                  Fetched {getTimeAgo(tweet?.created_at)}
                                 </Typography>
                               </Box>
-                              <Tooltip title="View in Search History">
-                                <IconButton
-                                  onClick={() => {
-                                    navigate(`/history?tweetId=${tweet.id}`)
-                                  }}
-                                  size="small"
-                                  sx={{
-                                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                                    transition: 'all 0.2s',
-                                    '&:hover': {
-                                      backgroundColor: 'rgba(244, 67, 54, 0.15)',
-                                      transform: 'scale(1.1)'
-                                    }
-                                  }}
-                                >
-                                  <ViewIcon fontSize="small" sx={{ color: '#f44336' }} />
-                                </IconButton>
-                              </Tooltip>
+
+                              {/* Post Button */}
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<EditIcon />}
+                                onClick={() => handlePost(tweet)}
+                                sx={{
+                                  mt: 2,
+                                  width: "100%",
+                                  borderRadius: 2,
+                                  backgroundColor: "#f44336",
+                                  color: "white",
+                                  fontWeight: 600,
+                                  textTransform: "none",
+                                  boxShadow:
+                                    "0 2px 8px rgba(244, 67, 54, 0.25)",
+                                  "&:hover": {
+                                    backgroundColor: "#d32f2f",
+                                    boxShadow:
+                                      "0 4px 12px rgba(244, 67, 54, 0.35)",
+                                    transform: "translateY(-2px)",
+                                  },
+                                  transition: "all 0.2s ease",
+                                }}
+                              >
+                                Post Reply
+                              </Button>
                             </Box>
                           </CardContent>
                         </Card>
