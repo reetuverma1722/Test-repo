@@ -650,7 +650,7 @@ const SocialMediaAccounts = () => {
     <Box>
       {/* Header and Actions */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h6">Social Media Accounts</Typography>
+        <Typography variant="h6" sx={{fontSize:"0.96rem"}}>Social Media Accounts</Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
@@ -658,6 +658,7 @@ const SocialMediaAccounts = () => {
             onClick={() => handleAddAccount("twitter")}
             sx={{
               backgroundColor: "#1DA1F2",
+              border:"none",
               '&:hover': {
                 backgroundColor: "#0d8bd9"
               }
@@ -671,6 +672,7 @@ const SocialMediaAccounts = () => {
             onClick={() => handleAddAccount("linkedin")}
             sx={{
               backgroundColor: "#0A66C2",
+                border:"none",
               '&:hover': {
                 backgroundColor: "#0850a0"
               }
@@ -724,7 +726,7 @@ const SocialMediaAccounts = () => {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {getPlatformIcon(account.platform)}
-                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                      <Typography variant="body2" sx={{ textTransform: 'capitalize' , mt:"12px" }}>
                         {account.platform}
                       </Typography>
                     </Box>

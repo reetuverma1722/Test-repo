@@ -327,7 +327,7 @@ const TwitterKeywords = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h6">Twitter Keywords Management</Typography>
+        <Typography variant="h6" sx={{fontSize:"0.9rem"}}>Twitter Keywords Management</Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
@@ -343,7 +343,7 @@ const TwitterKeywords = () => {
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={3}>
-            <Typography variant="subtitle1" fontWeight="bold">
+            <Typography variant="subtitle1" fontWeight="bold" sx={{fontSize:"0.9rem"}}>
               Select Twitter Account:
             </Typography>
           </Grid>
@@ -355,8 +355,8 @@ const TwitterKeywords = () => {
                 displayEmpty
                 sx={{ minWidth: 250 }}
               >
-                <MenuItem value="">
-                  <em>All Accounts</em>
+                <MenuItem value="" sx={{fontSize:"0.9rem"}}>
+                  <em sx={{fontSize:"0.9rem"}}>All Accounts</em>
                 </MenuItem>
                 {twitterAccounts.map((account) => (
                   <MenuItem key={account.id} value={account.id}>

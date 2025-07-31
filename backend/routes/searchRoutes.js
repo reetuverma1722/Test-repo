@@ -794,7 +794,7 @@ router.post("/reply-to-tweet", async (req, res) => {
     const id = selectedAccountId;
 
     const result = await pool.query(
-      "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
+      "SELECT account_name,twitter_password FROM social_media_accounts WHERE id = $1",
       [selectedAccountId]
     );
 
@@ -807,12 +807,12 @@ router.post("/reply-to-tweet", async (req, res) => {
         });
     }
 
-    const { account_name, password } = result.rows[0];
+    const { account_name, twitter_password  } = result.rows[0];
 
     // Run Puppeteer login and reply - now returns a result object
     const postResult = await postReplyWithPuppeteer(
       account_name,
-      password,
+      twitter_password ,
       tweetId,
       replyText
     );

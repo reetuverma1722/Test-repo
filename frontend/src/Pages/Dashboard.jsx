@@ -1107,12 +1107,12 @@ const Dashboard = () => {
                 transition: "all 0.2s ease",
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "rgba(244, 67, 54, 0.7)", // Light red
-                  color: "#f44336",
-                  borderLeft: "3px solid #f44336",
+                  backgroundColor: "#13343bab", // Light red
+                  color: "#13343B",
+                  borderLeft: "3px solid #13343B",
                   paddingLeft: "13px",
                   "& .MuiListItemIcon-root": {
-                    color: "#f44336",
+                    color: "#13343B",
                   },
                 },
 
@@ -1160,11 +1160,11 @@ const Dashboard = () => {
                 height: "44px",
                 "&.Mui-selected": {
                   backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
-                  color: "#f44336",
-                  borderLeft: "3px solid #f44336",
+                  color: "#13343B",
+                  borderLeft: "3px solid #13343B",
                   paddingLeft: "13px",
                   "& .MuiListItemIcon-root": {
-                    color: "#f44336",
+                    color: "#13343B",
                   },
                 },
 
@@ -1216,11 +1216,11 @@ const Dashboard = () => {
                 height: "44px",
                 "&.Mui-selected": {
                   backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
-                  color: "#f44336",
-                  borderLeft: "3px solid #f44336",
+                  color: "#13343B",
+                  borderLeft: "3px solid #13343B",
                   paddingLeft: "13px",
                   "& .MuiListItemIcon-root": {
-                    color: "#f44336",
+                    color: "#13343B",
                   },
                 },
 
@@ -1285,7 +1285,7 @@ const Dashboard = () => {
    
   }}
 >
-  <div className="logo-container" style={{ display: 'flex', alignItems: 'center' }}>
+  <div className="logo-container" style={{ display: 'flex', alignItems: 'center',marginTop:"0.6rem", }}>
     <img
       src="/images/Buzly.png"
       alt="Buzly Logo"
@@ -1319,8 +1319,8 @@ const Dashboard = () => {
                   sx={{
                     width: 36,
                     height: 36,
-                    bgcolor: "#ff5858a1",
-                    color: "white",
+                    bgcolor: "#E8E8E3",
+                    color: "#13343B",
                     fontWeight: "bold",
                     cursor: "pointer",
                     border: "2px solid rgba(255,255,255,0.8)",
