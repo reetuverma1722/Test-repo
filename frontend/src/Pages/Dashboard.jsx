@@ -1446,7 +1446,7 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background: "#fef2f2",
+                      background: "#e5efee",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1458,7 +1458,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#f44336",
+                          bgcolor: "#4896A0",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -1516,7 +1516,7 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background: "#fef2f2",
+                      background: "#e5efee",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1528,7 +1528,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#f44336",
+                          bgcolor: "#4896A0",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -1748,7 +1748,7 @@ const Dashboard = () => {
                               height: 6,
                               width: "100%",
                               background:
-                                "linear-gradient(90deg, #f3dddc, #eb8270)",
+                                "linear-gradient(90deg, #E5EFEE, #C8DEE0)",
                             }}
                           />
                           <CardContent sx={{ p: 3 }}>
@@ -1898,16 +1898,17 @@ const Dashboard = () => {
                                   mt: 2,
                                   width: "100%",
                                   borderRadius: 2,
-                                  backgroundColor: "#f44336",
-                                  color: "white",
+                                  backgroundColor: "#E8E8E3",
+                                  color: "#4F6669",
                                   fontWeight: 600,
                                   textTransform: "none",
+                                  border: "none",
                                   boxShadow:
-                                    "0 2px 8px rgba(244, 67, 54, 0.25)",
+                                    "0 2px 8px rgba(65, 82, 43, 0.25)",
                                   "&:hover": {
-                                    backgroundColor: "#d32f2f",
+                                    backgroundColor: "#637e6eff",
                                     boxShadow:
-                                      "0 4px 12px rgba(244, 67, 54, 0.35)",
+                                      "0 4px 12px rgba(233, 214, 213, 0.35)",
                                     transform: "translateY(-2px)",
                                   },
                                   transition: "all 0.2s ease",
