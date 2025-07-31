@@ -948,9 +948,8 @@ async function postReplyWithPuppeteer(
     );
     await replyBtn.click();
     console.log("Clicked reply button, waiting for confirmation...");
-    await page.screenshot({ path: "erro7.png" });
+    await page.screenshot({ path: "reply-clicked.png" });
     console.log("posted");
-    await replyBtn.click();
     // Increase timeout to allow Twitter to process the reply
     await new Promise((resolve) => setTimeout(resolve, 10000));
 

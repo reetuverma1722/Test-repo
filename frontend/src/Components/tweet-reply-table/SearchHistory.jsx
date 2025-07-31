@@ -29,7 +29,7 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { AddTaskOutlined, RemoveRedEye, Search } from "@mui/icons-material";
+import { AddTaskOutlined, RemoveRedEye, Search, Clear as ClearIcon } from "@mui/icons-material";
 import axios from "axios";
 import SuccessPopup from "../dialog/successPopup";
 
@@ -1100,6 +1100,21 @@ useEffect(() => {
             position: 'relative',
           }}
         >
+          <IconButton
+            onClick={() => setSuccessPopup(false)}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              }
+            }}
+          >
+            <ClearIcon fontSize="small" />
+          </IconButton>
+          
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
             Success!
           </Typography>
@@ -1123,6 +1138,25 @@ useEffect(() => {
           >
             <Search sx={{ fontSize: '120px' }} />
           </Box>
+        </Box>
+        
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            onClick={() => setSuccessPopup(false)}
+            variant="contained"
+            color="primary"
+            sx={{
+              minWidth: 120,
+              borderRadius: '8px',
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 16px rgba(76, 175, 80, 0.3)',
+              }
+            }}
+          >
+            Close
+          </Button>
         </Box>
       </Dialog>
 
