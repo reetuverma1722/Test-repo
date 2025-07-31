@@ -54,6 +54,10 @@ import {
   VisibilityOff as VisibilityOffIcon,
   AddTaskOutlined,
   Edit as EditIcon,
+  Favorite as FavoriteIcon,
+  Replay as ReplyIcon,
+  People as PeopleIcon,
+  
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -1447,6 +1451,7 @@ const Dashboard = () => {
                       borderRadius: 3,
                       height: "100%",
                       background: "#e5efee",
+                      width:"40vw",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1516,6 +1521,7 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
+                      width:"40vw",
                       background: "#e5efee",
                       transition: "all 0.3s ease",
                       "&:hover": {
@@ -1584,10 +1590,12 @@ const Dashboard = () => {
               <Paper
                 elevation={0}
                 variant="outlined"
+
                 sx={{
                   p: 3,
                   mb: 4,
                   borderRadius: 3,
+                  width:"82vw",
                   background: "rgba(255, 255, 255, 0.8)",
                   backdropFilter: "blur(10px)",
                 }}
@@ -1598,6 +1606,7 @@ const Dashboard = () => {
                     justifyContent: "space-between",
                     alignItems: "center",
                     mb: 2,
+                    
                   }}
                 >
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1736,6 +1745,7 @@ const Dashboard = () => {
                             border: "1px solid #e5e7eb",
                             transition: "all 0.3s ease",
                             height: "100%",
+                            width: "18vw",
                             backgroundColor: "#fafafa",
                             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                             "&:hover": {
@@ -1760,7 +1770,7 @@ const Dashboard = () => {
                                 sx={{
                                   width: 48,
                                   height: 48,
-                                  backgroundColor: "#2563eb",
+                                  backgroundColor: "#E5EFEE",
                                   fontSize: "1.2rem",
                                   fontWeight: 600,
                                   border: "2px solid #ffffff",
@@ -1805,9 +1815,9 @@ const Dashboard = () => {
                               <Typography
                                 variant="body1"
                                 sx={{
-                                  fontSize: "1rem",
+                                  fontSize: "0.96rem",
                                   lineHeight: 1.6,
-                                  color: "#1a1a1a",
+                                  color: "#363535ff",
                                   fontWeight: 400,
                                   display: "-webkit-box",
                                   WebkitLineClamp: 4,
@@ -1848,17 +1858,7 @@ const Dashboard = () => {
                                     gap: 0.5,
                                   }}
                                 >
-                                  <Box
-                                    sx={{
-                                      width: 16,
-                                      height: 16,
-                                      borderRadius: "50%",
-                                      backgroundColor: "#ef4444",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                    }}
-                                  >
+                               
                                     <Typography
                                       sx={{
                                         fontSize: "10px",
@@ -1866,9 +1866,9 @@ const Dashboard = () => {
                                         fontWeight: 600,
                                       }}
                                     >
-                                      ♥
+                                      <FavoriteIcon sx={{ fontSize: "18px", color:"#21808D" ,mt:"0.8rem"}}  />
                                     </Typography>
-                                  </Box>
+                                
                                   <Typography
                                     variant="caption"
                                     sx={{
@@ -1888,17 +1888,7 @@ const Dashboard = () => {
                                     gap: 0.5,
                                   }}
                                 >
-                                  <Box
-                                    sx={{
-                                      width: 16,
-                                      height: 16,
-                                      borderRadius: "50%",
-                                      backgroundColor: "#10b981",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                    }}
-                                  >
+                                 
                                     <Typography
                                       sx={{
                                         fontSize: "10px",
@@ -1906,9 +1896,9 @@ const Dashboard = () => {
                                         fontWeight: 600,
                                       }}
                                     >
-                                      ↻
+                                       <ReplyIcon sx={{ fontSize: "18px", color:"#21808D",mt:"0.8rem" }}  />
                                     </Typography>
-                                  </Box>
+                              
                                   <Typography
                                     variant="caption"
                                     sx={{
@@ -1921,6 +1911,7 @@ const Dashboard = () => {
                                   </Typography>
                                 </Box>
 
+                            
                                 <Box
                                   sx={{
                                     display: "flex",
@@ -1928,17 +1919,7 @@ const Dashboard = () => {
                                     gap: 0.5,
                                   }}
                                 >
-                                  <Box
-                                    sx={{
-                                      width: 16,
-                                      height: 16,
-                                      borderRadius: "50%",
-                                      backgroundColor: "#3b82f6",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                    }}
-                                  >
+                                 
                                     <Typography
                                       sx={{
                                         fontSize: "10px",
@@ -1946,49 +1927,9 @@ const Dashboard = () => {
                                         fontWeight: 600,
                                       }}
                                     >
-                                      👁
+                                     <PeopleIcon sx={{ fontSize: "18px", color:"#21808D",mt:"0.8rem" }}  />
                                     </Typography>
-                                  </Box>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      fontWeight: 600,
-                                      color: "#1a1a1a",
-                                    }}
-                                  >
-                                    {tweet?.view_count || "N/A"}
-                                  </Typography>
-                                </Box>
-
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      width: 16,
-                                      height: 16,
-                                      borderRadius: "50%",
-                                      backgroundColor: "#8b5cf6",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                    }}
-                                  >
-                                    <Typography
-                                      sx={{
-                                        fontSize: "10px",
-                                        color: "white",
-                                        fontWeight: 600,
-                                      }}
-                                    >
-                                      👥
-                                    </Typography>
-                                  </Box>
+                                
                                   <Typography
                                     variant="caption"
                                     sx={{
@@ -2012,10 +1953,10 @@ const Dashboard = () => {
                                     width: 32,
                                     height: 32,
                                     backgroundColor: "#ffffff",
-                                    border: "1px solid #e5e7eb",
+                                    border: "1px solid #21808D",
                                     transition: "all 0.2s",
                                     "&:hover": {
-                                      backgroundColor: "#f3f4f6",
+                                      backgroundColor: "#21808db0",
                                       borderColor: "#d1d5db",
                                       transform: "scale(1.05)",
                                     },
@@ -2023,7 +1964,7 @@ const Dashboard = () => {
                                 >
                                   <ViewIcon
                                     fontSize="small"
-                                    sx={{ color: "#666666", fontSize: "16px" }}
+                                    sx={{ color: "#21808D", fontSize: "16px" }}
                                   />
                                 </IconButton>
                               </Tooltip>
