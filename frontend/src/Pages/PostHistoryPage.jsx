@@ -31,14 +31,14 @@ const PostHistoryPage = () => {
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 700,
-              mb: 0.5,
-              color: '#a71900ff',
+               fontWeight: 600,
+                      mb: 0.5,
+                      color: "#4896a1"
             }}
           >
             Post History
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" sx={{fontSize:'0.9rem'}}>
             View and manage your social media post history
           </Typography>
         </Box>
