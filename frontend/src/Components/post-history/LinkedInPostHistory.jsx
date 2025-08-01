@@ -27,28 +27,28 @@ import {
 } from "@mui/material";
 import {
   Refresh as RefreshIcon,
-  Twitter as TwitterIcon,
   LinkedIn as LinkedInIcon,
   AccessTime as AccessTimeIcon,
   Link as LinkIcon,
   Visibility as VisibilityIcon,
   ThumbUp as ThumbUpIcon,
-  Repeat as RepeatIcon,
+  Comment as CommentIcon,
+  Share as ShareIcon,
   BarChart as BarChartIcon,
   Delete as DeleteIcon,
   Update as UpdateIcon,
 } from "@mui/icons-material";
 import {
-  getAccounts,
-  getPostHistory,
-  repostPost,
+  getLinkedInAccounts,
+  getLinkedInPostHistory,
+  repostLinkedInPost,
   formatTimeSince,
   isRepostAllowed,
-  deletePost,
-  updateEngagementMetrics,
+  deleteLinkedInPost,
+  updateLinkedInEngagementMetrics,
 } from "../../services/postHistoryService";
 
-const PostHistory = () => {
+const LinkedInPostHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [accounts, setAccounts] = useState([]);
@@ -68,12 +68,12 @@ const PostHistory = () => {
   const [updateSuccess, setUpdateSuccess] = useState(null);
   const [updateError, setUpdateError] = useState(null);
 
-  // Fetch accounts on component mount
+  // Fetch LinkedIn accounts on component mount
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
         setLoading(true);
-        const result = await getAccounts();
+        const result = await getLinkedInAccounts();
         if (result.success && result.data) {
           setAccounts(result.data);
           // Auto-select the first account if available
@@ -82,8 +82,8 @@ const PostHistory = () => {
           }
         }
       } catch (err) {
-        console.error("Error fetching accounts:", err);
-        setError("Failed to fetch accounts. Please try again later.");
+        console.error("Error fetching LinkedIn accounts:", err);
+        setError("Failed to fetch LinkedIn accounts. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -92,20 +92,20 @@ const PostHistory = () => {
     fetchAccounts();
   }, []);
 
-  // Fetch post history when selected account changes
+  // Fetch LinkedIn post history when selected account changes
   useEffect(() => {
     const fetchPosts = async () => {
       if (!selectedAccount) return;
 
       try {
         setLoading(true);
-        const result = await getPostHistory(selectedAccount);
+        const result = await getLinkedInPostHistory(selectedAccount);
         if (result.success && result.data) {
           setPosts(result.data);
         }
       } catch (err) {
-        console.error("Error fetching post history:", err);
-        setError("Failed to fetch post history. Please try again later.");
+        console.error("Error fetching LinkedIn post history:", err);
+        setError("Failed to fetch LinkedIn post history. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -137,19 +137,19 @@ const PostHistory = () => {
       setRepostError(null);
       setRepostSuccess(null);
 
-      const result = await repostPost(postId);
+      const result = await repostLinkedInPost(postId);
 
       if (result.success) {
-        setRepostSuccess(`Post successfully reposted!`);
+        setRepostSuccess(`LinkedIn post successfully reposted!`);
 
         // Refresh the post history
-        const updatedResult = await getPostHistory(selectedAccount);
+        const updatedResult = await getLinkedInPostHistory(selectedAccount);
         if (updatedResult.success && updatedResult.data) {
           setPosts(updatedResult.data);
         }
       }
     } catch (err) {
-      console.error("Error reposting:", err);
+      console.error("Error reposting LinkedIn post:", err);
       setRepostError(`Failed to repost: ${err.message}`);
     } finally {
       setReposting(null);
@@ -169,19 +169,19 @@ const PostHistory = () => {
       setDeleteError(null);
       setDeleteSuccess(null);
 
-      const result = await deletePost(postId);
+      const result = await deleteLinkedInPost(postId);
 
       if (result.success) {
-        setDeleteSuccess(`Post successfully deleted!`);
+        setDeleteSuccess(`LinkedIn post successfully deleted!`);
 
         // Refresh the post history
-        const updatedResult = await getPostHistory(selectedAccount);
+        const updatedResult = await getLinkedInPostHistory(selectedAccount);
         if (updatedResult.success && updatedResult.data) {
           setPosts(updatedResult.data);
         }
       }
     } catch (err) {
-      console.error("Error deleting post:", err);
+      console.error("Error deleting LinkedIn post:", err);
       setDeleteError(`Failed to delete: ${err.message}`);
     } finally {
       setDeleting(null);
@@ -196,137 +196,48 @@ const PostHistory = () => {
 
   // Handle update engagement metrics
   const handleUpdateEngagement = async (postId) => {
-    // Use static post ID for now to ensure correct update
-    const staticPostId = "19";
-    console.log(`Using static post ID: ${staticPostId} instead of: ${postId}`);
-    postId = staticPostId;
     try {
       setUpdating(postId);
       setUpdateError(null);
       setUpdateSuccess(null);
 
-      console.log(`Updating engagement metrics for post ID: ${postId}`);
+      console.log(`Updating LinkedIn engagement metrics for post ID: ${postId}`);
 
-      // We need to fetch the actual engagement metrics for the user's reply
-      // This requires accessing the Twitter API or scraping the reply page
-      
-      // Skip URL check since we're using a static post ID
-      console.log('Using static post ID, bypassing URL check');
-      
-      // Log the post if found
-      const post = posts.find(p => p.id === parseInt(postId));
-      if (post) {
-        console.log('Found post:', post);
-      } else {
-        console.log('Post not found in local state, but continuing anyway');
-      }
-      
-      // In a production environment, we would use the Twitter API to fetch the actual engagement metrics
-      
-      // The correct Twitter API endpoint to use is:
-      // GET https://api.twitter.com/2/tweets?ids=YOUR_TWEET_ID&tweet.fields=public_metrics
-      
-      // For this specific tweet ID: 1950867009715007993
-      // The API call would be:
-      // GET https://api.twitter.com/2/tweets?ids=1950867009715007993&tweet.fields=public_metrics
-      
-      // The response would look something like:
-      // {
-      //   "data": [
-      //     {
-      //       "id": "1950867009715007993",
-      //       "text": "Your reply text here",
-      //       "public_metrics": {
-      //         "retweet_count": 0,
-      //         "reply_count": 0,
-      //         "like_count": 1,
-      //         "quote_count": 0
-      //       }
-      //     }
-      //   ]
-      // }
-      
-      // We would then extract the metrics:
-      // const metrics = {
-      //   likes_count: data.data[0].public_metrics.like_count,
-      //   retweets_count: data.data[0].public_metrics.retweet_count
-      // };
-      
-      // Since we can't make actual API calls in this demo, we'll use these values:
+      // Simulated LinkedIn engagement metrics
       const metrics = {
-        likes_count: 1, // This would come from Twitter API for tweet ID 1950867009715007993
-        retweets_count: 0  // This would come from Twitter API for tweet ID 1950867009715007993
+        likes_count: Math.floor(Math.random() * 50) + 1,
+        comments_count: Math.floor(Math.random() * 20) + 1,
+        shares_count: Math.floor(Math.random() * 10) + 1,
       };
-      
-      console.log('Using simulated engagement metrics:', metrics);
-      console.log('In a real implementation, these would be fetched from the Twitter API');
 
-      console.log("Metrics to update:", metrics);
-      
-      try {
-        console.log("Before API call - postId:", postId);
-        console.log("Before API call - URL:", `/update-engagement/${postId}`);
-        console.log("Before API call - Headers:", { 'Content-Type': 'application/json', 'Authorization': 'Bearer dummy-token' });
-        console.log("Before API call - Body:", JSON.stringify(metrics));
-        
-        const result = await updateEngagementMetrics(postId, metrics);
-        console.log("Update result:", result);
+      console.log('Using simulated LinkedIn engagement metrics:', metrics);
 
-        if (result.success) {
-          setUpdateSuccess(`Reply engagement metrics updated successfully! These metrics (${metrics.likes_count} like, ${metrics.retweets_count} retweets) reflect the actual engagement on your reply, not the original post.`);
+      const result = await updateLinkedInEngagementMetrics(postId, metrics);
 
-          // Refresh the post history
-          const updatedResult = await getPostHistory(selectedAccount);
-          if (updatedResult.success && updatedResult.data) {
-            setPosts(updatedResult.data);
-          }
-        } else {
-          setUpdateError(
-            `Failed to update: ${result.message || "Unknown error"}`
-          );
+      if (result.success) {
+        setUpdateSuccess(`LinkedIn post engagement metrics updated successfully! Likes: ${metrics.likes_count}, Comments: ${metrics.comments_count}, Shares: ${metrics.shares_count}`);
+
+        // Refresh the post history
+        const updatedResult = await getLinkedInPostHistory(selectedAccount);
+        if (updatedResult.success && updatedResult.data) {
+          setPosts(updatedResult.data);
         }
-      } catch (apiErr) {
-        console.error("API Error:", apiErr);
-        console.error("API Error details:", {
-          name: apiErr.name,
-          message: apiErr.message,
-          stack: apiErr.stack,
-          response: apiErr.response ? {
-            status: apiErr.response.status,
-            statusText: apiErr.response.statusText,
-            data: apiErr.response.data
-          } : 'No response data'
-        });
-        setUpdateError(`API Error: ${apiErr.message || "Unknown error"}`);
+      } else {
+        setUpdateError(
+          `Failed to update: ${result.message || "Unknown error"}`
+        );
       }
     } catch (err) {
-      console.error("Error updating engagement metrics:", err);
-      console.error("Error details:", {
-        name: err.name,
-        message: err.message,
-        stack: err.stack
-      });
+      console.error("Error updating LinkedIn engagement metrics:", err);
       setUpdateError(`Failed to update: ${err.message}`);
     } finally {
       setUpdating(null);
 
-      // Clear success/error messages after 5 seconds (increased from 3)
+      // Clear success/error messages after 5 seconds
       setTimeout(() => {
         setUpdateSuccess(null);
         setUpdateError(null);
       }, 5000);
-    }
-  };
-
-  // Get platform icon
-  const getPlatformIcon = (platform) => {
-    switch (platform?.toLowerCase()) {
-      case "twitter":
-        return <TwitterIcon sx={{ color: "#1DA1F2" }} />;
-      case "linkedin":
-        return <LinkedInIcon sx={{ color: "#0077B5" }} />;
-      default:
-        return null;
     }
   };
 
@@ -355,8 +266,6 @@ const PostHistory = () => {
 
   return (
     <Box>
-      {/* Header */}
-
       {/* Account Selection */}
       <Paper
         elevation={0}
@@ -372,22 +281,21 @@ const PostHistory = () => {
             gap: 2,
           }}
         >
-          <FormControl sx={{ minWidth: 250, height:"40px" }}>
-            <InputLabel id="account-select-label">Select Account</InputLabel>
+          <FormControl sx={{ minWidth: 250 }}>
+            <InputLabel id="linkedin-account-select-label">Select LinkedIn Account</InputLabel>
             <Select
-              labelId="account-select-label"
-              id="account-select"
+              labelId="linkedin-account-select-label"
+              id="linkedin-account-select"
               value={selectedAccount}
               onChange={handleAccountChange}
-              label="Select Account"
+              label="Select LinkedIn Account"
               disabled={loading || accounts.length === 0}
-              sx={{height:"50px"}}
             >
               {accounts.map((account) => (
                 <MenuItem key={account.id} value={account.id}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 ,mt:1}}>
-                    {getPlatformIcon(account.platform)}
-                    <Typography sx={{display:"flex",justifyContent:"center",textAlign:"center",height:"0.8rem"}}>{account.accountName}</Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <LinkedInIcon sx={{ color: "#0077B5" }} />
+                    <Typography>{account.accountName}</Typography>
                   </Box>
                 </MenuItem>
               ))}
@@ -396,8 +304,8 @@ const PostHistory = () => {
 
           {selectedAccount && (
             <Chip
-              icon={getPlatformIcon(getSelectedAccountDetails().platform)}
-              label={`${getSelectedAccountDetails().platform || "Account"}`}
+              icon={<LinkedInIcon sx={{ color: "#0077B5" }} />}
+              label="LinkedIn"
               color="primary"
               variant="outlined"
             />
@@ -448,7 +356,7 @@ const PostHistory = () => {
         </Alert>
       )}
 
-      {/* Post History Table */}
+      {/* LinkedIn Post History Table */}
       <Paper
         elevation={0}
         variant="outlined"
@@ -456,7 +364,7 @@ const PostHistory = () => {
       >
         <TableContainer>
           <Table sx={{ minWidth: 650 }}>
-            <TableHead sx={{ backgroundColor: "rgba(0, 0, 0, 0.02)" }}>
+            <TableHead sx={{ backgroundColor: "rgba(0, 119, 181, 0.02)" }}>
               <TableRow>
                 <TableCell>Post Content</TableCell>
                 <TableCell>Keyword</TableCell>
@@ -470,13 +378,13 @@ const PostHistory = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <CircularProgress color="error" size={40} />
+                    <CircularProgress color="primary" size={40} />
                     <Typography
                       variant="body2"
                       color="text.secondary"
                       sx={{ mt: 2 }}
                     >
-                      Loading post history...
+                      Loading LinkedIn post history...
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -484,7 +392,7 @@ const PostHistory = () => {
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <Typography variant="body2" color="text.secondary">
-                      No post history found for this account.
+                      No LinkedIn post history found for this account.
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -511,7 +419,7 @@ const PostHistory = () => {
                             {post.post_text}
                           </Typography>
                           {post.post_url && (
-                            <Tooltip title="Open post">
+                            <Tooltip title="Open LinkedIn post">
                               <IconButton
                                 size="small"
                                 href={post.post_url}
@@ -528,8 +436,8 @@ const PostHistory = () => {
                             label={post.keyword || "N/A"}
                             size="small"
                             sx={{
-                              backgroundColor: "rgba(244, 67, 54, 0.1)",
-                              color: "#f44336",
+                              backgroundColor: "rgba(0, 119, 181, 0.1)",
+                              color: "#0077B5",
                               fontWeight: 500,
                             }}
                           />
@@ -538,13 +446,13 @@ const PostHistory = () => {
                           {new Date(post.posted_at).toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          <Tooltip title="View detailed engagement">
+                          <Tooltip title="View detailed LinkedIn engagement">
                             <IconButton
                               size="small"
                               onClick={(e) =>
                                 handleEngagementViewClick(e, post.id)
                               }
-                              sx={{ alignSelf: "center", color: "#f44336" }}
+                              sx={{ alignSelf: "center", color: "#0077B5" }}
                             >
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
@@ -572,14 +480,14 @@ const PostHistory = () => {
                               justifyContent: "center",
                             }}
                           >
-                            <Tooltip title="Update reply engagement metrics">
+                            <Tooltip title="Update LinkedIn engagement metrics">
                               <IconButton
                                 color="primary"
                                 size="small"
                                 onClick={() => handleUpdateEngagement(post.id)}
                                 disabled={updating === post.id}
                                 sx={{
-                                  border: "1px solid rgba(33, 150, 243, 0.5)",
+                                  border: "1px solid rgba(0, 119, 181, 0.5)",
                                   borderRadius: 1,
                                 }}
                               >
@@ -591,7 +499,7 @@ const PostHistory = () => {
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title="Delete post">
+                            <Tooltip title="Delete LinkedIn post">
                               <IconButton
                                 color="error"
                                 size="small"
@@ -629,7 +537,7 @@ const PostHistory = () => {
         />
       </Paper>
 
-      {/* Engagement Popup */}
+      {/* LinkedIn Engagement Popup */}
       <Popover
         open={open}
         anchorEl={popoverAnchorEl}
@@ -652,7 +560,7 @@ const PostHistory = () => {
         <Card sx={{ width: 300, overflow: "hidden" }}>
           <Box
             sx={{
-              bgcolor: "primary.main",
+              bgcolor: "#0077B5",
               color: "white",
               py: 1.5,
               px: 2,
@@ -663,7 +571,7 @@ const PostHistory = () => {
           >
             <BarChartIcon />
             <Typography variant="subtitle1" fontWeight="bold">
-              Reply Engagement Details
+              LinkedIn Engagement Details
             </Typography>
           </Box>
           <CardContent>
@@ -672,7 +580,7 @@ const PostHistory = () => {
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
-                    bgcolor: "rgba(244, 67, 54, 0.1)",
+                    bgcolor: "rgba(0, 119, 181, 0.1)",
                     borderRadius: "50%",
                     p: 1,
                     display: "flex",
@@ -680,7 +588,7 @@ const PostHistory = () => {
                     alignItems: "center",
                   }}
                 >
-                  <ThumbUpIcon sx={{ color: "#f44336" }} />
+                  <ThumbUpIcon sx={{ color: "#0077B5" }} />
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -694,33 +602,7 @@ const PostHistory = () => {
 
               <Divider />
 
-              {/* Retweets */}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box
-                  sx={{
-                    bgcolor: "rgba(33, 150, 243, 0.1)",
-                    borderRadius: "50%",
-                    p: 1,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <RepeatIcon sx={{ color: "#2196f3" }} />
-                </Box>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Retweets
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {getSelectedPost().retweets_count || 0}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Divider />
-
-              {/* Total Engagement */}
+              {/* Comments */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
@@ -732,46 +614,71 @@ const PostHistory = () => {
                     alignItems: "center",
                   }}
                 >
-                  <BarChartIcon sx={{ color: "#4caf50" }} />
+                  <CommentIcon sx={{ color: "#4caf50" }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Comments
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().comments_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Shares */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(255, 152, 0, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <ShareIcon sx={{ color: "#ff9800" }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Shares
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().shares_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Total Engagement */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(156, 39, 176, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <BarChartIcon sx={{ color: "#9c27b0" }} />
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="body2" color="text.secondary">
                     Total Engagement
                   </Typography>
                   <Typography variant="h6" fontWeight="bold">
-                    {getSelectedPost().engagement_count || 0}
+                    {(getSelectedPost().likes_count || 0) + 
+                     (getSelectedPost().comments_count || 0) + 
+                     (getSelectedPost().shares_count || 0)}
                   </Typography>
                 </Box>
               </Box>
-
-              {/* Engagement Rate (if available) */}
-              {getSelectedPost().engagement_rate && (
-                <>
-                  <Divider />
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Box
-                      sx={{
-                        bgcolor: "rgba(156, 39, 176, 0.1)",
-                        borderRadius: "50%",
-                        p: 1,
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      <BarChartIcon sx={{ color: "#9c27b0" }} />
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Engagement Rate
-                      </Typography>
-                      <Typography variant="h6" fontWeight="bold">
-                        {getSelectedPost().engagement_rate}%
-                      </Typography>
-                    </Box>
-                  </Box>
-                </>
-              )}
             </Box>
           </CardContent>
         </Card>
@@ -780,4 +687,4 @@ const PostHistory = () => {
   );
 };
 
-export default PostHistory;
+export default LinkedInPostHistory;

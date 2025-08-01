@@ -83,14 +83,46 @@ export const getAccounts = async (token = null) => {
   }
 };
 
+// Get LinkedIn accounts for the user
+export const getLinkedInAccounts = async (token = null) => {
+  // Get user ID from localStorage
+  let userId = null;
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      userId = user.id;
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
+  }
+  
+  // If userId is available, include it in the request
+  if (userId) {
+    return await apiGet(`/accounts/linkedin?userId=${userId}`, token);
+  } else {
+    return await apiGet('/accounts/linkedin', token);
+  }
+};
+
 // Get post history for a specific account
 export const getPostHistory = async (id, token = null) => {
   return await apiGet(`/history/${id}`, token);
 };
 
+// Get LinkedIn post history for a specific account
+export const getLinkedInPostHistory = async (id, token = null) => {
+  return await apiGet(`/history/linkedin/${id}`, token);
+};
+
 // Repost a specific post
 export const repostPost = async (postId, token = null) => {
   return await apiPost(`/repost/${postId}`, {}, token);
+};
+
+// Repost a specific LinkedIn post
+export const repostLinkedInPost = async (postId, token = null) => {
+  return await apiPost(`/repost/linkedin/${postId}`, {}, token);
 };
 
 // Delete a post from history
@@ -104,6 +136,33 @@ export const deletePost = async (postId, token = null) => {
     headers.Authorization = `Bearer ${token || 'dummy-token'}`;
     
     const res = await fetch(`${BASE_URL}/history/${postId}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw new Error(result.message || 'API error');
+    }
+
+    return result;
+  } catch (err) {
+    throw new Error(err.message || 'Network error');
+  }
+};
+
+// Delete a LinkedIn post from history
+export const deleteLinkedInPost = async (postId, token = null) => {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Always include Authorization header, even with a dummy token for development
+    headers.Authorization = `Bearer ${token || 'dummy-token'}`;
+    
+    const res = await fetch(`${BASE_URL}/history/linkedin/${postId}`, {
       method: 'DELETE',
       headers,
     });
@@ -168,6 +227,54 @@ export const updateEngagementMetrics = async (postId, metrics, token = null) => 
   }
 };
 
+// Update engagement metrics for a LinkedIn post
+export const updateLinkedInEngagementMetrics = async (postId, metrics, token = null) => {
+  // Ensure postId is a string
+  postId = String(postId);
+  try {
+    console.log(`Updating LinkedIn engagement metrics for post ID: ${postId}`, metrics);
+    
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Always include Authorization header, even with a dummy token for development
+    headers.Authorization = `Bearer ${token || 'dummy-token'}`;
+    
+    console.log('Request URL:', `${BASE_URL}/update-engagement/linkedin/${postId}`);
+    console.log('Request headers:', headers);
+    
+    const res = await fetch(`${BASE_URL}/update-engagement/linkedin/${postId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(metrics),
+    });
+
+    console.log('Response status:', res.status);
+    
+    const result = await res.json();
+    console.log('Response data:', result);
+
+    if (!res.ok) {
+      console.error('API error:', result);
+      return {
+        success: false,
+        message: result.message || `API error: ${res.status}`,
+        error: result
+      };
+    }
+
+    return result;
+  } catch (err) {
+    console.error('Network or parsing error:', err);
+    return {
+      success: false,
+      message: err.message || 'Network error',
+      error: err
+    };
+  }
+};
+
 // Add a post from search history to post_history
 export const addFromSearch = async (postData, token = null) => {
   return await apiPost('/add-from-search', postData, token);
@@ -199,11 +306,16 @@ export const isRepostAllowed = (timeSinceMs) => {
 
 export default {
   getAccounts,
+  getLinkedInAccounts,
   getPostHistory,
+  getLinkedInPostHistory,
   repostPost,
+  repostLinkedInPost,
   deletePost,
+  deleteLinkedInPost,
   addFromSearch,
   updateEngagementMetrics,
+  updateLinkedInEngagementMetrics,
   formatTimeSince,
   isRepostAllowed
 };
