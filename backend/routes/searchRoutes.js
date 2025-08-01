@@ -456,6 +456,7 @@ router.get("/search", async (req, res) => {
   const minRetweets = parseInt(req.query.minRetweets || "0");
   const minFollowers = parseInt(req.query.minFollowers || "0");
   const maxResults = parseInt(req.query.max_results || "10");
+  const forceRefresh = req.query.forceRefresh === "true"; // New parameter to bypass cache
   if (!rawKeyword)
     return res.status(400).json({ error: "Keyword is required" });
 
@@ -521,11 +522,17 @@ router.get("/search", async (req, res) => {
       query += ` ORDER BY created_at DESC`;
 
     
-      const cached = await db.query(query, params);
-
-      if (cached.rows.length > 0) {
-        allTweets.push(...cached.rows);
-        continue;
+      // Only check cache if forceRefresh is false
+      if (!forceRefresh) {
+        const cached = await db.query(query, params);
+  
+        if (cached.rows.length > 0) {
+          console.log(`Using cached results for keyword "${keyword}"`);
+          allTweets.push(...cached.rows);
+          continue;
+        }
+      } else {
+        console.log(`Force refresh requested for keyword "${keyword}", bypassing cache`);
       }
 
       // 3. Scrape if not in cache
@@ -1207,13 +1214,23 @@ router.get("/search", async (req, res) => {
         `Filtering criteria: minLikes=${minLikes}, minRetweets=${minRetweets}, minFollowers=${minFollowers}`
       );
 
+      // Add created_at timestamp to each tweet if it doesn't have one
+      const currentTime = new Date().toISOString();
+      const tweetsWithTimestamp = filtered.map(tweet => ({
+        ...tweet,
+        created_at: tweet.created_at || currentTime
+      }));
+
       // Add filtered tweets to result
-      allTweets.push(...filtered.slice(0, maxResults));
+      allTweets.push(...tweetsWithTimestamp.slice(0, maxResults));
     }
 
+    // Determine the data source for the response
+    const dataSource = forceRefresh ? "twitter" : "cache";
+    
     res.json({
       keywords,
-      from: "cache",
+      from: dataSource,
       count: allTweets.length,
       tweets: allTweets,
     });

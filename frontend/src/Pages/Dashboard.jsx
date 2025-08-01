@@ -83,6 +83,7 @@ const Dashboard = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [dataSource, setDataSource] = useState("cache");
 
   // Twitter accounts state
   const [twitterAccounts, setTwitterAccounts] = useState([]);
@@ -100,7 +101,11 @@ const Dashboard = () => {
 
   // Function to format time difference as "X hours ago"
   const getTimeAgo = (timestamp) => {
-    if (!timestamp) return "Unknown";
+    if (!timestamp) {
+      // If no timestamp but data is from Twitter, it's freshly fetched
+      if (dataSource === "twitter") return "Just now";
+      return "Unknown";
+    }
 
     const fetchedTime = new Date(timestamp);
     const diffMs = currentTime - fetchedTime;
@@ -194,9 +199,13 @@ const Dashboard = () => {
     }
   };
 
-  const fetchAllPosts = async (accountId = selectedAccount) => {
+  const fetchAllPosts = async (
+    accountId = selectedAccount,
+    forceRefresh = false
+  ) => {
     setLoading(true);
     setTweets([]);
+    setDataSource("cache"); // Reset data source to default at the start of fetch
 
     try {
       // First fetch all keywords
@@ -250,10 +259,20 @@ const Dashboard = () => {
           searchUrl += `&accountId=${accountId}`;
         }
 
+        // Add forceRefresh parameter if true
+        if (forceRefresh) {
+          searchUrl += `&forceRefresh=true`;
+        }
+
         console.log("Search URL for keyword:", searchUrl);
 
         try {
           const res = await axios.get(searchUrl);
+
+          // Set data source from the response
+          if (res.data.from) {
+            setDataSource(res.data.from);
+          }
 
           // Add keyword information to each tweet
           const keywordTweets = (res.data.tweets || []).map((tweet) => ({
@@ -1551,7 +1570,7 @@ const Dashboard = () => {
                           variant="contained"
                           color="black"
                           size="small"
-                          onClick={fetchAllPosts}
+                          onClick={() => fetchAllPosts(selectedAccount, true)}
                           disabled={loading}
                           sx={{
                             borderRadius: 2,
@@ -1564,7 +1583,7 @@ const Dashboard = () => {
                             },
                           }}
                         >
-                          Fetch Now
+                          {loading ? "Fetching..." : "Fetch New"}
                         </Button>
                       </Box>
                     </Box>
@@ -1666,9 +1685,33 @@ const Dashboard = () => {
                     mb: 2,
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Your Keywords & Posts
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Your Keywords & Posts
+                    </Typography>
+
+                    {tweets.length > 0 && (
+                      <Chip
+                        label={
+                          dataSource === "twitter"
+                            ? "Fresh from Twitter"
+                            : "From Cache"
+                        }
+                        color={dataSource === "twitter" ? "success" : "default"}
+                        size="medium"
+                        sx={{
+                          padding: "10px",
+                          fontWeight: 500,
+                          backgroundColor:
+                            dataSource === "twitter" ? "#4896a1" : "#e0e0e0",
+                          color:
+                            dataSource === "twitter"
+                              ? "white"
+                              : "text.secondary",
+                        }}
+                      />
+                    )}
+                  </Box>
 
                   {/* Twitter Account Selection */}
                   <Box sx={{ minWidth: 200 }}>
@@ -1726,14 +1769,14 @@ const Dashboard = () => {
                             borderRadius: "16px",
                             px: 1,
                             fontWeight: 500,
-                            backgroundColor: isSelected ? "#f44336" : "#ffffff",
-                            color: isSelected ? "#ffffff" : "#333333",
+                            backgroundColor: isSelected ? "#4896a1" : "#ffffff",
+                            color: isSelected ? "#ffffff" : "#4896a1",
                             boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
                             cursor: "pointer",
                             "&:hover": {
                               boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
                               backgroundColor: isSelected
-                                ? "#e53935"
+                                ? "#4896a1"
                                 : "#f5f5f5",
                             },
                           }}
@@ -1788,34 +1831,33 @@ const Dashboard = () => {
                   <Grid container spacing={3}>
                     {filteredTweets.map((tweet, i) => (
                       <Grid item xs={12} sm={6} lg={4} key={i}>
-                       
-                          <Card
-                            elevation={0}
-                            sx={{
-                              borderRadius: 4,
-                              overflow: "hidden",
-                              border: "1px solid #e5e7eb",
-                              transition: "all 0.3s ease",
-                              height: "100%",
-                              width: "18vw",
-                              backgroundColor: "#fafafa",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                              cursor: "pointer", // pointer on hover
-                              "&:hover": {
-                                transform: "translateY(-4px)",
-                                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
-                                borderColor: "#d1d5db",
-                              },
-                            }}
-                          >
-                            <CardContent sx={{ p: 0, height: "100%" }}>
-                               <a
-                          href={`https://x.com/i/web/status/${tweet.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ textDecoration: "none" }}
+                        <Card
+                          elevation={0}
+                          sx={{
+                            borderRadius: 4,
+                            overflow: "hidden",
+                            border: "1px solid #e5e7eb",
+                            transition: "all 0.3s ease",
+                            height: "100%",
+                            width: "18vw",
+                            backgroundColor: "#fafafa",
+                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                            cursor: "pointer", // pointer on hover
+                            "&:hover": {
+                              transform: "translateY(-4px)",
+                              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+                              borderColor: "#d1d5db",
+                            },
+                          }}
                         >
- {/* User Profile Section */}
+                          <CardContent sx={{ p: 0, height: "100%" }}>
+                            <a
+                              href={`https://x.com/i/web/status/${tweet.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ textDecoration: "none" }}
+                            >
+                              {/* User Profile Section */}
                               <Box
                                 sx={{
                                   display: "flex",
@@ -1879,8 +1921,7 @@ const Dashboard = () => {
                                 </Box>
                               </Box>
 
-
-                           {/* Tweet Content */}
+                              {/* Tweet Content */}
                               <Box sx={{ px: 3, pb: 2 }}>
                                 <Typography
                                   variant="body1"
@@ -1902,7 +1943,7 @@ const Dashboard = () => {
                                 </Typography>
                               </Box>
 
-                          <Box
+                              <Box
                                 sx={{
                                   display: "flex",
                                   alignItems: "center",
@@ -2021,7 +2062,9 @@ const Dashboard = () => {
                                         color: "#1a1a1a",
                                       }}
                                     >
-                                      {formatNumber(tweet?.followers_count || 0)}
+                                      {formatNumber(
+                                        tweet?.followers_count || 0
+                                      )}
                                     </Typography>
                                   </Box>
 
@@ -2061,74 +2104,70 @@ const Dashboard = () => {
                                   </Box>
                                 </Box>
                               </Box>
-                        </a>
-                             
-                        
-                             
-                      
-                              {/* Stats Row */}
-                              
+                            </a>
 
-                              {/* Timestamp */}
-                              <Box
+                            {/* Stats Row */}
+
+                            {/* Timestamp */}
+                            <Box
+                              sx={{
+                                px: 3,
+                                py: 1.5,
+                                backgroundColor: "#f8f9fa",
+                                borderTop: "1px solid #e5e7eb",
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
                                 sx={{
-                                  px: 3,
-                                  py: 1.5,
-                                  backgroundColor: "#f8f9fa",
-                                  borderTop: "1px solid #e5e7eb",
+                                  fontSize: "0.75rem",
+                                  color: "#999999",
+                                  fontStyle: "italic",
                                 }}
                               >
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontSize: "0.75rem",
-                                    color: "#999999",
-                                    fontStyle: "italic",
-                                  }}
-                                >
-                                  Fetched {getTimeAgo(tweet?.created_at)}
-                                </Typography>
-                              </Box>
+                                {dataSource === "twitter" && !tweet?.created_at
+                                  ? "Freshly fetched from Twitter"
+                                  : `Fetched ${getTimeAgo(tweet?.created_at)}`}
+                              </Typography>
+                            </Box>
 
-                              {/* Post Reply Button */}
-                              <Box sx={{ p: 3, pt: 2 }}>
-                                <Button
-                                  variant="contained"
-                                  size="medium"
-                                  startIcon={
-                                    <EditIcon sx={{ fontSize: "18px" }} />
-                                  }
-                                  onClick={() => handlePost(tweet)}
-                                  sx={{
-                                    width: "100%",
-                                    borderRadius: 3,
+                            {/* Post Reply Button */}
+                            <Box sx={{ p: 3, pt: 2 }}>
+                              <Button
+                                variant="contained"
+                                size="medium"
+                                startIcon={
+                                  <EditIcon sx={{ fontSize: "18px" }} />
+                                }
+                                onClick={() => handlePost(tweet)}
+                                sx={{
+                                  width: "100%",
+                                  borderRadius: 3,
 
-                                    backgroundColor: "#21808db0",
-                                    color: "#E8E8E3",
+                                  backgroundColor: "#21808db0",
+                                  color: "#E8E8E3",
+                                  border: "none",
+                                  fontWeight: 600,
+                                  fontSize: "0.875rem",
+                                  textTransform: "none",
+                                  py: 1.5,
+                                  boxShadow: "0 2px 8px rgba(26, 26, 26, 0.15)",
+                                  "&:hover": {
+                                    backgroundColor: "#E8E8E3",
+                                    color: "#21808db0",
                                     border: "none",
-                                    fontWeight: 600,
-                                    fontSize: "0.875rem",
-                                    textTransform: "none",
-                                    py: 1.5,
                                     boxShadow:
-                                      "0 2px 8px rgba(26, 26, 26, 0.15)",
-                                    "&:hover": {
-                                      backgroundColor: "#E8E8E3",
-                                      color: "#21808db0",
-                                      border: "none",
-                                      boxShadow:
-                                        "0 4px 16px rgba(26, 26, 26, 0.25)",
-                                      transform: "translateY(-1px)",
-                                    },
-                                    transition: "all 0.2s ease",
-                                  }}
-                                >
-                                  Post Reply
-                                </Button>
-                              </Box>
-                            </CardContent>
-                          </Card>
-                        
+                                      "0 4px 16px rgba(26, 26, 26, 0.25)",
+                                    transform: "translateY(-1px)",
+                                  },
+                                  transition: "all 0.2s ease",
+                                }}
+                              >
+                                Post Reply
+                              </Button>
+                            </Box>
+                          </CardContent>
+                        </Card>
                       </Grid>
                     ))}
                   </Grid>
