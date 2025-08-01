@@ -544,7 +544,7 @@ const PostHistory = () => {
                               onClick={(e) =>
                                 handleEngagementViewClick(e, post.id)
                               }
-                              sx={{ alignSelf: "center", color: "#f44336" }}
+                              sx={{ alignSelf: "center", color: "#4896a1" }}
                             >
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
@@ -555,11 +555,11 @@ const PostHistory = () => {
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 0.5,
+                              gap: 1,
                             }}
                           >
-                            <AccessTimeIcon fontSize="small" color="action" />
-                            <Typography variant="body2">
+                            <AccessTimeIcon fontSize="small" color="#4896a1" />
+                            <Typography sx={{mt:'15px'}}>
                               {formatTimeSince(timeSinceMs)}
                             </Typography>
                           </Box>
@@ -579,14 +579,14 @@ const PostHistory = () => {
                                 onClick={() => handleUpdateEngagement(post.id)}
                                 disabled={updating === post.id}
                                 sx={{
-                                  border: "1px solid rgba(33, 150, 243, 0.5)",
+                                  border: "1px solid #4896a1",
                                   borderRadius: 1,
                                 }}
                               >
                                 {updating === post.id ? (
-                                  <CircularProgress size={20} color="inherit" />
+                                  <CircularProgress size={20} color="#4896a1" />
                                 ) : (
-                                  <UpdateIcon fontSize="small" />
+                                  <UpdateIcon fontSize="small" sx={{color:"#4896a1"}}/>
                                 )}
                               </IconButton>
                             </Tooltip>
@@ -598,14 +598,14 @@ const PostHistory = () => {
                                 onClick={() => handleDelete(post.id)}
                                 disabled={deleting === post.id}
                                 sx={{
-                                  border: "1px solid rgba(244, 67, 54, 0.5)",
+                                  border: "1px solid black",
                                   borderRadius: 1,
                                 }}
                               >
                                 {deleting === post.id ? (
-                                  <CircularProgress size={20} color="inherit" />
+                                  <CircularProgress size={20} color="#4896a1" />
                                 ) : (
-                                  <DeleteIcon fontSize="small" />
+                                  <DeleteIcon fontSize="small" sx={{color:"black"}}/>
                                 )}
                               </IconButton>
                             </Tooltip>
@@ -652,8 +652,8 @@ const PostHistory = () => {
         <Card sx={{ width: 300, overflow: "hidden" }}>
           <Box
             sx={{
-              bgcolor: "primary.main",
-              color: "white",
+              bgcolor: "#4896a1",
+              color: "black",
               py: 1.5,
               px: 2,
               display: "flex",
@@ -662,7 +662,7 @@ const PostHistory = () => {
             }}
           >
             <BarChartIcon />
-            <Typography variant="subtitle1" fontWeight="bold">
+            <Typography variant="subtitle1" fontWeight="bold" sx={{color:"black"}}>
               Reply Engagement Details
             </Typography>
           </Box>
