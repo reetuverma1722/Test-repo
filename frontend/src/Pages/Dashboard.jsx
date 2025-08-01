@@ -1788,12 +1788,7 @@ const Dashboard = () => {
                   <Grid container spacing={3}>
                     {filteredTweets.map((tweet, i) => (
                       <Grid item xs={12} sm={6} lg={4} key={i}>
-                        <a
-                          href={`https://x.com/i/web/status/${tweet.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ textDecoration: "none" }}
-                        >
+                       
                           <Card
                             elevation={0}
                             sx={{
@@ -1814,7 +1809,13 @@ const Dashboard = () => {
                             }}
                           >
                             <CardContent sx={{ p: 0, height: "100%" }}>
-                              {/* User Profile Section */}
+                               <a
+                          href={`https://x.com/i/web/status/${tweet.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ textDecoration: "none" }}
+                        >
+ {/* User Profile Section */}
                               <Box
                                 sx={{
                                   display: "flex",
@@ -1878,7 +1879,8 @@ const Dashboard = () => {
                                 </Box>
                               </Box>
 
-                              {/* Tweet Content */}
+
+                           {/* Tweet Content */}
                               <Box sx={{ px: 3, pb: 2 }}>
                                 <Typography
                                   variant="body1"
@@ -1900,8 +1902,7 @@ const Dashboard = () => {
                                 </Typography>
                               </Box>
 
-                              {/* Stats Row */}
-                              <Box
+                          <Box
                                 sx={{
                                   display: "flex",
                                   alignItems: "center",
@@ -2060,6 +2061,13 @@ const Dashboard = () => {
                                   </Box>
                                 </Box>
                               </Box>
+                        </a>
+                             
+                        
+                             
+                      
+                              {/* Stats Row */}
+                              
 
                               {/* Timestamp */}
                               <Box
@@ -2120,7 +2128,7 @@ const Dashboard = () => {
                               </Box>
                             </CardContent>
                           </Card>
-                        </a>
+                        
                       </Grid>
                     ))}
                   </Grid>
