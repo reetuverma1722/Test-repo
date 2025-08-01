@@ -619,7 +619,7 @@ const Dashboard = () => {
                 display: "inline-block",
                 width: "4px",
                 height: "16px",
-                backgroundColor: "#FF0000",
+                backgroundColor: "#4D99A3",
                 marginRight: "8px",
                 borderRadius: "2px",
               },
@@ -661,7 +661,7 @@ const Dashboard = () => {
                 display: "inline-block",
                 width: "4px",
                 height: "16px",
-                backgroundColor: "#4caf50",
+                backgroundColor: "#4D99A3",
                 marginRight: "8px",
                 borderRadius: "2px",
               },
@@ -688,8 +688,17 @@ const Dashboard = () => {
               "& .MuiOutlinedInput-root": {
                 borderRadius: "8px",
                 transition: "all 0.3s",
+                border:"none",
                 fontSize: "0.95rem",
               },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: 'transparent',
+    }, '&:hover fieldset': {
+        borderColor: 'gray', // Hover color
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: 'transparent', // Removes the blue border
+      },
               "& .MuiFormHelperText-root": {
                 color: editedReply.length > 220 ? "#f44336" : "text.secondary",
                 fontWeight: editedReply.length > 220 ? 600 : 400,
@@ -707,7 +716,7 @@ const Dashboard = () => {
               bgcolor: 'rgba(244, 67, 54, 0.08)',
               p: 1,
               borderRadius: 1,
-              borderLeft: '3px solid #f44336'
+              borderLeft: '3px solid #4D99A3'
             }}
           >
             <strong>Note:</strong> Only premium members can post replies longer than 200 characters.
@@ -729,7 +738,7 @@ const Dashboard = () => {
                 display: "inline-block",
                 width: "4px",
                 height: "16px",
-                backgroundColor: "#4caf50",
+                backgroundColor: "#4D99A3",
                 marginRight: "8px",
                 borderRadius: "2px",
               },
@@ -772,8 +781,8 @@ const Dashboard = () => {
             onClick={() => setPostDialogOpen(false)}
             variant="outlined"
             sx={{
-              borderColor: "#9e9e9e",
-              color: "#757575",
+              borderColor: "#4d99a393",
+              color: "#4d99a3ff",
               borderRadius: "8px",
               fontWeight: 600,
               padding: "6px 16px",
@@ -789,9 +798,10 @@ const Dashboard = () => {
               isPosting || editedReply.length > 220 || !editedReply.trim()
             }
             sx={{
-              backgroundColor: "#4caf50",
+              backgroundColor: "#4D99A3",
               padding: "6px 20px",
               borderRadius: "8px",
+              border:"none",
               fontWeight: 600,
               boxShadow: "0 4px 12px rgba(76, 175, 80, 0.2)",
               transition: "all 0.3s ease",
@@ -1035,7 +1045,8 @@ const Dashboard = () => {
           [`& .MuiDrawer-paper`]: {
             width: drawerWidth,
             boxSizing: "border-box",
-            backgroundColor: "#ffffff",
+            backgroundColor: "#F3F3EE",
+            color:"#4F6669",
             boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.05)",
             borderRight: "1px solid rgba(0, 0, 0, 0.08)",
           },
@@ -1061,11 +1072,12 @@ const Dashboard = () => {
                 // transition: 'all 0.2s ease',
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "#fef2f2",
+                  backgroundColor: "#E5EFEE",
                   // backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
                   color: "#fef2f2",
                   borderLeft: "3px",
                   paddingLeft: "13px",
+                  
                   "& .MuiListItemIcon-root": {
                     color: "#fef2f2",
                   },
@@ -1084,7 +1096,7 @@ const Dashboard = () => {
               </ListItemIcon>
               <ListItemText
                 primary="Dashboard"
-                primaryTypographyProps={{
+                primaryTypographyProps={{marginTop:"16px",
                   fontSize: "0.9rem",
                   fontWeight: location.pathname.includes("/dashboard")
                     ? 600
@@ -1107,7 +1119,7 @@ const Dashboard = () => {
                 transition: "all 0.2s ease",
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "#13343bab", // Light red
+                  backgroundColor: "#E5EFEE", // Light red
                   color: "#13343B",
                   borderLeft: "3px solid #13343B",
                   paddingLeft: "13px",
@@ -1118,7 +1130,7 @@ const Dashboard = () => {
 
                 "&:hover": {
                   backgroundColor: location.pathname.includes("/history")
-                    ? "rgba(210, 25, 87, 0.29)"
+                    ? "#E5EFEE"
                     : "rgba(210, 25, 87, 0.29)",
                   transform: "translateX(3px)",
                 },
@@ -1136,7 +1148,7 @@ const Dashboard = () => {
               </ListItemIcon>
               <ListItemText
                 primary="Search History"
-                primaryTypographyProps={{
+                primaryTypographyProps={{marginTop:"16px",
                   fontSize: "0.9rem",
                   fontWeight: location.pathname.includes("/history")
                     ? 600
@@ -1159,7 +1171,7 @@ const Dashboard = () => {
                 transition: "all 0.2s ease",
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
+                  backgroundColor: "#E5EFEE", // Light red
                   color: "#13343B",
                   borderLeft: "3px solid #13343B",
                   paddingLeft: "13px",
@@ -1172,8 +1184,8 @@ const Dashboard = () => {
                   backgroundColor: location.pathname.includes(
                     "/social-media-settings"
                   )
-                    ? "rgba(210, 25, 87, 0.29)"
-                    : "rgba(119, 76, 76, 0.04)",
+                    ? "#E5EFEE"
+                    : "#E5EFEE",
                   transform: "translateX(3px)",
                 },
               }}
@@ -1190,8 +1202,8 @@ const Dashboard = () => {
               </ListItemIcon>
               <ListItemText
                 primary="Social Media Settings"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
+                primaryTypographyProps={{marginTop:"16px",
+                  fontSize: "0.9rem",marginTop:"16px",
                   fontWeight: location.pathname.includes(
                     "/social-media-settings"
                   )
@@ -1215,7 +1227,7 @@ const Dashboard = () => {
                 transition: "all 0.2s ease",
                 height: "44px",
                 "&.Mui-selected": {
-                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
+                  backgroundColor: "#E5EFEE", // Light red
                   color: "#13343B",
                   borderLeft: "3px solid #13343B",
                   paddingLeft: "13px",
@@ -1226,7 +1238,7 @@ const Dashboard = () => {
 
                 "&:hover": {
                   backgroundColor: location.pathname.includes("/post-history")
-                    ? "rgba(210, 25, 87, 0.29)"
+                    ? "#E5EFEE"
                     : "rgba(119, 76, 76, 0.04)",
                   transform: "translateX(3px)",
                 },
@@ -1244,7 +1256,7 @@ const Dashboard = () => {
               </ListItemIcon>
               <ListItemText
                 primary="Post History"
-                primaryTypographyProps={{
+                primaryTypographyProps={{marginTop:"16px",
                   fontSize: "0.9rem",
                   fontWeight: location.pathname.includes("/post-history")
                     ? 600
@@ -1267,7 +1279,7 @@ const Dashboard = () => {
           elevation={2}
           sx={{
             zIndex: (theme) => theme.zIndex.drawer + 1,
-            backgroundColor: "white",
+            backgroundColor: "#F3F3EE",
             color: "text.primary",
           }}
         >
