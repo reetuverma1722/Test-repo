@@ -1362,7 +1362,11 @@ router.put("/update/:id", async (req, res) => {
 //     res.status(500).json({ error: "Failed to post tweet" });
 //   }
 // });
+// DEPRECATED: This endpoint is no longer used directly. Use /reply-to-tweet instead.
+// Kept for backward compatibility.
 router.post("/postReply", async (req, res) => {
+  console.log("WARNING: Using deprecated /postReply endpoint. Use /reply-to-tweet instead.");
+  
   const {
     tweetId,
     replyText,
@@ -1411,7 +1415,15 @@ router.post("/postReply", async (req, res) => {
 });
 
 router.post("/reply-to-tweet", async (req, res) => {
-  const { tweetId, replyText, selectedAccountId, keywordId } = req.body;
+  const {
+    tweetId,
+    replyText,
+    selectedAccountId,
+    keywordId,
+    tweetText,
+    likeCount,
+    retweetCount
+  } = req.body;
   console.log(req.body);
 
   if (!tweetId || !replyText || !selectedAccountId) {
@@ -1425,7 +1437,7 @@ router.post("/reply-to-tweet", async (req, res) => {
     const id = selectedAccountId;
 
     const result = await pool.query(
-      "SELECT account_name,twitter_password FROM social_media_accounts WHERE id = $1",
+      "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
       [selectedAccountId]
     );
 
@@ -1438,12 +1450,12 @@ router.post("/reply-to-tweet", async (req, res) => {
         });
     }
 
-    const { account_name, twitter_password  } = result.rows[0];
+    const { account_name, password  } = result.rows[0];
 
     // Run Puppeteer login and reply - now returns a result object
     const postResult = await postReplyWithPuppeteer(
       account_name,
-      twitter_password ,
+      password ,
       tweetId,
       replyText
     );
@@ -1461,12 +1473,13 @@ router.post("/reply-to-tweet", async (req, res) => {
           RETURNING id
         `;
 
+        // Use the provided like and retweet counts if available, otherwise default to 0
         const values = [
           replyText,
           tweetUrl,
-          0, // Initial engagement count
-          0, // Initial likes count
-          0, // Initial retweets count
+          (likeCount || 0) + (retweetCount || 0), // Initial engagement count based on original tweet
+          likeCount || 0,                         // Initial likes count
+          retweetCount || 0,                      // Initial retweets count
           keywordId || null,
           selectedAccountId,
         ];
@@ -1511,7 +1524,7 @@ router.post("/reply-to-tweet", async (req, res) => {
 
 async function postReplyWithPuppeteer(
   username,
-  twitter_password,
+  password,
   tweetId,
   replyText
 ) {
@@ -1553,10 +1566,10 @@ async function postReplyWithPuppeteer(
     await page.waitForSelector('input[name="password"]', { timeout: 10000 });
     console.log("6");
     console.log("🔑 Username:", username);
-    console.log("🔑 Password:", twitter_password);
-    console.log("🧪 typeof Password:", typeof twitter_password);
+    console.log("🔑 Password:", password);
+    console.log("🧪 typeof Password:", typeof password);
 
-    await page.type('input[name="password"]', twitter_password);
+    await page.type('input[name="password"]', password);
     console.log("7");
     await page.keyboard.press("Enter");
     console.log("8");
