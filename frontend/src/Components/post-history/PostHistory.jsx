@@ -579,7 +579,7 @@ const PostHistory = () => {
                                 onClick={() => handleUpdateEngagement(post.id)}
                                 disabled={updating === post.id}
                                 sx={{
-                                  border: "1px solid #4896a1",
+                                  border: "none",
                                   borderRadius: 1,
                                 }}
                               >
@@ -598,14 +598,15 @@ const PostHistory = () => {
                                 onClick={() => handleDelete(post.id)}
                                 disabled={deleting === post.id}
                                 sx={{
-                                  border: "1px solid black",
+                                  border: "none",
                                   borderRadius: 1,
+                                 
                                 }}
                               >
                                 {deleting === post.id ? (
                                   <CircularProgress size={20} color="#4896a1" />
                                 ) : (
-                                  <DeleteIcon fontSize="small" sx={{color:"black"}}/>
+                                  <DeleteIcon fontSize="small" sx={{color:"#686666ff"}}/>
                                 )}
                               </IconButton>
                             </Tooltip>
