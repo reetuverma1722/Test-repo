@@ -1516,12 +1516,15 @@ const Dashboard = () => {
                         </Typography>
                         <Button
                           variant="contained"
-                          color="error"
+                          color="black"
                           size="small"
                           onClick={fetchAllPosts}
                           disabled={loading}
                           sx={{
                             borderRadius: 2,
+                            color:"white",
+                            backgroundColor:"#4D99A3",
+                            border:"none",
                             transition: "all 0.3s ease",
                             "&:hover": {
                               transform: "scale(1.05)",
@@ -1592,6 +1595,9 @@ const Dashboard = () => {
                           onClick={() => navigate("/social-media-settings")}
                           sx={{
                             borderRadius: 2,
+                              color:"white",
+                            backgroundColor:"#4D99A3",
+                            border:"none",
                             transition: "all 0.3s ease",
                             "&:hover": {
                               transform: "scale(1.05)",
@@ -2021,15 +2027,19 @@ const Dashboard = () => {
                                 sx={{
                                   width: "100%",
                                   borderRadius: 3,
-                                  backgroundColor: "#1a1a1a",
-                                  color: "#ffffff",
+                                 
+                                   backgroundColor: "#21808db0",
+                                    color: "#E8E8E3",
+                                    border:"none",
                                   fontWeight: 600,
                                   fontSize: "0.875rem",
                                   textTransform: "none",
                                   py: 1.5,
                                   boxShadow: "0 2px 8px rgba(26, 26, 26, 0.15)",
                                   "&:hover": {
-                                    backgroundColor: "#000000",
+                                   backgroundColor: "#E8E8E3",
+                                  color: "#21808db0",
+                                  border:"none",
                                     boxShadow: "0 4px 16px rgba(26, 26, 26, 0.25)",
                                     transform: "translateY(-1px)",
                                   },
