@@ -333,6 +333,7 @@ const TwitterKeywords = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleAddKeyword}
+            sx={{backgroundColor:"#4896A0",border:"none"}}
           >
             Add Keyword
           </Button>
@@ -479,6 +480,8 @@ const TwitterKeywords = () => {
               sx={{
                 minWidth: "28px",
                 height: "28px",
+                border:"none",
+                backgroundColor: "#4896A0",
                 fontSize: "0.7rem",
                 py: 0,
                 px: 1,
