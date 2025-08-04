@@ -1753,4 +1753,215 @@ router.delete("/history/:id", async (req, res) => {
   }
 });
 
+router.post("/reply-id", async (req, res) => {
+
+  if (!tweetId || !selectedAccountId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing tweet id" });
+  }
+
+  try {
+    // Fetch user credentials from DB
+    const id = selectedAccountId;
+
+    const result = await pool.query(
+      "SELECT account_name,twitter_password FROM social_media_accounts WHERE id = $1",
+      [selectedAccountId]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Twitter account not found for user",
+        });
+    }
+
+    const { account_name, twitter_password  } = result.rows[0];
+
+    // Run Puppeteer login and reply - now returns a result object
+    const postResult = await getReplyIdForTweet(
+      account_name,
+      twitter_password ,
+      tweetId,
+      
+    );
+
+    if (postResult.success) {
+      // Store the reply in post_history with initial engagement metrics set to 0
+      try {
+        // const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+        
+        // const insertQuery = `
+        //   INSERT INTO post_history
+        //     (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id)
+        //   VALUES
+        //     ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7)
+        //   RETURNING id
+        // `;
+
+        // const values = [
+        //   replyText,
+        //   tweetUrl,
+        //   0, // Initial engagement count
+        //   0, // Initial likes count
+        //   0, // Initial retweets count
+        //   keywordId || null,
+        //   selectedAccountId,
+        // ];
+
+        // const insertResult = await pool.query(insertQuery, values);
+       console.log("Reply ID fetched successfully:", postResult.replyId);
+
+        return res.json({
+          success: true,
+          message: "Reply id fetched successfully",
+         
+        });
+      } catch (dbError) {
+        console.error("Error:", dbError);
+        // Still return success since the tweet was posted
+        return res.json({
+          success: true,
+          message: "successfully",
+          details: postResult.details || {},
+        });
+      }
+    } else {
+      // If posting failed but didn't throw an exception
+      return res.status(400).json({
+        success: false,
+        message: "Failed to post reply",
+        error: postResult.error || "Unknown error",
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error in replying to tweet:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to post reply",
+      error: error.message,
+    });
+  }
+});
+
+async function getReplyIdForTweet(account_name, twitter_password, tweetId) {
+  const browser = await puppeteer.launch({
+    headless: false,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    defaultViewport: null,
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+
+  let result = {
+    success: false,
+    replyId: null,
+    error: null,
+  };
+
+  try {
+    // Login
+    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+
+    await page.waitForSelector('input[name="text"]');
+    await page.type('input[name="text"]', account_name);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(2000);
+
+    await page.waitForSelector('input[name="password"]');
+    await page.type('input[name="password"]', twitter_password);
+    await page.keyboard.press("Enter");
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+
+    console.log("✅ Logged in");
+
+    // Go to user profile's "Replies" tab
+    const userProfileUrl = `https://twitter.com/${account_name}`;
+    await page.goto(userProfileUrl, { waitUntil: "networkidle2" });
+
+    // Click on "Replies" tab
+    await page.waitForSelector('a[href$="/with_replies"]');
+    await page.click('a[href$="/with_replies"]');
+    await page.waitForTimeout(3000);
+
+    console.log("🔍 Scanning replies...");
+
+    const visitedTweetUrls = new Set();
+
+    let found = false;
+    while (!found) {
+      const tweetLinks = await page.$$eval('a[href*="/status/"]', (links) =>
+        links.map((link) => link.href).filter((href) => href.includes("/status/"))
+      );
+
+      for (let link of tweetLinks) {
+        if (visitedTweetUrls.has(link)) continue;
+        visitedTweetUrls.add(link);
+
+        await page.goto(link, { waitUntil: "networkidle2", timeout: 60000 });
+
+        // Extract parent tweet ID from URL or content
+        const currentUrl = page.url();
+        const matchedTweetId = currentUrl.match(/status\/(\d+)/);
+        if (!matchedTweetId) continue;
+
+        const parentTweetId = await page.evaluate(() => {
+          const parent = document.querySelector('article div[data-testid="tweet"] a[href*="/status/"]');
+          return parent ? parent.href.split("/status/")[1] : null;
+        });
+
+        // Check if the parent tweet matches the target tweetId
+        if (parentTweetId && parentTweetId === tweetId) {
+          console.log("✅ Found matching tweet thread");
+
+          // Your reply should be the top visible reply
+          await page.waitForSelector('article a[href*="/status/"]');
+
+          const replyUrl = await page.evaluate((username) => {
+            const replies = Array.from(document.querySelectorAll('article a[href*="/status/"]'));
+            const myReply = replies.find((a) => a.href.includes(`/${username}/status/`));
+            return myReply ? myReply.href : null;
+          }, username);
+
+          if (replyUrl) {
+            const replyId = replyUrl.split("/status/")[1].split("?")[0];
+            result.success = true;
+            result.replyId = replyId;
+            console.log("📨 Reply ID:", replyId);
+          } else {
+            result.error = "Reply not found in thread.";
+          }
+
+          found = true;
+          break;
+        }
+
+        // Back to replies tab
+        await page.goto(`${userProfileUrl}/with_replies`, { waitUntil: "networkidle2" });
+        await page.waitForTimeout(2000);
+      }
+
+      // Scroll down to load more if not found
+      if (!found) {
+        await page.evaluate(() => window.scrollBy(0, window.innerHeight));
+        await page.waitForTimeout(3000);
+      }
+    }
+
+    return result;
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+    result.success = false;
+    result.error = err.message;
+    return result;
+  } finally {
+    await browser.close();
+  }
+}
+
+
 module.exports = router;

@@ -512,9 +512,11 @@ const Dashboard = () => {
         try {
           const response = await authService.convertTwitterToken(twitterToken);
 
-          if (response.success && response.token) {
+          if (response.success) {
             // Store the JWT token
             localStorage.setItem("token", response.token);
+            console.log("response2")
+            const response2= await authService.getReplyIdForTweet();
 
             if (response.user) {
               localStorage.setItem("user", JSON.stringify(response.user));

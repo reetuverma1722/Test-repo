@@ -662,8 +662,8 @@ const PostHistory = () => {
               gap: 1,
             }}
           >
-            <BarChartIcon />
-            <Typography variant="subtitle1" fontWeight="bold" sx={{color:"black"}}>
+            <BarChartIcon sx={{color:"white"}}/>
+            <Typography variant="subtitle1" fontWeight="bold" sx={{color:"white",fontSize:"0.96rem"}}>
               Reply Engagement Details
             </Typography>
           </Box>
