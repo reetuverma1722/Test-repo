@@ -1372,6 +1372,7 @@ router.post("/postReply", async (req, res) => {
     keywordId,
     likeCount = 0,
     retweetCount = 0,
+    replyId = null, // Add reply ID parameter
   } = req.body;
 
   // Initialize engagement metrics to 0 for new replies
@@ -1381,9 +1382,9 @@ router.post("/postReply", async (req, res) => {
   try {
     const insertQuery = `
       INSERT INTO post_history
-        (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id)
+        (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id)
       VALUES
-        ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7)
+        ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8)
       RETURNING id
     `;
 
@@ -1395,6 +1396,7 @@ router.post("/postReply", async (req, res) => {
       0, // Initialize retweets_count to 0
       keywordId || null,
       selectedAccountId,
+      replyId, // Store the reply ID
     ];
 
     const result = await pool.query(insertQuery, values);
@@ -1403,6 +1405,7 @@ router.post("/postReply", async (req, res) => {
       success: true,
       message: "Post added to history",
       post_id: result.rows[0].id,
+      reply_id: replyId,
     });
   } catch (error) {
     console.error("Insert Error:", error.message);
@@ -1422,10 +1425,8 @@ router.post("/reply-to-tweet", async (req, res) => {
 
   try {
     // Fetch user credentials from DB
-    const id = selectedAccountId;
-
     const result = await pool.query(
-      "SELECT account_name,twitter_password FROM social_media_accounts WHERE id = $1",
+      "SELECT account_name, twitter_password FROM social_media_accounts WHERE id = $1",
       [selectedAccountId]
     );
 
@@ -1438,26 +1439,26 @@ router.post("/reply-to-tweet", async (req, res) => {
         });
     }
 
-    const { account_name, twitter_password  } = result.rows[0];
+    const { account_name, twitter_password } = result.rows[0];
 
-    // Run Puppeteer login and reply - now returns a result object
-    const postResult = await postReplyWithPuppeteer(
+    // Run Puppeteer login and reply - now returns a result object with reply ID
+    const postResult = await postReplyWithPuppeteerAndGetId(
       account_name,
-      twitter_password ,
+      twitter_password,
       tweetId,
       replyText
     );
 
     if (postResult.success) {
-      // Store the reply in post_history with initial engagement metrics set to 0
+      // Store the reply in post_history with the reply ID
       try {
         const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
         
         const insertQuery = `
           INSERT INTO post_history
-            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id)
+            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id)
           VALUES
-            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7)
+            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8)
           RETURNING id
         `;
 
@@ -1469,6 +1470,7 @@ router.post("/reply-to-tweet", async (req, res) => {
           0, // Initial retweets count
           keywordId || null,
           selectedAccountId,
+          postResult.replyId || null, // Store the reply ID
         ];
 
         const insertResult = await pool.query(insertQuery, values);
@@ -1479,7 +1481,8 @@ router.post("/reply-to-tweet", async (req, res) => {
           message: "Reply posted successfully",
           details: {
             ...postResult.details,
-            post_history_id: postHistoryId
+            post_history_id: postHistoryId,
+            reply_id: postResult.replyId
           },
         });
       } catch (dbError) {
@@ -1688,6 +1691,179 @@ async function postReplyWithPuppeteer(
 
     // Wait a bit longer to ensure everything is processed
     await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    return result;
+  } catch (err) {
+    console.error("❌ Puppeteer failed:", err.message);
+    result.success = false;
+    result.error = err.message;
+    return result;
+  } finally {
+    await browser.close();
+  }
+}
+
+async function postReplyWithPuppeteerAndGetId(
+  username,
+  twitter_password,
+  tweetId,
+  replyText
+) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-web-security",
+    ],
+    defaultViewport: null,
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+  let result = {
+    success: false,
+    error: null,
+    details: {},
+    replyId: null,
+  };
+
+  try {
+    console.log("🔐 Logging in...");
+
+    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+
+    // Fill username
+    await page.waitForSelector('input[name="text"]');
+    await page.type('input[name="text"]', username);
+    await page.keyboard.press("Enter");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Fill password
+    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
+    await page.type('input[name="password"]', twitter_password);
+    await page.keyboard.press("Enter");
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+    console.log("✅ Logged in");
+
+    const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+    console.log(`📨 Opening tweet: ${tweetUrl}`);
+    await page.goto(tweetUrl, { waitUntil: "networkidle2", timeout: 90000 });
+
+    // Wait for reply button and click it
+    await page.waitForSelector('button[data-testid="reply"]', {
+      timeout: 10000,
+    });
+    console.log("✅ Reply button found");
+    await page.click('button[data-testid="reply"]');
+    console.log("📨 Reply button clicked");
+
+    // Wait for reply modal textarea and type reply
+    await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
+      timeout: 15000,
+    });
+    await page.waitForSelector(
+      'div[role="textbox"][data-testid="tweetTextarea_0"]'
+    );
+    await page.type(
+      'div[role="textbox"][data-testid="tweetTextarea_0"]',
+      replyText
+    );
+    console.log("📝 Typed reply");
+
+    // Wait for the "Reply" button to become enabled
+    await page.waitForFunction(
+      () => {
+        const btn = document.querySelector(
+          'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+        );
+        return (
+          btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
+        );
+      },
+      { timeout: 10000 }
+    );
+
+    console.log("✅ Reply button is now enabled");
+
+    // Click the reply button
+    const replyBtn = await page.$(
+      'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+    );
+    await replyBtn.click();
+    console.log("Clicked reply button, waiting for confirmation...");
+    
+    // Wait for the reply to be posted
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Now try to get the reply ID by going to the user's profile and finding the reply
+    console.log("🔍 Searching for reply ID...");
+    
+    // Go to user profile's replies tab
+    const userProfileUrl = `https://twitter.com/${username}`;
+    await page.goto(userProfileUrl, { waitUntil: "networkidle2" });
+
+    // Click on "Replies" tab
+    await page.waitForSelector('a[href$="/with_replies"]', { timeout: 10000 });
+    await page.click('a[href$="/with_replies"]');
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+    console.log("🔍 Scanning replies for the posted reply...");
+
+    // Look for the reply we just posted
+    const replyId = await page.evaluate((originalTweetId, replyContent) => {
+      const articles = document.querySelectorAll('article');
+      
+      for (const article of articles) {
+        // Check if this article contains our reply text
+        const tweetText = article.querySelector('div[lang]')?.innerText || '';
+        
+        if (tweetText.includes(replyContent)) {
+          // Check if this is a reply to our target tweet
+          const links = article.querySelectorAll('a[href*="/status/"]');
+          
+          for (const link of links) {
+            const href = link.getAttribute('href');
+            if (href && href.includes('/status/')) {
+              const statusId = href.match(/\/status\/(\d+)/);
+              if (statusId && statusId[1]) {
+                // If this is our reply, extract the reply ID
+                if (href.includes(`/${originalTweetId}`) || tweetText.includes(replyContent)) {
+                  // Find the reply's own status link
+                  const replyLinks = article.querySelectorAll('a[href*="/status/"]');
+                  for (const replyLink of replyLinks) {
+                    const replyHref = replyLink.getAttribute('href');
+                    if (replyHref && replyHref.includes('/status/') && !replyHref.includes(`/${originalTweetId}`)) {
+                      const replyMatch = replyHref.match(/\/status\/(\d+)/);
+                      if (replyMatch && replyMatch[1]) {
+                        return replyMatch[1];
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      return null;
+    }, tweetId, replyText);
+
+    if (replyId) {
+      console.log("✅ Found reply ID:", replyId);
+      result.replyId = replyId;
+      result.success = true;
+      result.details = {
+        message: "Reply posted and ID retrieved successfully",
+        replyId: replyId
+      };
+    } else {
+      console.log("⚠️ Reply posted but couldn't find reply ID");
+      result.success = true;
+      result.details = {
+        warning: "Reply posted but couldn't retrieve reply ID",
+      };
+    }
 
     return result;
   } catch (err) {

@@ -335,7 +335,7 @@ const Dashboard = () => {
       );
 
       if (response.data.success) {
-        // After successful posting, add to post history
+        // After successful posting, add to post history with reply ID
         try {
           await axios.post("http://localhost:5000/api/postReply", {
             tweetId: selectedTweet.id,
@@ -346,16 +346,21 @@ const Dashboard = () => {
             likeCount: selectedTweet.like_count,
             retweetCount: selectedTweet.retweet_count,
             keywordId: null, // We don't have keyword ID in this context
+            replyId: response.data.details?.reply_id || null, // Include reply ID from the response
           });
 
-          console.log("Post added to history successfully");
+          console.log("Post added to history successfully with reply ID:", response.data.details?.reply_id);
         } catch (historyError) {
           console.error("Error adding post to history:", historyError);
           // Don't show this error to the user since the reply was posted successfully
         }
 
-        // Show success message
-        alert("Reply posted successfully!");
+        // Show success message with reply ID if available
+        const replyId = response.data.details?.reply_id;
+        const successMessage = replyId
+          ? `Reply posted successfully! Reply ID: ${replyId}`
+          : "Reply posted successfully!";
+        alert(successMessage);
 
         // Close the dialog
         setPostDialogOpen(false);

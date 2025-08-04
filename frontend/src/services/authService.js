@@ -52,17 +52,16 @@ export const convertTwitterToken = async (accessToken) => {
 };
  
 //get reply id for tweet
-export const getReplyIdForTweet = async (account_name, twitter_password, tweetId)=>{
+export const getReplyIdForTweet = async ()=>{
   try {
     const tweetId = localStorage.getItem("selected_tweet_id");
-    const response = await axios.post(`${BASE_URL}/get-reply-id`, {
+    const response = await axios.post(`http://localhost:5000/api/reply-id`, {
       tweetId
     });
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to get reply ID' };
   }
-
 }
 // Logout
 export const logout = () => {
