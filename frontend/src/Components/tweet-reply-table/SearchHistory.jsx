@@ -76,10 +76,13 @@ const SearchHistory = () => {
   const [tabValue, setTabValue] = useState(0);
   const [twitterHistory, setTwitterHistory] = useState([]);
   const [linkedinHistory, setLinkedinHistory] = useState([]);
-  const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all"); // "all", "liked", "retweeted", "deleted"
+  const [keywordFilter, setKeywordFilter] = useState(""); // For keyword filtering
+  const [availableKeywords, setAvailableKeywords] = useState([]); // Store unique keywords
+ 
   const [accessToken, setAccessToken] = useState("");
   const [tweetText, setTweetText] = useState("");
   const [open, setOpen] = useState(false);
@@ -101,6 +104,15 @@ const SearchHistory = () => {
     setSelectedIds([]);
     setSelectAll(false);
     setSearch("");
+    setFilterType("all");
+    setKeywordFilter("");
+  };
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setSearch("");
+    setFilterType("all");
+    setKeywordFilter("");
   };
 
   const fetchTwitterHistory = async (accountId = null) => {
@@ -139,6 +151,20 @@ const SearchHistory = () => {
     fetchTwitterAccounts();
     fetchLinkedInAccounts();
   }, []);
+  
+  // Extract unique keywords from history data
+  useEffect(() => {
+    const currentHistory = getCurrentHistory();
+    const keywords = new Set();
+    
+    currentHistory.forEach(item => {
+      if (item.keyword) {
+        keywords.add(item.keyword);
+      }
+    });
+    
+    setAvailableKeywords(Array.from(keywords));
+  }, [twitterHistory, linkedinHistory, tabValue]);
 
   // Refetch history when selected account changes
   useEffect(() => {
@@ -296,8 +322,23 @@ const SearchHistory = () => {
   };
 
   const filteredData = getCurrentHistory().filter(
-    (item) =>
-      item.text.toLowerCase().includes(search.toLowerCase())
+    (item) => {
+      // First apply text search filter
+      const matchesSearch = item.text.toLowerCase().includes(search.toLowerCase());
+      
+      // Then apply type filter
+      let matchesType = true;
+      if (filterType === "liked" && (item.like_count <= 0)) {
+        matchesType = false;
+      } else if (filterType === "retweeted" && (item.retweet_count <= 0)) {
+        matchesType = false;
+      } 
+      
+      // Apply keyword filter
+      const matchesKeyword = !keywordFilter || item.keyword === keywordFilter;
+      
+      return matchesSearch && matchesType && matchesKeyword;
+    }
   );
 
   const handlePost = (tweet) => {
@@ -429,73 +470,170 @@ const SearchHistory = () => {
           },
         }}
       >
-        <Grid container alignItems="center" spacing={3} sx={{ position: "relative", zIndex: 1 }}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: "flex",flexDirection:"column" }}>
+        <Grid container spacing={3} >
+         
+          {/* Filters first - now at the top for better visibility */}
+          <Grid item xs={12}>
+            
+            <Box sx={{
+             display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between", 
+    alignItems: "flex-start",
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    flexWrap: "wrap", 
+              backgroundColor: "rgba(255,255,255,0.9)",
+             
+             
               
-               <Typography
-                  variant="h4"
-                   sx={{
-                      fontWeight: 600,
-                      mb: 0.5,
-                      color: "#4896a1",
+            }}>
+               <Box sx={{ flex: 1, minWidth: "300px" }}>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 600,
+                  mb: 0.5,
+                  color: "#4896a1",
+                }}
+              >
+                Search History
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  opacity: 0.9,
+                  fontSize: "1rem",
+                }}
+              >
+                Manage your social media search history across platforms
+              </Typography>
+            </Box>
+             
+              <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                  <Typography variant="caption"  sx={{
+                  fontWeight: 600,
+                  color: "#4896a1",
+                }}>
+                    SEARCH
+                  </Typography>
+                  <TextField
+                    size="medium"
+                    placeholder="Search posts..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: (
+                        <Search
+                          sx={{ color: "#4896a1" }}
+                        />
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                       
+                        borderRadius: "12px",
+                        color: "#333",
+                        border: "1px solid #ddd",
+                        transition: "all 0.3s",
+                        "&:hover": {
+                          backgroundColor: "#fff",
+                          border: "1px solid #4896a1",
+                        },
+                        "&.Mui-focused": {
+                          backgroundColor: "#fff",
+                          border: "1px solid #4896a1",
+                        },
+                      }
+                    }}
+                  />
+                </Box>
+                
+               
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1, minWidth: "300px" }}>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                   
+                    
+                   
+                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
+                      <Typography variant="caption"  sx={{
+                  fontWeight: 600,
+              
+                  color: "#4896a1",
+                }}>
+                        Keyword
+                      </Typography>
+                      <TextField
+                        select
+                        size="medium"
+                        value={keywordFilter}
+                        onChange={(e) => setKeywordFilter(e.target.value)}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                           
+                            borderRadius: "12px",
+                            color: "#333",
+                            border: "1px solid #ddd",
+                            transition: "all 0.3s",
+                            "&:hover": {
+                              backgroundColor: "#fff",
+                              border: "1px solid #4896a1",
+                            },
+                            "&.Mui-focused": {
+                              backgroundColor: "#fff",
+                              border: "1px solid #4896a1",
+                            },
+                            "& fieldset": {
+                              border: "none",
+                            },
+                          },
+                          "& .MuiSelect-select": {
+                            color: "#333",
+                          },
+                          "& .MuiSvgIcon-root": {
+                            color: "#4896a1",
+                          }
+                        }}
+                      >
+                        <MenuItem value="">All Keywords</MenuItem>
+                        {availableKeywords.map((keyword, index) => (
+                          <MenuItem key={index} value={keyword}>
+                            {keyword}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Box>
+                  </Box>
+                </Box>
+                 {(search || filterType !== "all" || keywordFilter) && (
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={clearFilters}
+                    endIcon={<ClearIcon />}
+                    sx={{
+                      backgroundColor: "#4896a1",
+                      color: "white",
+                      fontWeight: "bold",
+                     
                     }}
                   >
-                
-                  Search History
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    opacity: 0.9,
-                    fontSize: "1rem",
-                  }}
-                >
-                  Manage your social media search history across platforms
-                </Typography>
+                    CLEAR ALL FILTERS
+                  </Button>
+                </Box>
+              )}
+              </Box>
+              
+              
+             
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              size="medium"
-              placeholder="Search posts..."
-              variant="outlined"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "rgba(255,255,255,0.15)",
-                  borderRadius: "12px",
-                  color: "white",
-                  backdropFilter: "blur(10px)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  transition: "all 0.3s",
-                  "&:hover": {
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                  },
-                  "&.Mui-focused": {
-                    backgroundColor: "rgba(255,255,255,0.25)",
-                    border: "1px solid rgba(255,255,255,0.5)",
-                  },
-                  "& fieldset": {
-                    border: "none",
-                  },
-                },
-                "& .MuiInputBase-input::placeholder": {
-                  color: "rgba(255,255,255,0.7)",
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <Search
-                    sx={{ color: "rgba(255,255,255,0.7)", mr: 1 }}
-                  />
-                ),
-              }}
-            />
-          </Grid>
+          
+          
+         
         </Grid>
       </Box>
 
