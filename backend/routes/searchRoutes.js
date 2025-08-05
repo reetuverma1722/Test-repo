@@ -1527,184 +1527,184 @@ router.post("/reply-to-tweet", async (req, res) => {
   }
 });
 
-async function postReplyWithPuppeteer(
-  username,
-  password,
-  tweetId,
-  replyText
-) {
-  const browser = await puppeteer.launch({
-    headless: true, // Change to false to see what's happening
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-web-security",
-    ],
-    defaultViewport: null,
-  });
+// async function postReplyWithPuppeteer(
+//   username,
+//   password,
+//   tweetId,
+//   replyText
+// ) {
+//   const browser = await puppeteer.launch({
+//     headless: true, // Change to false to see what's happening
+//     args: [
+//       "--no-sandbox",
+//       "--disable-setuid-sandbox",
+//       "--disable-web-security",
+//     ],
+//     defaultViewport: null,
+//   });
 
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1280, height: 800 });
-  let result = {
-    success: false,
-    error: null,
-    details: {},
-  };
+//   const page = await browser.newPage();
+//   await page.setViewport({ width: 1280, height: 800 });
+//   let result = {
+//     success: false,
+//     error: null,
+//     details: {},
+//   };
 
-  try {
-    console.log("🔐 Logging in...");
+//   try {
+//     console.log("🔐 Logging in...");
 
-    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+//     await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
-    // Fill username
-    console.log("1");
-    await page.waitForSelector('input[name="text"]');
-    console.log("2");
-    await page.type('input[name="text"]', username);
-    console.log("3");
-    await page.keyboard.press("Enter");
-    console.log("4");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+//     // Fill username
+//     console.log("1");
+//     await page.waitForSelector('input[name="text"]');
+//     console.log("2");
+//     await page.type('input[name="text"]', username);
+//     console.log("3");
+//     await page.keyboard.press("Enter");
+//     console.log("4");
+//     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    console.log("5");
-    // Fill password
-    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
-    console.log("6");
-    console.log("🔑 Username:", username);
-    console.log("🔑 Password:", password);
-    console.log("🧪 typeof Password:", typeof password);
+//     console.log("5");
+//     // Fill password
+//     await page.waitForSelector('input[name="password"]', { timeout: 10000 });
+//     console.log("6");
+//     console.log("🔑 Username:", username);
+//     console.log("🔑 Password:", password);
+//     console.log("🧪 typeof Password:", typeof password);
 
-    await page.type('input[name="password"]', password);
-    console.log("7");
-    await page.keyboard.press("Enter");
-    console.log("8");
-    await page.waitForNavigation({ waitUntil: "networkidle2" });
-    console.log("9");
-    console.log("✅ Logged in");
+//     await page.type('input[name="password"]', password);
+//     console.log("7");
+//     await page.keyboard.press("Enter");
+//     console.log("8");
+//     await page.waitForNavigation({ waitUntil: "networkidle2" });
+//     console.log("9");
+//     console.log("✅ Logged in");
 
-    const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+//     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
 
-    console.log(`📨 Opening tweet: ${tweetUrl}`);
-    console.log("🔗 Navigating to tweet:", tweetUrl);
-    await page.goto(tweetUrl, { waitUntil: "networkidle2", timeout: 90000 });
+//     console.log(`📨 Opening tweet: ${tweetUrl}`);
+//     console.log("🔗 Navigating to tweet:", tweetUrl);
+//     await page.goto(tweetUrl, { waitUntil: "networkidle2", timeout: 90000 });
 
-    // Wait for reply button using stable test ID
-    await page.waitForSelector('button[data-testid="reply"]', {
-      timeout: 10000,
-    });
-    console.log("✅ Reply button found");
+//     // Wait for reply button using stable test ID
+//     await page.waitForSelector('button[data-testid="reply"]', {
+//       timeout: 10000,
+//     });
+//     console.log("✅ Reply button found");
 
-    await page.click('button[data-testid="reply"]');
-    console.log("📨 Reply button clicked");
+//     await page.click('button[data-testid="reply"]');
+//     console.log("📨 Reply button clicked");
 
-    // Wait for reply modal textarea
-    await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
-      timeout: 15000,
-    });
-    await page.waitForSelector(
-      'div[role="textbox"][data-testid="tweetTextarea_0"]'
-    );
-    await page.type(
-      'div[role="textbox"][data-testid="tweetTextarea_0"]',
-      replyText
-    );
-    console.log("📝 Typed reply");
+//     // Wait for reply modal textarea
+//     await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
+//       timeout: 15000,
+//     });
+//     await page.waitForSelector(
+//       'div[role="textbox"][data-testid="tweetTextarea_0"]'
+//     );
+//     await page.type(
+//       'div[role="textbox"][data-testid="tweetTextarea_0"]',
+//       replyText
+//     );
+//     console.log("📝 Typed reply");
 
-    // Wait for the "Reply" button to become enabled
-    await page.waitForFunction(
-      () => {
-        const btn = document.querySelector(
-          'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
-        );
-        return (
-          btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
-        );
-      },
-      { timeout: 10000 }
-    );
+//     // Wait for the "Reply" button to become enabled
+//     await page.waitForFunction(
+//       () => {
+//         const btn = document.querySelector(
+//           'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+//         );
+//         return (
+//           btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
+//         );
+//       },
+//       { timeout: 10000 }
+//     );
 
-    console.log("✅ Reply button is now enabled");
+//     console.log("✅ Reply button is now enabled");
 
-    // Click the reply button
-    const replyBtn = await page.$(
-      'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
-    );
-    await replyBtn.click();
-    console.log("Clicked reply button, waiting for confirmation...");
-    console.log("posted");
-    // Increase timeout to allow Twitter to process the reply
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+//     // Click the reply button
+//     const replyBtn = await page.$(
+//       'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+//     );
+//     await replyBtn.click();
+//     console.log("Clicked reply button, waiting for confirmation...");
+//     console.log("posted");
+//     // Increase timeout to allow Twitter to process the reply
+//     await new Promise((resolve) => setTimeout(resolve, 10000));
 
-    // Verify that the tweet was actually posted
-    try {
-      // Look for success indicators
-      const successIndicator = await page.evaluate(() => {
-        // Check for success toast or notification
-        const successToast =
-          document.body.textContent.includes("Your Tweet was sent") ||
-          document.body.textContent.includes("Reply posted");
+//     // Verify that the tweet was actually posted
+//     try {
+//       // Look for success indicators
+//       const successIndicator = await page.evaluate(() => {
+//         // Check for success toast or notification
+//         const successToast =
+//           document.body.textContent.includes("Your Tweet was sent") ||
+//           document.body.textContent.includes("Reply posted");
 
-        // Check if the reply dialog is closed (another indicator of success)
-        const replyDialogClosed = !document.querySelector('div[role="dialog"]');
+//         // Check if the reply dialog is closed (another indicator of success)
+//         const replyDialogClosed = !document.querySelector('div[role="dialog"]');
 
-        // Check for any error messages
-        const errorMessages =
-          document.body.innerText.match(
-            /error|failed|couldn't post|try again/i
-          ) || [];
+//         // Check for any error messages
+//         const errorMessages =
+//           document.body.innerText.match(
+//             /error|failed|couldn't post|try again/i
+//           ) || [];
 
-        return {
-          successToast,
-          replyDialogClosed,
-          errorMessages,
-        };
-      });
+//         return {
+//           successToast,
+//           replyDialogClosed,
+//           errorMessages,
+//         };
+//       });
 
-      if (successIndicator.successToast || successIndicator.replyDialogClosed) {
-        console.log(
-          "✅ Tweet successfully posted! Indicators:",
-          successIndicator
-        );
-        result.success = true;
-        result.details = {
-          successIndicators: successIndicator,
-        };
-      } else if (successIndicator.errorMessages.length > 0) {
-        console.error(
-          "❌ Error messages found:",
-          successIndicator.errorMessages
-        );
-        result.success = false;
-        result.error = `Tweet posting failed: ${successIndicator.errorMessages.join(
-          ", "
-        )}`;
-      } else {
-        console.log("⚠️ No success indicators found, but no error either");
-        // In this case, we'll assume it worked since there's no error
-        result.success = true;
-        result.details = {
-          warning: "No explicit success indicators found, but no errors either",
-        };
-      }
-    } catch (verifyError) {
-      console.error("❌ Error verifying tweet post:", verifyError.message);
-      result.success = false;
-      result.error = `Failed to verify if tweet was posted: ${verifyError.message}`;
-    }
+//       if (successIndicator.successToast || successIndicator.replyDialogClosed) {
+//         console.log(
+//           "✅ Tweet successfully posted! Indicators:",
+//           successIndicator
+//         );
+//         result.success = true;
+//         result.details = {
+//           successIndicators: successIndicator,
+//         };
+//       } else if (successIndicator.errorMessages.length > 0) {
+//         console.error(
+//           "❌ Error messages found:",
+//           successIndicator.errorMessages
+//         );
+//         result.success = false;
+//         result.error = `Tweet posting failed: ${successIndicator.errorMessages.join(
+//           ", "
+//         )}`;
+//       } else {
+//         console.log("⚠️ No success indicators found, but no error either");
+//         // In this case, we'll assume it worked since there's no error
+//         result.success = true;
+//         result.details = {
+//           warning: "No explicit success indicators found, but no errors either",
+//         };
+//       }
+//     } catch (verifyError) {
+//       console.error("❌ Error verifying tweet post:", verifyError.message);
+//       result.success = false;
+//       result.error = `Failed to verify if tweet was posted: ${verifyError.message}`;
+//     }
 
-    // Wait a bit longer to ensure everything is processed
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+//     // Wait a bit longer to ensure everything is processed
+//     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    return result;
-  } catch (err) {
-    console.error("❌ Puppeteer failed:", err.message);
-    result.success = false;
-    result.error = err.message;
-    return result;
-  } finally {
-    await browser.close();
-  }
-}
+//     return result;
+//   } catch (err) {
+//     console.error("❌ Puppeteer failed:", err.message);
+//     result.success = false;
+//     result.error = err.message;
+//     return result;
+//   } finally {
+//     await browser.close();
+//   }
+// }
 
 async function postReplyWithPuppeteerAndGetId(
   username,
@@ -1931,710 +1931,5 @@ router.delete("/history/:id", async (req, res) => {
     });
   }
 });
-
-// GET /api/fetch-followers-count/:username - Fetch followers count for a Twitter username
-// router.get("/fetch-followers-count/:username", async (req, res) => {
-//   const { username } = req.params;
-  
-//   if (!username) {
-//     return res.status(400).json({ success: false, message: "Username is required" });
-//   }
-
-//   try {
-//     console.log(`[FOLLOWERS] Fetching followers count for Twitter user: ${username}`);
-//     console.log(`[FOLLOWERS] Current time: ${new Date().toISOString()}`);
-    
-//     // Launch browser to scrape the followers count
-//     console.log(`[FOLLOWERS] Launching browser...`);
-//     const browser = await puppeteer.launch({
-//       headless: true,
-//       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
-//       defaultViewport: null,
-//     });
-//     console.log(`[FOLLOWERS] Browser launched successfully`);
-
-//     const page = await browser.newPage();
-//     console.log(`[FOLLOWERS] New page created`);
-    
-//     await page.setViewport({ width: 1280, height: 800 });
-//     console.log(`[FOLLOWERS] Viewport set to 1280x800`);
-
-//     // Enable console log from the browser
-//     page.on('console', msg => console.log(`[BROWSER CONSOLE] ${msg.text()}`));
-//     console.log(`[FOLLOWERS] Browser console logging enabled`);
-
-//     // Navigate to the user's Twitter profile
-//     const profileUrl = `https://twitter.com/${username}`;
-//     console.log(`[FOLLOWERS] Navigating to: ${profileUrl}`);
-    
-//     try {
-//       console.log(`[FOLLOWERS] Starting page navigation at ${new Date().toISOString()}`);
-//       console.log(`[FOLLOWERS] Using waitUntil: networkidle2 with timeout: 60000ms`);
-      
-//       // Add detailed network request logging
-//       page.on('request', request => {
-//         console.log(`[FOLLOWERS] Network request: ${request.url().substring(0, 100)}...`);
-//       });
-      
-//       page.on('requestfailed', request => {
-//         console.log(`[FOLLOWERS] Network request failed: ${request.url().substring(0, 100)}...`);
-//         console.log(`[FOLLOWERS] Failure reason: ${request.failure().errorText}`);
-//       });
-      
-//       // Set a shorter timeout and catch the error specifically
-//       try {
-//         await page.goto(profileUrl, { waitUntil: "networkidle2", timeout: 60000 });
-//         console.log(`[FOLLOWERS] Page loaded successfully at ${new Date().toISOString()}`);
-//       } catch (navigationError) {
-//         console.error(`[FOLLOWERS] Navigation error: ${navigationError.message}`);
-//         console.log(`[FOLLOWERS] Attempting to continue anyway...`);
-//         // Try to continue anyway, even if the page didn't fully load
-//       }
-      
-//       // No screenshots needed
-      
-//       // Don't wait for a specific selector, just wait for the page to load
-//       // This makes the endpoint more robust against Twitter UI changes
-//       console.log(`[FOLLOWERS] Waiting for 5 seconds to ensure page is fully loaded...`);
-//      await new Promise(resolve => setTimeout(resolve, 5000));
-
-//       console.log(`[FOLLOWERS] Wait completed at ${new Date().toISOString()}`);
-      
-//       // Check if the page loaded properly
-//       const pageContent = await page.content();
-//       console.log(`[FOLLOWERS] Page content length: ${pageContent.length} characters`);
-      
-//       // Check if we're on the right page
-//       const currentUrl = page.url();
-//       console.log(`[FOLLOWERS] Current page URL: ${currentUrl}`);
-      
-//       // Check if we got rate limited or redirected to an error page
-//       const pageTitle = await page.title();
-//       console.log(`[FOLLOWERS] Page title: ${pageTitle}`);
-      
-//       // No screenshots needed
-      
-//       // Try to find and click on the followers link to get the exact count
-//       try {
-//         console.log(`[FOLLOWERS] Attempting to find and click followers link...`);
-        
-//         // Wait for any potential followers link to be visible
-//         await page.waitForTimeout(2000);
-        
-//         // Try multiple selectors that might contain the followers link
-//         const followersLinkSelectors = [
-//           'a[href*="followers"]',
-//           'a[href*="/followers"]',
-//           'a[href$="/followers"]',
-//           'a[href*="followers_count"]',
-//           'span:has-text("followers")',
-//           'div:has-text("followers")'
-//         ];
-        
-//         let followersLinkFound = false;
-        
-//         for (const selector of followersLinkSelectors) {
-//           console.log(`[FOLLOWERS] Trying selector: ${selector}`);
-          
-//           const exists = await page.evaluate((sel) => {
-//             const elements = document.querySelectorAll(sel);
-//             return elements.length > 0;
-//           }, selector);
-          
-//           if (exists) {
-//             console.log(`[FOLLOWERS] Found elements with selector: ${selector}`);
-            
-//             // Get text content of all matching elements
-//             const elementsText = await page.evaluate((sel) => {
-//               return Array.from(document.querySelectorAll(sel)).map(el => ({
-//                 text: el.innerText || el.textContent,
-//                 href: el.getAttribute('href')
-//               }));
-//             }, selector);
-            
-//             console.log(`[FOLLOWERS] Elements found:`, JSON.stringify(elementsText));
-            
-//             // Try to find the one that contains followers count
-//             for (const el of elementsText) {
-//               if (el.text && el.text.match(/\d+\s*(?:followers|Followers)/i)) {
-//                 console.log(`[FOLLOWERS] Found element with followers count: "${el.text}"`);
-//                 followersLinkFound = true;
-//                 break;
-//               }
-//             }
-            
-//             if (followersLinkFound) break;
-//           }
-//         }
-//       } catch (clickError) {
-//         console.log(`[FOLLOWERS] Error finding/clicking followers link: ${clickError.message}`);
-//         // Continue with extraction even if clicking fails
-//       }
-      
-//       // Extract followers count using multiple methods for reliability
-//       console.log(`[FOLLOWERS] Starting followers count extraction at ${new Date().toISOString()}`);
-//       const followersCount = await page.evaluate(() => {
-//         console.log("Starting followers count extraction in browser context...");
-//         let followers = 0;
-//         let followersMethod = "default";
-        
-//         try {
-//           // METHOD 1: Try to find followers count in any link with "followers" in the href
-//           console.log("METHOD 1: Looking for followers in links...");
-//           const followersLinks = Array.from(document.querySelectorAll('a[href*="followers"]'));
-//           console.log(`METHOD 1: Found ${followersLinks.length} links with 'followers' in href`);
-          
-//           // First try to find links with both a number and "followers" text
-//           const followersLinksWithNumbers = followersLinks.filter(link => {
-//             const text = link.innerText || link.textContent || "";
-//             return text.match(/\d/) && text.match(/followers/i);
-//           });
-          
-//           console.log(`METHOD 1: Found ${followersLinksWithNumbers.length} links with both numbers and 'followers'`);
-          
-//           // Try the more specific links first
-//           for (const link of followersLinksWithNumbers) {
-//             const linkText = link.innerText || link.textContent || "";
-//             console.log(`METHOD 1: Examining link with text: "${linkText}"`);
-            
-//             // More specific regex to match patterns like "1.2K Followers" or "1,234 Followers"
-//             const followersMatch = linkText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)\s*(?:Followers|followers)/i);
-//             if (followersMatch) {
-//               const rawCount = followersMatch[1];
-//               console.log(`METHOD 1: Found raw followers count: ${rawCount}`);
-              
-//               // Convert K, M, B suffixes to actual numbers
-//               let multiplier = 1;
-//               if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//               if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//               if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-              
-//               // Remove suffix and convert to number
-//               const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//               followers = parseInt(numericPart) * multiplier;
-              
-//               followersMethod = "followers_link_specific";
-//               console.log(`METHOD 1 SUCCESS: Found followers count ${followers} in link with specific pattern`);
-//               break;
-//             }
-//           }
-          
-//           // If no specific match found, try with any number in the link
-//           if (followers === 0 && followersLinks.length > 0) {
-//             for (const link of followersLinks) {
-//               const linkText = link.innerText || link.textContent || "";
-//               console.log(`METHOD 1: Trying generic number extraction from link: "${linkText}"`);
-              
-//               // Look for any number in the link text
-//               const followersMatch = linkText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)/);
-//               if (followersMatch) {
-//                 const rawCount = followersMatch[1];
-//                 console.log(`METHOD 1: Found raw followers count: ${rawCount}`);
-                
-//                 // Convert K, M, B suffixes to actual numbers
-//                 let multiplier = 1;
-//                 if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                 if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                 if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                
-//                 // Remove suffix and convert to number
-//                 const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                 followers = parseInt(numericPart) * multiplier;
-                
-//                 followersMethod = "followers_link_generic";
-//                 console.log(`METHOD 1 SUCCESS: Found followers count ${followers} in link with generic pattern`);
-//                 break;
-//               }
-//             }
-//           }
-          
-//           // METHOD 2: Look for any text with "followers" pattern
-//           if (followers === 0) {
-//             console.log("METHOD 2: Looking for followers count in any text...");
-//             const allText = document.body.innerText;
-            
-//             // Try multiple regex patterns for better matching
-//             const patterns = [
-//               // Pattern 1: Number followed by "followers" (most common)
-//               /(\d+(?:[,.]\d+)*[KkMmBb]?)\s*(?:Followers|followers)/gi,
-              
-//               // Pattern 2: Number between other profile stats
-//               /(?:Following|following)[^\d]*(\d+(?:[,.]\d+)*[KkMmBb]?)[^\d]*(?:Followers|followers)/gi,
-              
-//               // Pattern 3: "followers" followed by number
-//               /(?:Followers|followers)[^\d]*(\d+(?:[,.]\d+)*[KkMmBb]?)/gi
-//             ];
-            
-//             let followersMatches = [];
-            
-//             // Try each pattern until we find matches
-//             for (const pattern of patterns) {
-//               followersMatches = allText.match(pattern);
-//               if (followersMatches && followersMatches.length > 0) {
-//                 console.log(`METHOD 2: Found matches with pattern ${pattern}: ${followersMatches.join(', ')}`);
-//                 break;
-//               }
-//             }
-            
-//             if (followersMatches && followersMatches.length > 0) {
-//               console.log(`METHOD 2: Found potential followers counts: ${followersMatches.join(', ')}`);
-              
-//               // Sort matches by length to find the most specific one
-//               followersMatches.sort((a, b) => a.length - b.length);
-              
-//               // Extract the first match (shortest, most likely to be just the count and "followers")
-//               const firstMatch = followersMatches[0].match(/(\d+(?:[,.]\d+)*[KkMmBb]?)/i);
-//               if (firstMatch) {
-//                 const rawCount = firstMatch[1];
-//                 console.log(`METHOD 2: Found raw followers count: ${rawCount}`);
-                
-//                 // Convert K, M, B suffixes to actual numbers
-//                 let multiplier = 1;
-//                 if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                 if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                 if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                
-//                 // Remove suffix and convert to number
-//                 const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                 followers = parseInt(numericPart) * multiplier;
-                
-//                 followersMethod = "text_regex";
-//                 console.log(`METHOD 2 SUCCESS: Extracted followers count ${followers}`);
-//               }
-//             } else {
-//               console.log(`METHOD 2: No followers count pattern found in text`);
-//             }
-//           }
-          
-//           // METHOD 3: Look for spans with numbers near "followers" text
-//           if (followers === 0) {
-//             console.log("METHOD 3: Looking for spans with numbers near 'followers' text...");
-//             const spans = document.querySelectorAll('span');
-            
-//             for (const span of spans) {
-//               const spanText = span.innerText || "";
-//               // Look specifically for text that might be just a number
-//               if (/^\d+(?:[,.]\d+)*[KkMmBb]?$/.test(spanText.trim())) {
-//                 console.log(`METHOD 3: Found potential followers count: ${spanText}`);
-                
-//                 // Check if nearby elements contain "followers"
-//                 const parentText = span.parentElement?.innerText || "";
-//                 const grandparentText = span.parentElement?.parentElement?.innerText || "";
-                
-//                 if (
-//                   parentText.match(/followers/i) ||
-//                   grandparentText.match(/followers/i)
-//                 ) {
-//                   const rawCount = spanText.trim();
-//                   console.log(`METHOD 3: Confirmed followers count: ${rawCount}`);
-                  
-//                   // Convert K, M, B suffixes to actual numbers
-//                   let multiplier = 1;
-//                   if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                   if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                   if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                  
-//                   // Remove suffix and convert to number
-//                   const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                   followers = parseInt(numericPart) * multiplier;
-                  
-//                   followersMethod = "span_near_followers";
-//                   console.log(`METHOD 3 SUCCESS: Found followers count ${followers} in span`);
-//                   break;
-//                 }
-//               }
-//             }
-//           }
-          
-//           // METHOD 4: Look for any number in profile stats section
-//           if (followers === 0) {
-//             console.log("METHOD 4: Looking for numbers in profile stats section...");
-            
-//             // Try multiple selectors that might contain profile stats
-//             const statsSelectorsList = [
-//               'div[role="group"]',
-//               'nav[role="navigation"]',
-//               '[data-testid="UserProfileStats"]',
-//               'div[data-testid*="primaryColumn"]',
-//               'div[data-testid*="UserCell"]',
-//               'div[data-testid*="UserName"]',
-//               'a[href*="followers"]',
-//               'a[href*="following"]'
-//             ];
-            
-//             // Combine all selectors for a single query
-//             const combinedSelector = statsSelectorsList.join(', ');
-//             const statsSections = document.querySelectorAll(combinedSelector);
-//             console.log(`METHOD 4: Found ${statsSections.length} potential stats sections`);
-            
-//             // First try to find sections that specifically mention followers
-//             const followersSections = Array.from(statsSections).filter(section => {
-//               const text = section.innerText || section.textContent || "";
-//               return text.match(/followers/i) && text.match(/\d/);
-//             });
-            
-//             console.log(`METHOD 4: Found ${followersSections.length} sections mentioning followers and containing numbers`);
-            
-//             if (followersSections.length > 0) {
-//               // Process the most promising sections first
-//               for (const section of followersSections) {
-//                 const sectionText = section.innerText || section.textContent || "";
-//                 console.log(`METHOD 4: Examining stats section: "${sectionText.substring(0, 100)}..."`);
-                
-//                 // Try to extract followers count with a specific pattern
-//                 const followersMatch = sectionText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)\s*(?:Followers|followers)/i);
-//                 if (followersMatch) {
-//                   const rawCount = followersMatch[1];
-//                   console.log(`METHOD 4: Found raw followers count with specific pattern: ${rawCount}`);
-                  
-//                   // Convert K, M, B suffixes to actual numbers
-//                   let multiplier = 1;
-//                   if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                   if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                   if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                  
-//                   // Remove suffix and convert to number
-//                   const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                   followers = parseInt(numericPart) * multiplier;
-                  
-//                   followersMethod = "stats_section_specific";
-//                   console.log(`METHOD 4 SUCCESS: Found followers count ${followers} in stats section with specific pattern`);
-//                   break;
-//                 }
-                
-//                 // If specific pattern fails, try to find the number closest to "followers"
-//                 if (followers === 0) {
-//                   // Look for numbers in this section
-//                   const numberMatches = sectionText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)/g);
-//                   if (numberMatches && numberMatches.length > 0) {
-//                     console.log(`METHOD 4: Found ${numberMatches.length} numbers in section: ${numberMatches.join(', ')}`);
-                    
-//                     // If we find multiple numbers, try to find the one near "followers"
-//                     const followersIndex = sectionText.toLowerCase().indexOf("followers");
-//                     if (followersIndex >= 0) {
-//                       // Find the closest number to the "followers" text
-//                       let closestNumber = null;
-//                       let closestDistance = Infinity;
-                      
-//                       for (const match of numberMatches) {
-//                         const matchIndex = sectionText.indexOf(match);
-//                         const distance = Math.abs(matchIndex - followersIndex);
-                        
-//                         if (distance < closestDistance) {
-//                           closestDistance = distance;
-//                           closestNumber = match;
-//                         }
-//                       }
-                      
-//                       if (closestNumber) {
-//                         const rawCount = closestNumber;
-//                         console.log(`METHOD 4: Found closest number to 'followers': ${rawCount} (distance: ${closestDistance})`);
-                        
-//                         // Only use if it's reasonably close to the "followers" text
-//                         if (closestDistance < 50) {
-//                           // Convert K, M, B suffixes to actual numbers
-//                           let multiplier = 1;
-//                           if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                           if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                           if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                          
-//                           // Remove suffix and convert to number
-//                           const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                           followers = parseInt(numericPart) * multiplier;
-                          
-//                           followersMethod = "stats_section_proximity";
-//                           console.log(`METHOD 4 SUCCESS: Found followers count ${followers} in stats section by proximity`);
-//                           break;
-//                         } else {
-//                           console.log(`METHOD 4: Number is too far from 'followers' text (distance: ${closestDistance}), skipping`);
-//                         }
-//                       }
-//                     }
-//                   }
-//                 }
-//               }
-//             }
-            
-//             // If still no followers count, try all stats sections
-//             if (followers === 0) {
-//               for (const section of statsSections) {
-//                 const sectionText = section.innerText || section.textContent || "";
-//                 if (sectionText.match(/following|followers/i)) {
-//                   console.log(`METHOD 4: Examining generic stats section: "${sectionText.substring(0, 50)}..."`);
-                  
-//                   // Look for numbers in this section
-//                   const numberMatches = sectionText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)/g);
-//                   if (numberMatches && numberMatches.length > 0) {
-//                     // If we find multiple numbers, try to find the one near "followers"
-//                     const followersIndex = sectionText.toLowerCase().indexOf("followers");
-//                     if (followersIndex >= 0) {
-//                       // Find the closest number to the "followers" text
-//                       let closestNumber = null;
-//                       let closestDistance = Infinity;
-                      
-//                       for (const match of numberMatches) {
-//                         const matchIndex = sectionText.indexOf(match);
-//                         const distance = Math.abs(matchIndex - followersIndex);
-                        
-//                         if (distance < closestDistance) {
-//                           closestDistance = distance;
-//                           closestNumber = match;
-//                         }
-//                       }
-                      
-//                       if (closestNumber) {
-//                         const rawCount = closestNumber;
-//                         console.log(`METHOD 4: Found closest number to 'followers': ${rawCount}`);
-                        
-//                         // Convert K, M, B suffixes to actual numbers
-//                         let multiplier = 1;
-//                         if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                         if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                         if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                        
-//                         // Remove suffix and convert to number
-//                         const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                         followers = parseInt(numericPart) * multiplier;
-                        
-//                         followersMethod = "stats_section";
-//                         console.log(`METHOD 4 SUCCESS: Found followers count ${followers} in stats section`);
-//                         break;
-//                       }
-//                     }
-//                   }
-//                 }
-//               }
-//             }
-//           }
-          
-//           // METHOD 5: Try to find meta tags or structured data
-//           if (followers === 0) {
-//             console.log("METHOD 5: Looking for meta tags or structured data...");
-            
-//             // Check for meta tags
-//             const metaTags = document.querySelectorAll('meta[name*="followers"], meta[property*="followers"]');
-//             console.log(`METHOD 5: Found ${metaTags.length} meta tags related to followers`);
-            
-//             for (const tag of metaTags) {
-//               const content = tag.getAttribute('content');
-//               if (content && /^\d+/.test(content)) {
-//                 followers = parseInt(content);
-//                 followersMethod = "meta_tag";
-//                 console.log(`METHOD 5 SUCCESS: Found followers count ${followers} in meta tag`);
-//                 break;
-//               }
-//             }
-            
-//             // Check for JSON-LD structured data
-//             if (followers === 0) {
-//               const scriptTags = document.querySelectorAll('script[type="application/ld+json"]');
-//               console.log(`METHOD 5: Found ${scriptTags.length} JSON-LD script tags`);
-              
-//               for (const script of scriptTags) {
-//                 try {
-//                   const jsonData = JSON.parse(script.textContent);
-//                   console.log("METHOD 5: Found JSON-LD data");
-                  
-//                   // Look for followers count in structured data
-//                   const findFollowersInObject = (obj, path = '') => {
-//                     if (!obj || typeof obj !== 'object') return null;
-                    
-//                     // Check if this object has followers information
-//                     if (obj.hasOwnProperty('followers') && typeof obj.followers === 'number') {
-//                       console.log(`METHOD 5: Found followers count ${obj.followers} at path ${path}.followers`);
-//                       return obj.followers;
-//                     }
-                    
-//                     if (obj.hasOwnProperty('followersCount') && typeof obj.followersCount === 'number') {
-//                       console.log(`METHOD 5: Found followers count ${obj.followersCount} at path ${path}.followersCount`);
-//                       return obj.followersCount;
-//                     }
-                    
-//                     // Recursively search in nested objects
-//                     for (const key in obj) {
-//                       if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
-//                         const result = findFollowersInObject(obj[key], `${path}.${key}`);
-//                         if (result !== null) return result;
-//                       }
-//                     }
-                    
-//                     return null;
-//                   };
-                  
-//                   const followersCount = findFollowersInObject(jsonData);
-//                   if (followersCount !== null) {
-//                     followers = followersCount;
-//                     followersMethod = "structured_data";
-//                     console.log(`METHOD 5 SUCCESS: Found followers count ${followers} in structured data`);
-//                     break;
-//                   }
-//                 } catch (e) {
-//                   console.log("METHOD 5: Error parsing JSON-LD:", e);
-//                 }
-//               }
-//             }
-//           }
-          
-//           // METHOD 6: Try to extract from Twitter-specific elements
-//           if (followers === 0) {
-//             console.log("METHOD 6: Looking for Twitter-specific elements...");
-            
-//             // Try to find the profile header
-//             const profileHeader = document.querySelector('[data-testid="UserProfileHeader_Items"]');
-//             if (profileHeader) {
-//               console.log("METHOD 6: Found profile header element");
-//               const headerText = profileHeader.innerText || profileHeader.textContent || "";
-//               console.log(`METHOD 6: Profile header text: "${headerText}"`);
-              
-//               const followersMatch = headerText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)\s*(?:Followers|followers)/i);
-//               if (followersMatch) {
-//                 const rawCount = followersMatch[1];
-//                 console.log(`METHOD 6: Found raw followers count: ${rawCount}`);
-                
-//                 // Convert K, M, B suffixes to actual numbers
-//                 let multiplier = 1;
-//                 if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                 if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                 if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                
-//                 // Remove suffix and convert to number
-//                 const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                 followers = parseInt(numericPart) * multiplier;
-                
-//                 followersMethod = "profile_header";
-//                 console.log(`METHOD 6 SUCCESS: Found followers count ${followers} in profile header`);
-//               }
-//             } else {
-//               console.log("METHOD 6: Profile header element not found");
-//             }
-            
-//             // If still not found, try to find any elements with "UserProfileStats" in the class name or data-testid
-//             if (followers === 0) {
-//               // Try with querySelector to find elements with data-testid containing UserProfileStats
-//               const statsElements = document.querySelectorAll('[data-testid*="UserProfileStats"], [data-testid*="UserCell"], [data-testid*="ProfileStat"]');
-//               console.log(`METHOD 6: Found ${statsElements.length} potential stats elements`);
-              
-//               for (const statsElement of statsElements) {
-//                 const statsText = statsElement.innerText || statsElement.textContent || "";
-//                 console.log(`METHOD 6: Stats element text: "${statsText}"`);
-                
-//                 const followersMatch = statsText.match(/(\d+(?:[,.]\d+)*[KkMmBb]?)\s*(?:Followers|followers)/i);
-//                 if (followersMatch) {
-//                   const rawCount = followersMatch[1];
-//                   console.log(`METHOD 6: Found raw followers count: ${rawCount}`);
-                  
-//                   // Convert K, M, B suffixes to actual numbers
-//                   let multiplier = 1;
-//                   if (rawCount.match(/[Kk]$/)) multiplier = 1000;
-//                   if (rawCount.match(/[Mm]$/)) multiplier = 1000000;
-//                   if (rawCount.match(/[Bb]$/)) multiplier = 1000000000;
-                  
-//                   // Remove suffix and convert to number
-//                   const numericPart = rawCount.replace(/[KkMmBb]$/, "").replace(/[,.]/g, "");
-//                   followers = parseInt(numericPart) * multiplier;
-                  
-//                   followersMethod = "user_profile_stats";
-//                   console.log(`METHOD 6 SUCCESS: Found followers count ${followers} in stats element`);
-//                   break;
-//                 }
-//               }
-//             }
-//           }
-          
-//           // METHOD 7: Default to a reasonable number if all else fails
-//           if (followers === 0) {
-//             console.log("METHOD 7: Using default followers count");
-//             followers = 1000; // Default to a reasonable number
-//             followersMethod = "default";
-//           }
-          
-//           console.log(`Final followers count: ${followers} (method: ${followersMethod})`);
-          
-//           // Return more detailed information for debugging
-//           return {
-//             count: followers,
-//             method: followersMethod,
-//             pageText: document.body.innerText.substring(0, 1000) // First 1000 chars of page text
-//           };
-//         } catch (e) {
-//           console.error("Error extracting followers count:", e);
-//           return 1000; // Default fallback on error
-//         }
-//       });
-      
-//       // Log the detailed result
-//       console.log(`[FOLLOWERS] Extraction result:`, followersCount);
-      
-//       // Close the browser
-//       await browser.close();
-//       console.log(`[FOLLOWERS] Browser closed successfully`);
-      
-//       // Extract just the count from the detailed result
-//       const count = typeof followersCount === 'object' ? followersCount.count : followersCount;
-//       const method = typeof followersCount === 'object' ? followersCount.method : 'unknown';
-      
-//       console.log(`[FOLLOWERS] Fetched followers count for ${username}: ${count} (method: ${method})`);
-      
-//       res.json({
-//         success: true,
-//         username,
-//         followersCount: count,
-//         method: method,
-//         timestamp: new Date().toISOString()
-//       });
-//     } catch (navigationError) {
-//       console.error(`[FOLLOWERS] ❌ Navigation error for ${username}:`, navigationError);
-//       console.error(`[FOLLOWERS] Error details:`, {
-//         name: navigationError.name,
-//         message: navigationError.message,
-//         stack: navigationError.stack
-//       });
-      
-//       await browser.close();
-//       console.log(`[FOLLOWERS] Browser closed after error`);
-      
-//       // Return a default followers count if we couldn't navigate to the profile
-//       res.json({
-//         success: true,
-//         username,
-//         followersCount: 1000, // Default value
-//         note: "Could not access profile, using default value",
-//         error: navigationError.message,
-//         timestamp: new Date().toISOString()
-//       });
-//     }
-//   } catch (err) {
-//     console.error(`[FOLLOWERS] ❌ Error fetching followers count for ${username}:`, err);
-//     console.error(`[FOLLOWERS] Error details:`, {
-//       name: err.name,
-//       message: err.message,
-//       stack: err.stack
-//     });
-    
-//     // Check if this is a timeout error
-//     const isTimeout = err.message.includes('timeout') || err.message.includes('Timeout');
-    
-//     if (isTimeout) {
-//       console.log(`[FOLLOWERS] Detected timeout error, returning default value`);
-//       // For timeout errors, return a success response with default value instead of error
-//       return res.json({
-//         success: true,
-//         username,
-//         followersCount: 1000, // Default value
-//         note: "Request timed out, using default value",
-//         error: err.message,
-//         timestamp: new Date().toISOString()
-//       });
-//     }
-    
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch followers count",
-//       error: err.message,
-//       errorType: err.name,
-//       timestamp: new Date().toISOString()
-//     });
-//   }
-// });
 
 module.exports = router;

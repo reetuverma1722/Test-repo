@@ -177,7 +177,7 @@ const Dashboard = () => {
     fetchTwitterAccounts();
     fetchAllPosts(); // Automatically fetch posts when component mounts
   }, []);
-
+  
   const handleLogout = () => {
     localStorage.removeItem("token");
     setLogoutOpen(false);
@@ -1068,7 +1068,7 @@ const Dashboard = () => {
       >
         <Toolbar sx={{ minHeight: "48px !important" }} />
         <Box
-          sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, py: 2 }}
+          sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, }}
         >
           {/* <List component="nav" disablePadding>
             <ListItem
@@ -1389,7 +1389,7 @@ const Dashboard = () => {
                 fontWeight: 600,
                 letterSpacing: "0.5px",
                 fontSize: { xs: "1.1rem", sm: "1.4rem" },
-                marginTop: "20px",
+                
               }}
             >
               <div
@@ -1905,7 +1905,7 @@ const Dashboard = () => {
                             border: "1px solid #e5e7eb",
                             transition: "all 0.3s ease",
                             height: "100%",
-                            width: "18vw",
+                            width: "18.98vw",
                             backgroundColor: "#fafafa",
                             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                             cursor: "pointer", // pointer on hover
