@@ -68,6 +68,7 @@ import SocialMediaSettings from "./SocialMediaSettings";
 import { getAccountsByPlatform } from "../services/socialMediaAccountsService";
 import TrendingAnalytics from "./TrendingAnalytics";
 import PostHistoryPage from "./PostHistoryPage";
+import { motion } from "framer-motion";
 
 const drawerWidth = 260;
 
@@ -325,42 +326,23 @@ const Dashboard = () => {
 
     try {
       // Call the API to post the reply
+      // This endpoint already adds the post to history, so we don't need to do it separately
       const response = await axios.post(
         "http://localhost:5000/api/reply-to-tweet",
         {
           tweetId: selectedTweet.id,
           replyText: editedReply,
           selectedAccountId: selectedAccount,
+          keywordId: null, // Pass this in case it's needed for the history
+          tweetText: selectedTweet.text,
+          likeCount: selectedTweet.like_count,
+          retweetCount: selectedTweet.retweet_count,
         }
       );
 
       if (response.data.success) {
-        // After successful posting, add to post history with reply ID
-        try {
-          await axios.post("http://localhost:5000/api/postReply", {
-            tweetId: selectedTweet.id,
-            tweetText: selectedTweet.text,
-            tweetUrl: `https://twitter.com/i/web/status/${selectedTweet.id}`,
-            replyText: editedReply,
-            selectedAccountId: selectedAccount,
-            likeCount: selectedTweet.like_count,
-            retweetCount: selectedTweet.retweet_count,
-            keywordId: null, // We don't have keyword ID in this context
-            replyId: response.data.details?.reply_id || null, // Include reply ID from the response
-          });
-
-          console.log("Post added to history successfully with reply ID:", response.data.details?.reply_id);
-        } catch (historyError) {
-          console.error("Error adding post to history:", historyError);
-          // Don't show this error to the user since the reply was posted successfully
-        }
-
-        // Show success message with reply ID if available
-        const replyId = response.data.details?.reply_id;
-        const successMessage = replyId
-          ? `Reply posted successfully! Reply ID: ${replyId}`
-          : "Reply posted successfully!";
-        alert(successMessage);
+        // Show success message
+        alert("Reply posted successfully!");
 
         // Close the dialog
         setPostDialogOpen(false);
@@ -884,7 +866,7 @@ const Dashboard = () => {
             gap: 1,
           }}
         >
-          <VpnKeyIcon sx={{ color: "#f44336" }} />
+          <VpnKeyIcon sx={{ color: "#4D99A3" }} />
           Change Password
         </DialogTitle>
         <IconButton
@@ -1088,7 +1070,7 @@ const Dashboard = () => {
         <Box
           sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, py: 2 }}
         >
-          <List component="nav" disablePadding>
+          {/* <List component="nav" disablePadding>
             <ListItem
               button
               selected={location.pathname.includes("/dashboard")}
@@ -1301,6 +1283,83 @@ const Dashboard = () => {
                 }}
               />
             </ListItem>
+          </List> */}
+          <List component="nav" disablePadding>
+            {[
+              {
+                label: "Dashboard",
+                path: "/dashboard",
+                icon: <DashboardIcon fontSize="small" />,
+                key: "dashboard",
+              },
+              {
+                label: "Search History",
+                path: "/history",
+                icon: <HistoryIcon fontSize="small" />,
+                key: "search-history",
+              },
+              {
+                label: "Social Media Settings",
+                path: "/social-media-settings",
+                icon: <SettingsIcon fontSize="small" />,
+                key: "social-media-settings",
+              },
+              {
+                label: "Post History",
+                path: "/post-history",
+                icon: <PostAddIcon fontSize="small" />,
+                key: "post-history",
+              },
+            ].map((item,index) => {
+              const isSelected = location.pathname.includes(item.path);
+              return (
+               
+   <ListItem
+                  key={item.key}
+                  button
+                  selected={isSelected}
+                  onClick={() => {
+                    setActive(item.key);
+                    navigate(item.path);
+                  }}
+                  sx={{
+                    mb: 1,
+                    mx: 1.5,
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    height: "44px",
+                    transition: "all 0.2s ease",
+                                    backgroundColor: isSelected ? "#4D99A3" : "transparent",
+                    "&:hover": {
+                      backgroundColor: isSelected ? "#4D99A3" : "#f0f0f0",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      color: isSelected ? "#fff" : "#4D99A3",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                 <ListItemText
+  primary={item.label}
+  primaryTypographyProps={{
+    sx: {
+       color: isSelected ? '#fff !important' : '#4D99A3',
+      fontSize: "2rem",
+      fontWeight: isSelected ? 900 : 500,
+      marginTop: "16px",
+    },
+  }}
+/>
+
+                </ListItem>
+
+               
+              );
+            })}
           </List>
         </Box>
       </Drawer>
@@ -1434,17 +1493,17 @@ const Dashboard = () => {
                       gap: 0.5,
                     }}
                   >
-                    <EmailIcon fontSize="small" sx={{ color: "#FF0000" }} />
+                    <EmailIcon fontSize="small" sx={{ color: "#4D99A3" }} />
                     {userEmail}
                   </Typography>
                 </Box>
                 <Divider />
                 <MenuItem onClick={handlePasswordChange} sx={{ py: 1.5 }}>
-                  <VpnKeyIcon sx={{ mr: 2, color: "#FF0000" }} />
+                  <VpnKeyIcon sx={{ mr: 2, mb: 2, color: "#4D99A3" }} />
                   <Typography variant="body2">Change Password</Typography>
                 </MenuItem>
                 <MenuItem onClick={() => setLogoutOpen(true)} sx={{ py: 1.5 }}>
-                  <Logout sx={{ mr: 2, color: "#FF0000" }} />
+                  <Logout sx={{ mr: 2, mb: 2, color: "#4D99A3" }} />
                   <Typography variant="body2">Logout</Typography>
                 </MenuItem>
               </Menu>

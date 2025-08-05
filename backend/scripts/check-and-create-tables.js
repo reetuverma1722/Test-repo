@@ -17,7 +17,7 @@ async function checkAndCreateTables() {
   const client = await pool.connect();
   
   try {
-    console.log('Checking if required tables exist...');
+   
     
     // Check if users table exists
     const usersTableCheck = await client.query(`
@@ -41,7 +41,7 @@ async function checkAndCreateTables() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('Users table created successfully.');
+     
     } else {
       console.log('Users table already exists.');
     }
@@ -110,7 +110,7 @@ async function checkAndCreateTables() {
         CREATE INDEX idx_twitter_keywords_text ON twitter_keywords(text);
         CREATE INDEX idx_twitter_keywords_account_id ON twitter_keywords(account_id);
       `);
-      console.log('Twitter keywords table created successfully.');
+     
     } else {
       console.log('Twitter keywords table already exists.');
       
@@ -153,11 +153,8 @@ async function checkAndCreateTables() {
       // Read the SQL file
       const postHistorySqlPath = path.join(__dirname, '../sql/create_post_history_table.sql');
       const postHistorySql = fs.readFileSync(postHistorySqlPath, 'utf8');
-      
       // Execute the SQL query
       await client.query(postHistorySql);
-      
-      console.log('Post history table created successfully.');
     } else {
       console.log('Post history table already exists.');
       
@@ -210,8 +207,6 @@ async function checkAndCreateTables() {
     } catch (err) {
       console.log('Error checking for twitter_password column:', err.message);
     }
-    
-    console.log('All required tables have been checked and created if needed.');
   } catch (error) {
     console.error('Error checking and creating tables:', error);
   } finally {
