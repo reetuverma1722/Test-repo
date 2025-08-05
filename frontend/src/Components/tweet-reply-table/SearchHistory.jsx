@@ -303,8 +303,6 @@ const SearchHistory = () => {
   const handlePost = (tweet) => {
     setSelectedTweet(tweet);
     setEditedReply(tweet.reply || "");
-    localStorage.setItem("selected_tweet_id", tweet.id);
-    localStorage.setItem("selected_tweet_reply", tweet.reply || "");
     setIsEditing(false);
     setOpen(true);
   };

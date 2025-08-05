@@ -180,6 +180,7 @@ const Dashboard = () => {
   
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setLogoutOpen(false);
     navigate("/login");
   };
@@ -534,9 +535,7 @@ const Dashboard = () => {
     }
 
     // Ensure there's always a token for protected routes
-    if (!localStorage.getItem("token")) {
-      localStorage.setItem("token", "dummy-token");
-    }
+    
   }, [navigate]);
 
   const formatNumber = (num) => {
