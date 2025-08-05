@@ -528,8 +528,8 @@ const PostHistory = () => {
                             label={post.keyword || "N/A"}
                             size="small"
                             sx={{
-                              backgroundColor: "rgba(244, 67, 54, 0.1)",
-                              color: "#f44336",
+                              backgroundColor: "#E5EFEE",
+                              color: "#3A7A82",
                               fontWeight: 500,
                             }}
                           />
