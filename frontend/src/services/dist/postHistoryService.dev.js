@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports["default"] = exports.isRepostAllowed = exports.formatTimeSince = exports.addFromSearch = exports.updateLinkedInEngagementMetrics = exports.updateEngagementMetrics = exports.deleteLinkedInPost = exports.deletePost = exports.repostLinkedInPost = exports.repostPost = exports.getLinkedInPostHistory = exports.getPostHistory = exports.getLinkedInAccounts = exports.getAccounts = void 0;
+exports["default"] = exports.isRepostAllowed = exports.formatTimeSince = exports.addFromSearch = exports.scrapeReplyEngagement = exports.updateLinkedInEngagementMetrics = exports.updateEngagementMetrics = exports.deleteLinkedInPost = exports.deletePost = exports.repostLinkedInPost = exports.repostPost = exports.getLinkedInPostHistory = exports.getPostHistory = exports.getLinkedInAccounts = exports.getAccounts = void 0;
 var BASE_URL = 'http://localhost:5000/api'; // Helper function for GET requests
 
 var apiGet = function apiGet(endpoint) {
@@ -594,28 +594,107 @@ var updateLinkedInEngagementMetrics = function updateLinkedInEngagementMetrics(p
       }
     }
   }, null, null, [[2, 22]]);
-}; // Add a post from search history to post_history
+}; // Scrape engagement data for a reply ID
 
 
 exports.updateLinkedInEngagementMetrics = updateLinkedInEngagementMetrics;
 
-var addFromSearch = function addFromSearch(postData) {
+var scrapeReplyEngagement = function scrapeReplyEngagement(replyId, accountId) {
   var token,
+      headers,
+      body,
+      res,
+      result,
       _args13 = arguments;
-  return regeneratorRuntime.async(function addFromSearch$(_context13) {
+  return regeneratorRuntime.async(function scrapeReplyEngagement$(_context13) {
     while (1) {
       switch (_context13.prev = _context13.next) {
         case 0:
-          token = _args13.length > 1 && _args13[1] !== undefined ? _args13[1] : null;
-          _context13.next = 3;
+          token = _args13.length > 2 && _args13[2] !== undefined ? _args13[2] : null;
+          _context13.prev = 1;
+          console.log("Scraping engagement for reply ID: ".concat(replyId));
+          headers = {
+            'Content-Type': 'application/json',
+            Authorization: "Bearer ".concat(token || 'dummy-token')
+          };
+          body = JSON.stringify({
+            replyId: replyId,
+            accountId: accountId
+          });
+          console.log('Request URL:', "".concat(BASE_URL, "/scrape-reply-engagement"));
+          console.log('Request headers:', headers);
+          console.log('Request body:', body);
+          _context13.next = 10;
+          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/scrape-reply-engagement"), {
+            method: 'POST',
+            headers: headers,
+            body: body
+          }));
+
+        case 10:
+          res = _context13.sent;
+          console.log(body, "body");
+          console.log('Response status:', res.status);
+          _context13.next = 15;
+          return regeneratorRuntime.awrap(res.json());
+
+        case 15:
+          result = _context13.sent;
+          console.log('Response data:', result);
+
+          if (res.ok) {
+            _context13.next = 20;
+            break;
+          }
+
+          console.error('API error:', result);
+          return _context13.abrupt("return", {
+            success: false,
+            message: result.message || "API error: ".concat(res.status),
+            error: result
+          });
+
+        case 20:
+          return _context13.abrupt("return", result);
+
+        case 23:
+          _context13.prev = 23;
+          _context13.t0 = _context13["catch"](1);
+          console.error('Network or parsing error:', _context13.t0);
+          return _context13.abrupt("return", {
+            success: false,
+            message: _context13.t0.message || 'Network error',
+            error: _context13.t0
+          });
+
+        case 27:
+        case "end":
+          return _context13.stop();
+      }
+    }
+  }, null, null, [[1, 23]]);
+}; // Add a post from search history to post_history
+
+
+exports.scrapeReplyEngagement = scrapeReplyEngagement;
+
+var addFromSearch = function addFromSearch(postData) {
+  var token,
+      _args14 = arguments;
+  return regeneratorRuntime.async(function addFromSearch$(_context14) {
+    while (1) {
+      switch (_context14.prev = _context14.next) {
+        case 0:
+          token = _args14.length > 1 && _args14[1] !== undefined ? _args14[1] : null;
+          _context14.next = 3;
           return regeneratorRuntime.awrap(apiPost('/add-from-search', postData, token));
 
         case 3:
-          return _context13.abrupt("return", _context13.sent);
+          return _context14.abrupt("return", _context14.sent);
 
         case 4:
         case "end":
-          return _context13.stop();
+          return _context14.stop();
       }
     }
   });
@@ -662,6 +741,7 @@ var _default = {
   addFromSearch: addFromSearch,
   updateEngagementMetrics: updateEngagementMetrics,
   updateLinkedInEngagementMetrics: updateLinkedInEngagementMetrics,
+  scrapeReplyEngagement: scrapeReplyEngagement,
   formatTimeSince: formatTimeSince,
   isRepostAllowed: isRepostAllowed
 };

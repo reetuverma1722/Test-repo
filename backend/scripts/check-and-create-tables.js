@@ -157,6 +157,55 @@ async function checkAndCreateTables() {
       await client.query(postHistorySql);
     } else {
       console.log('Post history table already exists.');
+      
+      // Check if reply_id column exists in post_history table
+      try {
+        const replyIdColumnCheck = await client.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_schema = 'public'
+            AND table_name = 'post_history'
+            AND column_name = 'reply_id'
+          );
+        `);
+        
+        if (!replyIdColumnCheck.rows[0].exists) {
+          console.log('Adding reply_id column to post_history table...');
+          await client.query(`
+            ALTER TABLE post_history ADD COLUMN reply_id VARCHAR(255);
+            CREATE INDEX idx_post_history_reply_id ON post_history(reply_id);
+          `);
+          console.log('Added reply_id column to post_history table.');
+        } else {
+          console.log('reply_id column already exists in post_history table.');
+        }
+      } catch (err) {
+        console.log('Error checking for reply_id column:', err.message);
+      }
+    }
+    
+    // Check if twitter_password column exists in social_media_accounts table
+    try {
+      const passwordColumnCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns
+          WHERE table_schema = 'public'
+          AND table_name = 'social_media_accounts'
+          AND column_name = 'twitter_password'
+        );
+      `);
+      
+      if (!passwordColumnCheck.rows[0].exists) {
+        console.log('Adding twitter_password column to social_media_accounts table...');
+        await client.query(`
+          ALTER TABLE social_media_accounts ADD COLUMN twitter_password TEXT;
+        `);
+        console.log('Added twitter_password column to social_media_accounts table.');
+      } else {
+        console.log('twitter_password column already exists in social_media_accounts table.');
+      }
+    } catch (err) {
+      console.log('Error checking for twitter_password column:', err.message);
     }
   } catch (error) {
     console.error('Error checking and creating tables:', error);

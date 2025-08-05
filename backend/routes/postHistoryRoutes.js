@@ -76,7 +76,7 @@ router.get('/history/:id', checkAuth, async (req, res) => {
     
     // Fetch post history for the account
     const result = await pool.query(
-      `SELECT ph.id, ph.post_text, ph.post_url, ph.posted_at, ph.engagement_count,
+      `SELECT ph.id, ph.post_text, ph.post_url, ph.posted_at, ph.engagement_count,ph.reply_id,ph.account_id,
               ph.likes_count, ph.retweets_count, ph.created_at, ph.updated_at,
               k.text as keyword, k.min_likes, k.min_retweets, k.min_followers,
               (NOW() - ph.created_at) as time_since_fetch
