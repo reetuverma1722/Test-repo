@@ -12,8 +12,8 @@
 /* Header Section */
 .header {
   padding: 80px 40px 60px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-bottom: 1px solid #e5e7eb;
+  background:#E5EFEE;
+  border-bottom: 1px solid #bbf7d0;
 }
 
 .logo-container {
@@ -50,7 +50,7 @@
 }
 
 .cta-button {
-  background-color: #1a1a1a;
+  background-color: #4896A0;
   color: #ffffff;
   padding: 16px 32px;
   font-size: 1rem;
@@ -60,15 +60,15 @@
   font-weight: 500;
   font-family: inherit;
   transition: all 0.2s ease-in-out;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
   text-transform: none;
   letter-spacing: 0.01em;
 }
 
 .cta-button:hover {
-  background-color: #000000;
+  background-color: #047857;
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
 }
 
 /* Methodology Section */
@@ -104,9 +104,9 @@
 
 .methodology-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 32px;
-  max-width: 1200px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -117,15 +117,15 @@
   border-radius: 12px;
   transition: all 0.3s ease;
   animation: fadeInUp 1s ease-out;
-  background-color: #f8f9fa;
-  border: 1px solid #e5e7eb;
+  background-color: #E5EFEE;
+  border: none;
   text-align: left;
 }
 
 .methodology-step:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border-color: #d1d5db;
+  border-color: #86efac;
 }
 
 .step-number {
@@ -156,7 +156,7 @@
 .step-icon {
   font-size: 24px;
   margin-bottom: 16px;
-  color: #2563eb;
+  color: #4D99A3;
 }
 
 .methodology-step h3 {
@@ -177,10 +177,10 @@
 
 /* Features Section */
 .features-section {
-  background-color: #f8f9fa;
+  background-color: #E5EFEE;
   margin: 0;
   padding: 80px 40px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: none;
 }
 
 .features-section h2 {
@@ -203,9 +203,9 @@
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 32px;
-  max-width: 1200px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -214,21 +214,21 @@
   padding: 32px;
   border-radius: 12px;
   text-align: left;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #E5EFEE;
   transition: all 0.3s ease;
   animation: fadeInUp 1.2s ease-out;
 }
 
 .feature-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border-color: #d1d5db;
+  box-shadow: 0 8px 32px rgba(5, 150, 105, 0.1);
+  border-color: #E5EFEE;
 }
 
 .feature-icon {
   font-size: 24px;
   margin-bottom: 20px;
-  color: #2563eb;
+  color: #059669;
 }
 
 .feature-card h3 {
@@ -328,7 +328,7 @@
 .cta-section {
   margin: 0;
   padding: 80px 40px;
-  background-color: #f8f9fa;
+  background-color: #E5EFEE;
   text-align: center;
   animation: fadeInUp 1s ease-out;
 }
@@ -506,11 +506,13 @@
   }
   
   .methodology-steps {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
   }
   
   .features-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
   }
   
   .testimonials-container {
@@ -530,6 +532,16 @@
     padding: 60px 16px;
   }
   
+  .methodology-steps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
   .footer-content {
     padding: 48px 16px 32px;
   }
@@ -541,12 +553,12 @@
 
 /* Focus states for accessibility */
 .cta-button:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #059669;
   outline-offset: 2px;
 }
 
 .footer-links-column ul li a:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #059669;
   outline-offset: 2px;
   border-radius: 4px;
 }

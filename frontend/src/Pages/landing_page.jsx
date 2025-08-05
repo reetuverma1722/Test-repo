@@ -83,7 +83,7 @@ const LandingPage = () => {
             <div className="methodology-step" key={title}>
               {/* <div className="step-number">{number}</div> */}
               <div className="step-content">
-                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#4896a1' /></div>
+                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#4896A0' /></div>
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>
@@ -121,7 +121,7 @@ const LandingPage = () => {
             },
           ].map(({ icon, title, text }, index) => (
             <div className="feature-card" key={title}>
-              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#4896a1' /></div>
+              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#4896A0' /></div>
               <h3>{title}</h3>
               <p>{text}</p>
             </div>
