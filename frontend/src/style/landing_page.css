@@ -1,12 +1,19 @@
-/* Perplexity-inspired Landing Page - Font-focused theme */
+/* fkGroteskNeue Landing Page - Green theme variant */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 .oask-container {
-  font-family: 'fkGroteskNeue', 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'fkGroteskNeue', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   background-color: #ffffff;
   padding: 0;
   color: #1a1a1a;
   text-align: center;
   min-height: 100vh;
   line-height: 1.6;
+}
+
+/* Ensure fkGroteskNeue is applied to all text elements */
+.oask-container * {
+  font-family: 'fkGroteskNeue', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* Header Section */
@@ -16,31 +23,52 @@
   border-bottom: 1px solid #bbf7d0;
 }
 
-.logo-container {
+.header-logo-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   margin-bottom: 32px;
+  gap: 24px;
 }
 
-.qss-logo {
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.buzly-logo {
   height: 48px;
-  margin-right: 16px;
-  filter: grayscale(20%);
+  width: auto;
+  object-fit: contain;
+
 }
 
-.header h1 {
-  font-size: clamp(2.5rem, 5vw, 3.0rem);
+.brand-name {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-right: 10px;
+}
+
+.header-title {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: 700;
-  margin-bottom: 0;
+  margin: 0;
   color: #1a1a1a;
   letter-spacing: -0.02em;
   line-height: 1.2;
   max-width: 900px;
-  margin: 0 auto 24px;
 }
 
 .header p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   max-width: 600px;
   margin: 0 auto 40px;
   font-size: 1.125rem;
@@ -50,6 +78,7 @@
 }
 
 .cta-button {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   background-color: #4896A0;
   color: #ffffff;
   padding: 16px 32px;
@@ -58,17 +87,16 @@
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  font-family: inherit;
   transition: all 0.2s ease-in-out;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 2px 8px rgba(72, 150, 160, 0.2);
   text-transform: none;
   letter-spacing: 0.01em;
 }
 
 .cta-button:hover {
-  background-color: #047857;
+  background-color: #3a7a82;
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 4px 16px rgba(72, 150, 160, 0.3);
 }
 
 /* Methodology Section */
@@ -86,6 +114,7 @@
 }
 
 .methodology-header h2 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: clamp(2rem, 4vw, 2.5rem);
   font-weight: 700;
   margin-bottom: 16px;
@@ -94,6 +123,7 @@
 }
 
 .methodology-header p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   max-width: 600px;
   margin: 0 auto;
   font-size: 1.125rem;
@@ -156,10 +186,11 @@
 .step-icon {
   font-size: 24px;
   margin-bottom: 16px;
-  color: #4D99A3;
+  color: #4896A0;
 }
 
 .methodology-step h3 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 1.5rem;
   color: #1a1a1a;
   margin-bottom: 12px;
@@ -168,6 +199,7 @@
 }
 
 .methodology-step p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 1rem;
   color: #666666;
   line-height: 1.6;
@@ -184,6 +216,7 @@
 }
 
 .features-section h2 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: clamp(2rem, 4vw, 2.5rem);
   font-weight: 700;
   margin-bottom: 16px;
@@ -193,6 +226,7 @@
 }
 
 .features-section > p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   max-width: 600px;
   margin: 0 auto 48px;
   font-size: 1.125rem;
@@ -228,10 +262,11 @@
 .feature-icon {
   font-size: 24px;
   margin-bottom: 20px;
-  color: #059669;
+  color: #4896A0;
 }
 
 .feature-card h3 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 1.25rem;
   color: #1a1a1a;
   margin-bottom: 12px;
@@ -240,6 +275,7 @@
 }
 
 .feature-card p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 1rem;
   color: #666666;
   line-height: 1.6;
@@ -256,6 +292,7 @@
 }
 
 .testimonials-section h2 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: clamp(2rem, 4vw, 2.5rem);
   font-weight: 700;
   margin-bottom: 16px;
@@ -265,6 +302,7 @@
 }
 
 .testimonials-section > p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   max-width: 600px;
   margin: 0 auto 48px;
   font-size: 1.125rem;
@@ -298,6 +336,7 @@
 }
 
 .testimonial-text {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-style: normal;
   margin-bottom: 24px;
   color: #1a1a1a;
@@ -313,12 +352,14 @@
 }
 
 .testimonial-author strong {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   color: #1a1a1a;
   font-weight: 600;
   font-size: 1rem;
 }
 
 .testimonial-author span {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 0.875rem;
   color: #666666;
   font-weight: 400;
@@ -334,6 +375,7 @@
 }
 
 .cta-section h2 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: clamp(2rem, 4vw, 2.5rem);
   font-weight: 700;
   margin-bottom: 16px;
@@ -342,6 +384,7 @@
 }
 
 .cta-section p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   max-width: 600px;
   margin: 0 auto 40px;
   font-size: 1.125rem;
@@ -388,6 +431,7 @@
 }
 
 .footer-logo h3 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 1.5rem;
   margin-bottom: 0;
   color: #ffffff;
@@ -396,6 +440,7 @@
 }
 
 .footer-logo p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 1rem;
   color: #999999;
   margin: 0;
@@ -416,6 +461,7 @@
 }
 
 .footer-links-column h4 {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 0.875rem;
   margin-bottom: 20px;
   color: #ffffff;
@@ -435,6 +481,7 @@
 }
 
 .footer-links-column ul li a {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   color: #999999;
   text-decoration: none;
   font-size: 0.875rem;
@@ -453,6 +500,7 @@
 }
 
 .footer-bottom p {
+  font-family: 'fkGroteskNeue', 'Inter', sans-serif;
   font-size: 0.875rem;
   color: #666666;
   margin: 0;
@@ -553,12 +601,12 @@
 
 /* Focus states for accessibility */
 .cta-button:focus {
-  outline: 2px solid #059669;
+  outline: 2px solid #4896A0;
   outline-offset: 2px;
 }
 
 .footer-links-column ul li a:focus {
-  outline: 2px solid #059669;
+  outline: 2px solid #4896A0;
   outline-offset: 2px;
   border-radius: 4px;
 }

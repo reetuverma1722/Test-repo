@@ -12,33 +12,16 @@ const LandingPage = () => {
   return (
     <div className="oask-container">
       <header className="header">
-        <div className="logo-container">
-          {/* <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo" /> */}
-          <div>
-             <div
-                className="logo-container"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginTop: "0.6rem",
-                }}
-              >
-                <img
-                  src="/images/Buzly.png"
-                  alt="Buzly Logo"
-                  className="buzly-logo"
-                  style={{
-                    height: "1.5em", // Scales with text
-                    marginRight: "0.1em",
-                    verticalAlign: "middle",
-                    // Match the image tone
-                  }}
-                />
-                <span style={{ fontWeight: 600 }}>uzzly</span>
-              </div>
-               <h1>Optimize, Achieve, Scale, Keep Growing</h1>
+        <div className="header-logo-container">
+          <div className="brand-logo">
+            <img
+              src="/images/Buzly.png"
+              alt="Buzly Logo"
+              className="buzly-logo"
+            />
+            <span className="brand-name">uzzly</span>
           </div>
-         
+          <h1 className="header-title">Optimize, Achieve, Scale, Keep Growing</h1>
         </div>
         <p>
           Buzzly AI is your intelligent social media automation system that helps teams track, analyze, and automatically repost high-performing content.
@@ -107,7 +90,7 @@ const LandingPage = () => {
             <div className="methodology-step" key={title}>
               {/* <div className="step-number">{number}</div> */}
               <div className="step-content">
-                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#4896A0' /></div>
+                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#3A7A82' /></div>
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>
@@ -145,7 +128,7 @@ const LandingPage = () => {
             },
           ].map(({ icon, title, text }, index) => (
             <div className="feature-card" key={title}>
-              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#4896A0' /></div>
+              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#3A7A82' /></div>
               <h3>{title}</h3>
               <p>{text}</p>
             </div>
