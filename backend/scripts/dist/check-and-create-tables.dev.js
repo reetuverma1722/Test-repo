@@ -198,7 +198,7 @@ function checkAndCreateTables() {
         case 82:
           _context.prev = 82;
           _context.next = 85;
-          return regeneratorRuntime.awrap(client.query("\n        SELECT EXISTS (\n          SELECT FROM information_schema.columns\n          WHERE table_schema = 'public'\n          AND table_name = 'social_media_accounts'\n          AND column_name = 'twitter_password'\n        );\n      "));
+          return regeneratorRuntime.awrap(client.query("\n        SELECT EXISTS (\n          SELECT FROM information_schema.columns\n          WHERE table_schema = 'public'\n          AND table_name = 'social_media_accounts'\n          AND column_name = 'password'\n        );\n      "));
 
         case 85:
           passwordColumnCheck = _context.sent;
@@ -208,7 +208,7 @@ function checkAndCreateTables() {
             break;
           }
 
-          console.log('Adding twitter_password column to social_media_accounts table...');
+          console.log('Adding password column to social_media_accounts table...');
           _context.next = 90;
           return regeneratorRuntime.awrap(client.query("\n          ALTER TABLE social_media_accounts ADD COLUMN twitter_password TEXT;\n        "));
 

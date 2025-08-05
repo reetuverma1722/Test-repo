@@ -1708,7 +1708,7 @@ router.post("/reply-to-tweet", async (req, res) => {
 
 async function postReplyWithPuppeteerAndGetId(
   username,
-  twitter_password,
+  password,
   tweetId,
   replyText
 ) {
@@ -1744,7 +1744,7 @@ async function postReplyWithPuppeteerAndGetId(
 
     // Fill password
     await page.waitForSelector('input[name="password"]', { timeout: 10000 });
-    await page.type('input[name="password"]', twitter_password);
+    await page.type('input[name="password"]', password);
     await page.keyboard.press("Enter");
     await page.waitForNavigation({ waitUntil: "networkidle2" });
     console.log("✅ Logged in");

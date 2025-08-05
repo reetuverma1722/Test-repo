@@ -191,14 +191,14 @@ async function checkAndCreateTables() {
           SELECT FROM information_schema.columns
           WHERE table_schema = 'public'
           AND table_name = 'social_media_accounts'
-          AND column_name = 'twitter_password'
+          AND column_name = 'password'
         );
       `);
       
       if (!passwordColumnCheck.rows[0].exists) {
         console.log('Adding twitter_password column to social_media_accounts table...');
         await client.query(`
-          ALTER TABLE social_media_accounts ADD COLUMN twitter_password TEXT;
+          ALTER TABLE social_media_accounts ADD COLUMN password TEXT;
         `);
         console.log('Added twitter_password column to social_media_accounts table.');
       } else {

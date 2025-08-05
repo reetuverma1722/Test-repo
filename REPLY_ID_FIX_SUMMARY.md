@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_post_history_reply_id ON post_history(reply_id);
 
 #### Updated database initialization script:
 - Modified `Test-repo/backend/scripts/check-and-create-tables.js` to automatically add the `reply_id` column if it doesn't exist
-- Also added `twitter_password` column check for completeness
+- Also added `password` column check for completeness
 
 ### 2. Backend API Improvements
 
