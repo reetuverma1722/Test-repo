@@ -325,6 +325,15 @@ const Dashboard = () => {
     setIsPosting(true);
 
     try {
+      // Find the keyword ID based on the tweet's keyword
+      const tweetKeyword = selectedTweet.keyword;
+      const keywordObj = keywords.find(k => k.text === tweetKeyword);
+      const keywordId = keywordObj ? keywordObj.id : null;
+
+      console.log('Tweet keyword:', tweetKeyword);
+      console.log('Found keyword object:', keywordObj);
+      console.log('Using keyword ID:', keywordId);
+
       // Call the API to post the reply
       // This endpoint already adds the post to history, so we don't need to do it separately
       const response = await axios.post(
@@ -333,7 +342,7 @@ const Dashboard = () => {
           tweetId: selectedTweet.id,
           replyText: editedReply,
           selectedAccountId: selectedAccount,
-          keywordId: null, // Pass this in case it's needed for the history
+          keywordId: keywordId, // Pass the correct keyword ID
           tweetText: selectedTweet.text,
           likeCount: selectedTweet.like_count,
           retweetCount: selectedTweet.retweet_count,
