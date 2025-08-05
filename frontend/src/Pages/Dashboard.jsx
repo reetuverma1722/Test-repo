@@ -182,7 +182,7 @@ const Dashboard = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setLogoutOpen(false);
-    navigate("/login");
+    navigate("/");
   };
 
   // Fetch all keywords
