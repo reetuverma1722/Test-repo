@@ -563,7 +563,7 @@ const SearchHistory = () => {
               
                   color: "#4896a1",
                 }}>
-                        Keyword
+                        KEYWORD
                       </Typography>
                       <TextField
                         select
