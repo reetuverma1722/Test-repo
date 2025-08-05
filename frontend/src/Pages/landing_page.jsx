@@ -14,7 +14,31 @@ const LandingPage = () => {
       <header className="header">
         <div className="logo-container">
           {/* <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo" /> */}
-          <h1>Buzzly AI - Optimize, Achieve, Scale, Keep Growing</h1>
+          <div>
+             <div
+                className="logo-container"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginTop: "0.6rem",
+                }}
+              >
+                <img
+                  src="/images/Buzly.png"
+                  alt="Buzly Logo"
+                  className="buzly-logo"
+                  style={{
+                    height: "1.5em", // Scales with text
+                    marginRight: "0.1em",
+                    verticalAlign: "middle",
+                    // Match the image tone
+                  }}
+                />
+                <span style={{ fontWeight: 600 }}>uzzly</span>
+              </div>
+               <h1>Optimize, Achieve, Scale, Keep Growing</h1>
+          </div>
+         
         </div>
         <p>
           Buzzly AI is your intelligent social media automation system that helps teams track, analyze, and automatically repost high-performing content.
