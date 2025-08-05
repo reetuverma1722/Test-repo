@@ -91,7 +91,7 @@ const puppeteer = require('puppeteer');
     console.log(tweets);
   } catch (error) {
     console.error('❌ Error during scraping:', error.message);
-    await page.screenshot({ path: 'error-screenshot.png' });
+  
     console.log('📸 Screenshot saved to error-screenshot.png');
   } finally {
     // await browser.close(); // Keep it open if you're debugging
