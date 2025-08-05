@@ -46,6 +46,7 @@ import {
   isRepostAllowed,
   deletePost,
   updateEngagementMetrics,
+  scrapeReplyEngagement,
 } from "../../services/postHistoryService";
 
 const PostHistory = () => {
@@ -67,6 +68,7 @@ const PostHistory = () => {
   const [updating, setUpdating] = useState(null);
   const [updateSuccess, setUpdateSuccess] = useState(null);
   const [updateError, setUpdateError] = useState(null);
+  const [loadingEngagement, setLoadingEngagement] = useState(false);
 
   // Fetch accounts on component mount
   useEffect(() => {
@@ -194,12 +196,8 @@ const PostHistory = () => {
     }
   };
 
-  // Handle update engagement metrics
+  // Handle update engagement metrics using real reply ID scraping
   const handleUpdateEngagement = async (postId) => {
-    // Use static post ID for now to ensure correct update
-    const staticPostId = "19";
-    console.log(`Using static post ID: ${staticPostId} instead of: ${postId}`);
-    postId = staticPostId;
     try {
       setUpdating(postId);
       setUpdateError(null);
@@ -207,110 +205,65 @@ const PostHistory = () => {
 
       console.log(`Updating engagement metrics for post ID: ${postId}`);
 
-      // We need to fetch the actual engagement metrics for the user's reply
-      // This requires accessing the Twitter API or scraping the reply page
-      
-      // Skip URL check since we're using a static post ID
-      console.log('Using static post ID, bypassing URL check');
-      
-      // Log the post if found
+      // Find the post to get the reply_id
       const post = posts.find(p => p.id === parseInt(postId));
-      if (post) {
-        console.log('Found post:', post);
-      } else {
-        console.log('Post not found in local state, but continuing anyway');
+      if (!post) {
+        setUpdateError('Post not found');
+        return;
       }
+
+      console.log('Found post:', post);
+
+      // Check if the post has a reply_id
+      if (!post.reply_id) {
+        setUpdateError('No reply ID found for this post. Only posts with reply IDs can have engagement scraped.');
+        return;
+      }
+
+      console.log(`Scraping engagement for reply ID: ${post.reply_id}`);
+
+      // Call the scraping service to get real engagement data
+      const scrapeResult = await scrapeReplyEngagement(post.reply_id,post.account_id);
       
-      // In a production environment, we would use the Twitter API to fetch the actual engagement metrics
-      
-      // The correct Twitter API endpoint to use is:
-      // GET https://api.twitter.com/2/tweets?ids=YOUR_TWEET_ID&tweet.fields=public_metrics
-      
-      // For this specific tweet ID: 1950867009715007993
-      // The API call would be:
-      // GET https://api.twitter.com/2/tweets?ids=1950867009715007993&tweet.fields=public_metrics
-      
-      // The response would look something like:
-      // {
-      //   "data": [
-      //     {
-      //       "id": "1950867009715007993",
-      //       "text": "Your reply text here",
-      //       "public_metrics": {
-      //         "retweet_count": 0,
-      //         "reply_count": 0,
-      //         "like_count": 1,
-      //         "quote_count": 0
-      //       }
-      //     }
-      //   ]
-      // }
-      
-      // We would then extract the metrics:
-      // const metrics = {
-      //   likes_count: data.data[0].public_metrics.like_count,
-      //   retweets_count: data.data[0].public_metrics.retweet_count
-      // };
-      
-      // Since we can't make actual API calls in this demo, we'll use these values:
+      if (!scrapeResult.success) {
+        setUpdateError(`Failed to scrape engagement: ${scrapeResult.message || 'Unknown error'}`);
+        return;
+      }
+
+      console.log('Scraped engagement data:', scrapeResult.data);
+
+      // Extract metrics from scraped data
       const metrics = {
-        likes_count: 1, // This would come from Twitter API for tweet ID 1950867009715007993
-        retweets_count: 0  // This would come from Twitter API for tweet ID 1950867009715007993
+        likes_count: scrapeResult.data.likes || 0,
+        retweets_count: scrapeResult.data.retweets || 0,
+        replies_count: scrapeResult.data.replies || 0,
+        views_count: scrapeResult.data.views || 0
       };
-      
-      console.log('Using simulated engagement metrics:', metrics);
-      console.log('In a real implementation, these would be fetched from the Twitter API');
 
       console.log("Metrics to update:", metrics);
       
-      try {
-        console.log("Before API call - postId:", postId);
-        console.log("Before API call - URL:", `/update-engagement/${postId}`);
-        console.log("Before API call - Headers:", { 'Content-Type': 'application/json', 'Authorization': 'Bearer dummy-token' });
-        console.log("Before API call - Body:", JSON.stringify(metrics));
-        
-        const result = await updateEngagementMetrics(postId, metrics);
-        console.log("Update result:", result);
+      // Update the database with the scraped metrics
+      const updateResult = await updateEngagementMetrics(postId, metrics);
+      console.log("Update result:", updateResult);
 
-        if (result.success) {
-          setUpdateSuccess(`Reply engagement metrics updated successfully! These metrics (${metrics.likes_count} like, ${metrics.retweets_count} retweets) reflect the actual engagement on your reply, not the original post.`);
+      if (updateResult.success) {
+        setUpdateSuccess(`Reply engagement metrics updated successfully! Scraped real data: ${metrics.likes_count} likes, ${metrics.retweets_count} retweets, ${metrics.replies_count} replies, ${metrics.views_count} views.`);
 
-          // Refresh the post history
-          const updatedResult = await getPostHistory(selectedAccount);
-          if (updatedResult.success && updatedResult.data) {
-            setPosts(updatedResult.data);
-          }
-        } else {
-          setUpdateError(
-            `Failed to update: ${result.message || "Unknown error"}`
-          );
+        // Refresh the post history to show updated data
+        const updatedResult = await getPostHistory(selectedAccount);
+        if (updatedResult.success && updatedResult.data) {
+          setPosts(updatedResult.data);
         }
-      } catch (apiErr) {
-        console.error("API Error:", apiErr);
-        console.error("API Error details:", {
-          name: apiErr.name,
-          message: apiErr.message,
-          stack: apiErr.stack,
-          response: apiErr.response ? {
-            status: apiErr.response.status,
-            statusText: apiErr.response.statusText,
-            data: apiErr.response.data
-          } : 'No response data'
-        });
-        setUpdateError(`API Error: ${apiErr.message || "Unknown error"}`);
+      } else {
+        setUpdateError(`Failed to update database: ${updateResult.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Error updating engagement metrics:", err);
-      console.error("Error details:", {
-        name: err.name,
-        message: err.message,
-        stack: err.stack
-      });
       setUpdateError(`Failed to update: ${err.message}`);
     } finally {
       setUpdating(null);
 
-      // Clear success/error messages after 5 seconds (increased from 3)
+      // Clear success/error messages after 5 seconds
       setTimeout(() => {
         setUpdateSuccess(null);
         setUpdateError(null);
@@ -335,10 +288,57 @@ const PostHistory = () => {
     return accounts.find((account) => account.id === selectedAccount) || {};
   };
 
-  // Handle engagement view popup
-  const handleEngagementViewClick = (event, postId) => {
+  // Handle engagement view popup with real-time scraping
+  const handleEngagementViewClick = async (event, postId) => {
     setPopoverAnchorEl(event.currentTarget);
     setSelectedPostId(postId);
+
+    // Find the post to get the reply_id
+    const post = posts.find(p => p.id === postId);
+    if (!post) {
+      console.error('Post not found');
+      return;
+    }
+
+    // Check if the post has a reply_id
+    if (!post.reply_id) {
+      console.log('No reply ID found for this post - showing existing data');
+      return;
+    }
+
+    console.log(`Fetching real-time engagement for reply ID: ${post.reply_id}`);
+    setLoadingEngagement(true);
+
+    try {
+      // Call the scraping service to get real engagement data
+      const scrapeResult = await scrapeReplyEngagement(post.reply_id,post.account_id);
+      
+      if (scrapeResult.success && scrapeResult.data) {
+        console.log('Scraped engagement data:', scrapeResult.data);
+        
+        // Update the post data in the local state with scraped metrics
+        const updatedPosts = posts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              likes_count: scrapeResult.data.likes || 0,
+              retweets_count: scrapeResult.data.retweets || 0,
+              replies_count: scrapeResult.data.replies || 0,
+              views_count: scrapeResult.data.views || 0
+            };
+          }
+          return p;
+        });
+        
+        setPosts(updatedPosts);
+      } else {
+        console.error('Failed to scrape engagement:', scrapeResult.message);
+      }
+    } catch (err) {
+      console.error('Error scraping engagement:', err);
+    } finally {
+      setLoadingEngagement(false);
+    }
   };
 
   const handlePopoverClose = () => {
@@ -668,9 +668,17 @@ const PostHistory = () => {
             </Typography>
           </Box>
           <CardContent>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {/* Likes */}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {loadingEngagement ? (
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 4 }}>
+                <CircularProgress color="primary" size={40} />
+                <Typography variant="body2" color="text.secondary">
+                  Scraping real-time engagement data...
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {/* Likes */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
                     bgcolor: "rgba(244, 67, 54, 0.1)",
@@ -721,6 +729,58 @@ const PostHistory = () => {
 
               <Divider />
 
+              {/* Replies */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(255, 152, 0, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <RepeatIcon sx={{ color: "#ff9800" }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Replies
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().replies_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Views */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box
+                  sx={{
+                    bgcolor: "rgba(156, 39, 176, 0.1)",
+                    borderRadius: "50%",
+                    p: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <VisibilityIcon sx={{ color: "#9c27b0" }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Views
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {getSelectedPost().views_count || 0}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider />
+
               {/* Total Engagement */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
@@ -740,7 +800,7 @@ const PostHistory = () => {
                     Total Engagement
                   </Typography>
                   <Typography variant="h6" fontWeight="bold">
-                    {getSelectedPost().engagement_count || 0}
+                    {(getSelectedPost().likes_count || 0) + (getSelectedPost().retweets_count || 0) + (getSelectedPost().replies_count || 0)}
                   </Typography>
                 </Box>
               </Box>
@@ -773,8 +833,9 @@ const PostHistory = () => {
                   </Box>
                 </>
               )}
-            </Box>
-          </CardContent>
+             </Box>
+           )}
+         </CardContent>
         </Card>
       </Popover>
     </Box>

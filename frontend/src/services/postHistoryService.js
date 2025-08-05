@@ -275,6 +275,53 @@ export const updateLinkedInEngagementMetrics = async (postId, metrics, token = n
   }
 };
 
+// Scrape engagement data for a reply ID
+export const scrapeReplyEngagement = async (replyId, accountId, token = null) => {
+  try {
+    console.log(`Scraping engagement for reply ID: ${replyId}`);
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token || 'dummy-token'}`,
+    };
+
+    const body = JSON.stringify({ replyId, accountId });
+
+    console.log('Request URL:', `${BASE_URL}/scrape-reply-engagement`);
+    console.log('Request headers:', headers);
+    console.log('Request body:', body);
+
+    const res = await fetch(`${BASE_URL}/scrape-reply-engagement`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+  console.log(body,"body");
+    console.log('Response status:', res.status);
+
+    const result = await res.json();
+    console.log('Response data:', result);
+
+    if (!res.ok) {
+      console.error('API error:', result);
+      return {
+        success: false,
+        message: result.message || `API error: ${res.status}`,
+        error: result,
+      };
+    }
+
+    return result;
+  } catch (err) {
+    console.error('Network or parsing error:', err);
+    return {
+      success: false,
+      message: err.message || 'Network error',
+      error: err,
+    };
+  }
+};
+
 // Add a post from search history to post_history
 export const addFromSearch = async (postData, token = null) => {
   return await apiPost('/add-from-search', postData, token);
@@ -316,6 +363,7 @@ export default {
   addFromSearch,
   updateEngagementMetrics,
   updateLinkedInEngagementMetrics,
+  scrapeReplyEngagement,
   formatTimeSince,
   isRepostAllowed
 };

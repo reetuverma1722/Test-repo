@@ -386,6 +386,8 @@ const db = require("../db");
 const axios = require("axios");
 const puppeteer = require("puppeteer");
 const pool = require("../db"); // PostgreSQL Pool
+const path = require('path');
+const fs = require('fs');
 const { exec } = require("child_process");
 let fetch;
 (async () => {
@@ -2139,5 +2141,202 @@ async function getReplyIdForTweet(account_name, twitter_password, tweetId) {
   }
 }
 
+
+// GET /api/scrape-reply-engagement/:replyId - Scrape engagement data for a specific reply
+router.post("/scrape-reply-engagement", async (req, res) => {
+  const { replyId, accountId } = req.body;
+
+  if (!replyId) {
+    return res.status(400).json({
+      success: false,
+      message: "Reply ID is required"
+    });
+  }
+
+  if (!accountId) {
+    return res.status(400).json({
+      success: false,
+      message: "Account ID is required"
+    });
+  }
+
+  try {
+    // Fetch account credentials from DB
+    const result = await pool.query(
+      "SELECT account_name, twitter_password FROM social_media_accounts WHERE id = $1",
+      [accountId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Twitter account not found"
+      });
+    }
+
+    const { account_name, twitter_password } = result.rows[0];
+
+    // Scrape engagement data using Puppeteer
+    const engagementData = await scrapeReplyEngagement(
+      account_name,
+      twitter_password,
+      replyId
+    );
+
+    if (engagementData.success) {
+      return res.json({
+        success: true,
+        message: "Engagement data scraped successfully",
+        data: engagementData.metrics
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to scrape engagement data",
+        error: engagementData.error
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error scraping reply engagement:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to scrape engagement data",
+      error: error.message
+    });
+  }
+});
+
+
+async function scrapeReplyEngagement(username, twitter_password, replyId) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-web-security",
+    ],
+    defaultViewport: null,
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+
+  const timestamp = Date.now();
+  const screenshotDir = path.join(__dirname, 'screenshots');
+  if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir);
+
+  const result = {
+    success: false,
+    error: null,
+    metrics: {
+      likes_count: 0,
+      retweets_count: 0,
+      replies_count: 0,
+      views_count: 0
+    }
+  };
+
+  try {
+    console.log("🔐 Logging in to Twitter...");
+
+    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+    await page.screenshot({ path: `${screenshotDir}/3_before_password_extract_${timestamp}.png` });
+
+    await page.waitForSelector('input[name="text"]', { timeout: 10000 });
+    await page.type('input[name="text"]', username);
+    await page.keyboard.press("Enter");
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+
+    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
+    await page.type('input[name="password"]', twitter_password);
+    await page.keyboard.press("Enter");
+
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+    console.log("✅ Logged in successfully");
+
+    await page.screenshot({ path: `${screenshotDir}/1_after_login_${timestamp}.png` });
+
+    // Go to reply page
+    const replyUrl = `https://twitter.com/i/web/status/${replyId}`;
+    console.log(`📊 Navigating to reply: ${replyUrl}`);
+    await page.goto(replyUrl, { waitUntil: "networkidle2", timeout: 30000 });
+
+    await page.waitForSelector('article', { timeout: 15000 });
+    console.log("✅ Reply page loaded");
+
+    await page.screenshot({ path: `${screenshotDir}/2_reply_page_loaded_${timestamp}.png` });
+
+    // Extract metrics
+  const metrics = await page.evaluate(() => {
+  function parseCount(text) {
+    const num = parseInt(text.replace(/[^\d]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+
+  // ✅ Likes
+  const likeBtn = document.querySelector('button[data-testid="unlike"]') 
+               || document.querySelector('button[data-testid="like"]');
+  const likes_count = likeBtn?.querySelector('span.css-1jxf684')
+    ? parseCount(likeBtn.querySelector('span.css-1jxf684').textContent)
+    : 0;
+
+  // ✅ Reposts (retweet/unretweet)
+  const repostBtn = document.querySelector('button[data-testid="retweet"]') 
+                 || document.querySelector('button[data-testid="unretweet"]');
+  let retweets_count = 0;
+  if (repostBtn) {
+    const ariaLabel = repostBtn.getAttribute('aria-label') || '';
+    const match = ariaLabel.match(/(\d+)/);
+    if (match) retweets_count = parseInt(match[1]);
+    else {
+      const span = repostBtn.querySelector('span.css-1jxf684');
+      retweets_count = span ? parseCount(span.textContent) : 0;
+    }
+  }
+
+  // ✅ Views from matching "Views" label
+  let views_count = 0;
+  const viewDivs = document.querySelectorAll('div[style*="color: rgb(231, 233, 234)"]');
+  for (const container of viewDivs) {
+    const label = container.querySelector('span.css-1jxf684:last-child');
+    if (label && label.textContent.trim() === "Views") {
+      const countSpan = container.querySelector('span.css-1jxf684:not(:last-child)');
+      if (countSpan) {
+        views_count = parseCount(countSpan.textContent.trim());
+        break;
+      }
+    }
+  }
+
+  return {
+    likes_count,
+    retweets_count,
+    views_count
+  };
+});
+
+
+    await page.screenshot({ path: `${screenshotDir}/3_after_metrics_extract_${timestamp}.png` });
+
+    if (metrics) {
+      result.success = true;
+      result.metrics = metrics;
+      console.log("✅ Metrics extracted:", metrics);
+    } else {
+      result.error = "Metrics extraction failed";
+      console.error("❌ Failed to extract metrics");
+    }
+
+    return result;
+  } catch (err) {
+    console.error("❌ Puppeteer error:", err.message);
+    result.success = false;
+    result.error = err.message;
+    return result;
+  } finally {
+    await browser.close();
+  }
+}
 
 module.exports = router;
