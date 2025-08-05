@@ -76,9 +76,7 @@ const Appbar = () => {
                 sx={{
                   color: theme.palette.text.primary,
                   backgroundColor: 'rgba(0,0,0,0.05)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                  }
+                  
                 }}
               >
                 <Logout fontSize="small" />

@@ -68,6 +68,7 @@ import SocialMediaSettings from "./SocialMediaSettings";
 import { getAccountsByPlatform } from "../services/socialMediaAccountsService";
 import TrendingAnalytics from "./TrendingAnalytics";
 import PostHistoryPage from "./PostHistoryPage";
+import { motion } from "framer-motion";
 
 const drawerWidth = 260;
 
@@ -863,7 +864,7 @@ const Dashboard = () => {
             gap: 1,
           }}
         >
-          <VpnKeyIcon sx={{ color: "#f44336" }} />
+          <VpnKeyIcon sx={{ color: "#4D99A3" }} />
           Change Password
         </DialogTitle>
         <IconButton
@@ -1067,7 +1068,7 @@ const Dashboard = () => {
         <Box
           sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, py: 2 }}
         >
-          <List component="nav" disablePadding>
+          {/* <List component="nav" disablePadding>
             <ListItem
               button
               selected={location.pathname.includes("/dashboard")}
@@ -1280,6 +1281,83 @@ const Dashboard = () => {
                 }}
               />
             </ListItem>
+          </List> */}
+          <List component="nav" disablePadding>
+            {[
+              {
+                label: "Dashboard",
+                path: "/dashboard",
+                icon: <DashboardIcon fontSize="small" />,
+                key: "dashboard",
+              },
+              {
+                label: "Search History",
+                path: "/history",
+                icon: <HistoryIcon fontSize="small" />,
+                key: "search-history",
+              },
+              {
+                label: "Social Media Settings",
+                path: "/social-media-settings",
+                icon: <SettingsIcon fontSize="small" />,
+                key: "social-media-settings",
+              },
+              {
+                label: "Post History",
+                path: "/post-history",
+                icon: <PostAddIcon fontSize="small" />,
+                key: "post-history",
+              },
+            ].map((item,index) => {
+              const isSelected = location.pathname.includes(item.path);
+              return (
+               
+   <ListItem
+                  key={item.key}
+                  button
+                  selected={isSelected}
+                  onClick={() => {
+                    setActive(item.key);
+                    navigate(item.path);
+                  }}
+                  sx={{
+                    mb: 1,
+                    mx: 1.5,
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    height: "44px",
+                    transition: "all 0.2s ease",
+                                    backgroundColor: isSelected ? "#4D99A3" : "transparent",
+                    "&:hover": {
+                      backgroundColor: isSelected ? "#4D99A3" : "#f0f0f0",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      color: isSelected ? "#fff" : "#4D99A3",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                 <ListItemText
+  primary={item.label}
+  primaryTypographyProps={{
+    sx: {
+       color: isSelected ? '#fff !important' : '#4D99A3',
+      fontSize: "2rem",
+      fontWeight: isSelected ? 900 : 500,
+      marginTop: "16px",
+    },
+  }}
+/>
+
+                </ListItem>
+
+               
+              );
+            })}
           </List>
         </Box>
       </Drawer>
@@ -1413,17 +1491,17 @@ const Dashboard = () => {
                       gap: 0.5,
                     }}
                   >
-                    <EmailIcon fontSize="small" sx={{ color: "#FF0000" }} />
+                    <EmailIcon fontSize="small" sx={{ color: "#4D99A3" }} />
                     {userEmail}
                   </Typography>
                 </Box>
                 <Divider />
                 <MenuItem onClick={handlePasswordChange} sx={{ py: 1.5 }}>
-                  <VpnKeyIcon sx={{ mr: 2, color: "#FF0000" }} />
+                  <VpnKeyIcon sx={{ mr: 2, mb: 2, color: "#4D99A3" }} />
                   <Typography variant="body2">Change Password</Typography>
                 </MenuItem>
                 <MenuItem onClick={() => setLogoutOpen(true)} sx={{ py: 1.5 }}>
-                  <Logout sx={{ mr: 2, color: "#FF0000" }} />
+                  <Logout sx={{ mr: 2, mb: 2, color: "#4D99A3" }} />
                   <Typography variant="body2">Logout</Typography>
                 </MenuItem>
               </Menu>
