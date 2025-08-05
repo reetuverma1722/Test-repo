@@ -210,7 +210,7 @@ function checkAndCreateTables() {
 
           console.log('Adding password column to social_media_accounts table...');
           _context.next = 90;
-          return regeneratorRuntime.awrap(client.query("\n          ALTER TABLE social_media_accounts ADD COLUMN twitter_password TEXT;\n        "));
+          return regeneratorRuntime.awrap(client.query("\n          ALTER TABLE social_media_accounts ADD COLUMN password TEXT;\n        "));
 
         case 90:
           console.log('Added twitter_password column to social_media_accounts table.');
