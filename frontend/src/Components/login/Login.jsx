@@ -187,7 +187,8 @@ const Login = ({ isPopup = false }) => {
         mt: isPopup ? 0 : 8,
         mb: isPopup ? 0 : 4,
         p: isPopup ? 0 : undefined,
-        width: isPopup ? '100%' : undefined
+        width: isPopup ? '100%' : undefined,
+        padding:"45px"
       }}>
         <Card elevation={isPopup ? 0 : 3} sx={{
           borderRadius: 2,
@@ -196,7 +197,8 @@ const Login = ({ isPopup = false }) => {
           width: isPopup ? '95%' : 'auto',
           mx: 'auto',
           backgroundColor: 'transparent',
-          boxShadow: isPopup ? 'none' : undefined
+          boxShadow: isPopup ? 'none' : undefined,
+          
         }}>
           <CardContent sx={{ p: 4, backgroundColor: 'transparent' }}>
             <Typography variant="h5" component="h1" align="center" gutterBottom sx={{ mb: 3 }}>
