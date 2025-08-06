@@ -27,6 +27,7 @@ import {
   Snackbar,
   Tooltip,
   InputAdornment,
+  Checkbox,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -197,6 +198,8 @@ const SocialMediaAccounts = () => {
     useState(false);
   const [showTwitterPassword, setShowTwitterPassword] = useState(false);
   const [showLinkedInPassword, setShowLinkedInPassword] = useState(false);
+  const [isPremiumAccount, setIsPremiumAccount] = useState(true); // Default to true for premium accounts
+  const [isDefaultAccount, setIsDefaultAccount] = useState(true); // Default to true for setting as default
   const [currentAccount, setCurrentAccount] = useState({
     id: null,
     platform: "twitter",
@@ -297,6 +300,12 @@ const SocialMediaAccounts = () => {
       const response = await getAllAccounts(token);
       setAccounts(response.data || []);
       console.log("res", response);
+      
+      // If any accounts exist, uncheck both checkboxes
+      if (response.data && response.data.length > 0) {
+        setIsPremiumAccount(false);
+        setIsDefaultAccount(false);
+      }
     } catch (err) {
       setError("Failed to fetch accounts. Please try again later.");
       console.error("Error fetching accounts:", err);
@@ -460,6 +469,8 @@ const SocialMediaAccounts = () => {
         refreshToken: "", // Will be set by backend if needed
         tokenExpiresAt: null,
         twitterPassword: currentAccount.twitterPassword,
+        isPremium: isPremiumAccount, // Add premium status to the account data
+        isDefault: isDefaultAccount, // Add default status to the account data
       };
 
       // Console log the data being sent to backend
@@ -962,6 +973,47 @@ const SocialMediaAccounts = () => {
                           ),
                         }}
                       />
+                      
+                      {/* Account Settings Checkboxes */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2, gap: 1 }}>
+                        {/* Premium Account Checkbox */}
+                        <FormControl>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Checkbox
+                              checked={isPremiumAccount}
+                              onChange={(e) => setIsPremiumAccount(e.target.checked)}
+                              sx={{
+                                color: '#1DA1F2',
+                                '&.Mui-checked': {
+                                  color: '#1DA1F2',
+                                },
+                              }}
+                            />
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              Premium Account
+                            </Typography>
+                          </Box>
+                        </FormControl>
+                        
+                        {/* Default Account Checkbox */}
+                        <FormControl>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Checkbox
+                              checked={isDefaultAccount}
+                              onChange={(e) => setIsDefaultAccount(e.target.checked)}
+                              sx={{
+                                color: '#1DA1F2',
+                                '&.Mui-checked': {
+                                  color: '#1DA1F2',
+                                },
+                              }}
+                            />
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              Set as default for scanning/fetching
+                            </Typography>
+                          </Box>
+                        </FormControl>
+                      </Box>
 
                       <Button
                         variant="primary"
