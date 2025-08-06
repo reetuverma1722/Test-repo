@@ -85,6 +85,7 @@ const Dashboard = () => {
   const menuOpen = Boolean(anchorEl);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [dataSource, setDataSource] = useState("cache");
+  const [postedTweets, setPostedTweets] = useState([]);
 
   // Twitter accounts state
   const [twitterAccounts, setTwitterAccounts] = useState([]);
@@ -161,9 +162,16 @@ const Dashboard = () => {
       console.log("Fetched Twitter accounts:", accounts);
       setTwitterAccounts(accounts);
 
-      // Don't set any account as selected by default
-      // This will show "All Accounts" as the default selection
-      setSelectedAccount(null);
+      // Find the default account if any
+      const defaultAccount = accounts.find(account => account.isDefault === true);
+      if (defaultAccount) {
+        console.log("Found default account:", defaultAccount);
+        setSelectedAccount(defaultAccount.id);
+      } else {
+        // Don't set any account as selected by default
+        // This will show "All Accounts" as the default selection
+        setSelectedAccount(null);
+      }
     } catch (err) {
       console.error("Failed to fetch Twitter accounts", err);
       setTwitterAccounts([]); // Reset to empty array on error
@@ -172,11 +180,34 @@ const Dashboard = () => {
     }
   };
 
+  // Fetch post history to check which tweets have been replied to
+  const fetchPostHistory = async () => {
+    try {
+      // Fetch post history for all accounts
+      const response = await fetch("http://localhost:5000/api/search/history");
+      const data = await response.json();
+      
+      // Extract tweet IDs from post history
+      const postedIds = data.map(post => post.id);
+      setPostedTweets(postedIds);
+      console.log("Tweets already posted:", postedIds);
+    } catch (err) {
+      console.error("Failed to fetch post history:", err);
+    }
+  };
+
   // Fetch keywords and Twitter accounts on component mount
   useEffect(() => {
     fetchTwitterAccounts();
-    fetchAllPosts(); // Automatically fetch posts when component mounts
+    fetchPostHistory();
   }, []);
+
+  // Fetch posts when selectedAccount changes
+  useEffect(() => {
+    if (twitterAccounts.length > 0) {
+      fetchAllPosts(selectedAccount);
+    }
+  }, [selectedAccount, twitterAccounts]);
   
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -353,6 +384,9 @@ const Dashboard = () => {
       if (response.data.success) {
         // Show success message
         alert("Reply posted successfully!");
+
+        // Add the tweet ID to the postedTweets array
+        setPostedTweets(prev => [...prev, selectedTweet.id]);
 
         // Close the dialog
         setPostDialogOpen(false);
@@ -1890,17 +1924,23 @@ const Dashboard = () => {
                           sx={{
                             borderRadius: 4,
                             overflow: "hidden",
-                            border: "1px solid #e5e7eb",
+                            border: postedTweets.includes(tweet.id)
+                              ? "2px solid #4caf50" // Green border for posted tweets
+                              : "1px solid #e5e7eb",
                             transition: "all 0.3s ease",
                             height: "100%",
                             width: "18.98vw",
-                            backgroundColor: "#fafafa",
+                            backgroundColor: postedTweets.includes(tweet.id)
+                              ? "#f1f8e9" // Light green background for posted tweets
+                              : "#fafafa",
                             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                             cursor: "pointer", // pointer on hover
                             "&:hover": {
                               transform: "translateY(-4px)",
                               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
-                              borderColor: "#d1d5db",
+                              borderColor: postedTweets.includes(tweet.id)
+                                ? "#43a047" // Darker green on hover
+                                : "#d1d5db",
                             },
                           }}
                         >
@@ -2191,14 +2231,18 @@ const Dashboard = () => {
                                 variant="contained"
                                 size="medium"
                                 startIcon={
-                                  <EditIcon sx={{ fontSize: "18px" }} />
+                                  postedTweets.includes(tweet.id)
+                                    ? <CheckIcon sx={{ fontSize: "18px" }} />
+                                    : <EditIcon sx={{ fontSize: "18px" }} />
                                 }
                                 onClick={() => handlePost(tweet)}
+                                disabled={postedTweets.includes(tweet.id)}
                                 sx={{
                                   width: "100%",
                                   borderRadius: 3,
-
-                                  backgroundColor: "#21808db0",
+                                  backgroundColor: postedTweets.includes(tweet.id)
+                                    ? "#4caf50" // Green for posted tweets
+                                    : "#21808db0",
                                   color: "#E8E8E3",
                                   border: "none",
                                   fontWeight: 600,
@@ -2207,8 +2251,12 @@ const Dashboard = () => {
                                   py: 1.5,
                                   boxShadow: "0 2px 8px rgba(26, 26, 26, 0.15)",
                                   "&:hover": {
-                                    backgroundColor: "#E8E8E3",
-                                    color: "#21808db0",
+                                    backgroundColor: postedTweets.includes(tweet.id)
+                                      ? "#43a047" // Darker green on hover
+                                      : "#E8E8E3",
+                                    color: postedTweets.includes(tweet.id)
+                                      ? "#E8E8E3"
+                                      : "#21808db0",
                                     border: "none",
                                     boxShadow:
                                       "0 4px 16px rgba(26, 26, 26, 0.25)",
@@ -2217,7 +2265,7 @@ const Dashboard = () => {
                                   transition: "all 0.2s ease",
                                 }}
                               >
-                                Post Reply
+                                {postedTweets.includes(tweet.id) ? "Posted" : "Post Reply"}
                               </Button>
                             </Box>
                           </CardContent>

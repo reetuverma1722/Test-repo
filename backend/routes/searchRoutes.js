@@ -1419,113 +1419,113 @@ router.post("/postReply", async (req, res) => {
   }
 });
 
-router.post("/reply-to-tweet", async (req, res) => {
-  const {
-    tweetId,
-    replyText,
-    selectedAccountId,
-    keywordId,
-    tweetText,
-    likeCount,
-    retweetCount
-  } = req.body;
-  console.log(req.body);
+// router.post("/reply-to-tweet", async (req, res) => {
+//   const {
+//     tweetId,
+//     replyText,
+//     selectedAccountId,
+//     keywordId,
+//     tweetText,
+//     likeCount,
+//     retweetCount
+//   } = req.body;
+//   console.log(req.body);
 
-  if (!tweetId || !replyText || !selectedAccountId) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Missing required fields" });
-  }
+//   if (!tweetId || !replyText || !selectedAccountId) {
+//     return res
+//       .status(400)
+//       .json({ success: false, message: "Missing required fields" });
+//   }
 
-  try {
-    // Fetch user credentials from DB
-    const result = await pool.query(
-      "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
-      [selectedAccountId]
-    );
+//   try {
+//     // Fetch user credentials from DB
+//     const result = await pool.query(
+//       "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
+//       [selectedAccountId]
+//     );
 
-    if (result.rows.length === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Twitter account not found for user",
-        });
-    }
+//     if (result.rows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({
+//           success: false,
+//           message: "Twitter account not found for user",
+//         });
+//     }
 
-    const { account_name, password  } = result.rows[0];
+//     const { account_name, password  } = result.rows[0];
 
-    // Run Puppeteer login and reply - now returns a result object with reply ID
-    const postResult = await postReplyWithPuppeteerAndGetId(
-      account_name,
-      password ,
-      tweetId,
-      replyText
-    );
+//     // Run Puppeteer login and reply - now returns a result object with reply ID
+//     const postResult = await postReplyWithPuppeteerAndGetId(
+//       account_name,
+//       password ,
+//       tweetId,
+//       replyText
+//     );
 
-    if (postResult.success) {
-      // Store the reply in post_history with the reply ID
-      try {
-        const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+//     if (postResult.success) {
+//       // Store the reply in post_history with the reply ID
+//       try {
+//         const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
 
-        const insertQuery = `
-          INSERT INTO post_history
-            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id)
-          VALUES
-            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8)
-          RETURNING id
-        `;
+//         const insertQuery = `
+//           INSERT INTO post_history
+//             (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id)
+//           VALUES
+//             ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8)
+//           RETURNING id
+//         `;
         
-        // Use the provided like and retweet counts if available, otherwise default to 0
-        const values = [
-          replyText,
-          tweetUrl,
-          (likeCount || 0) + (retweetCount || 0), // Initial engagement count based on original tweet
-          likeCount || 0,                         // Initial likes count
-          retweetCount || 0,                      // Initial retweets count
-          keywordId || null,
-          selectedAccountId,
-          postResult.replyId || null, // Store the reply ID
-        ];
+//         // Use the provided like and retweet counts if available, otherwise default to 0
+//         const values = [
+//           replyText,
+//           tweetUrl,
+//           (likeCount || 0) + (retweetCount || 0), // Initial engagement count based on original tweet
+//           likeCount || 0,                         // Initial likes count
+//           retweetCount || 0,                      // Initial retweets count
+//           keywordId || null,
+//           selectedAccountId,
+//           postResult.replyId || null, // Store the reply ID
+//         ];
 
-        const insertResult = await pool.query(insertQuery, values);
-        const postHistoryId = insertResult.rows[0].id;
+//         const insertResult = await pool.query(insertQuery, values);
+//         const postHistoryId = insertResult.rows[0].id;
 
-        return res.json({
-          success: true,
-          message: "Reply posted successfully",
-          details: {
-            ...postResult.details,
-            post_history_id: postHistoryId,
-            reply_id: postResult.replyId
-          },
-        });
-      } catch (dbError) {
-        console.error("Error saving reply to post history:", dbError);
-        // Still return success since the tweet was posted
-        return res.json({
-          success: true,
-          message: "Reply posted successfully, but failed to save to history",
-          details: postResult.details || {},
-        });
-      }
-    } else {
-      // If posting failed but didn't throw an exception
-      return res.status(400).json({
-        success: false,
-        message: "Failed to post reply",
-        error: postResult.error || "Unknown error",
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error in replying to tweet:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to post reply",
-      error: error.message,
-    });
-  }
-});
+//         return res.json({
+//           success: true,
+//           message: "Reply posted successfully",
+//           details: {
+//             ...postResult.details,
+//             post_history_id: postHistoryId,
+//             reply_id: postResult.replyId
+//           },
+//         });
+//       } catch (dbError) {
+//         console.error("Error saving reply to post history:", dbError);
+//         // Still return success since the tweet was posted
+//         return res.json({
+//           success: true,
+//           message: "Reply posted successfully, but failed to save to history",
+//           details: postResult.details || {},
+//         });
+//       }
+//     } else {
+//       // If posting failed but didn't throw an exception
+//       return res.status(400).json({
+//         success: false,
+//         message: "Failed to post reply",
+//         error: postResult.error || "Unknown error",
+//       });
+//     }
+//   } catch (error) {
+//     console.error("❌ Error in replying to tweet:", error.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to post reply",
+//       error: error.message,
+//     });
+//   }
+// });
 
 // async function postReplyWithPuppeteer(
 //   username,
@@ -1705,7 +1705,115 @@ router.post("/reply-to-tweet", async (req, res) => {
 //     await browser.close();
 //   }
 // }
+router.post("/reply-to-tweet", async (req, res) => {
+  const {
+    tweetId,
+    replyText,
+    selectedAccountId,
+    keywordId,
+    tweetText,
+    likeCount,
+    retweetCount
+  } = req.body;
+  console.log(req.body);
 
+  if (!tweetId || !replyText || !selectedAccountId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing required fields" });
+  }
+
+  try {
+    // Fetch user credentials from DB
+    const result = await pool.query(
+      "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
+      [selectedAccountId]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Twitter account not found for user",
+        });
+    }
+
+    const { account_name, password  } = result.rows[0];
+
+    // Run Puppeteer login and reply - now returns a result object with reply ID
+    const postResult = await postReplyWithPuppeteerAndGetId(
+      account_name,
+      password ,
+      tweetId,
+      replyText
+    );
+
+    if (postResult.success) {
+      // Store the reply in post_history with the reply ID
+      try {
+        const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+
+        const insertQuery = `
+          INSERT INTO post_history
+            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id,tweetId)
+          VALUES
+            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8,$9)
+          RETURNING id
+        `;
+
+        // Use the provided like and retweet counts if available, otherwise default to 0
+        const values = [
+          replyText,
+          tweetUrl,
+          (likeCount || 0) + (retweetCount || 0), // Initial engagement count based on original tweet
+          likeCount || 0,                         // Initial likes count
+          retweetCount || 0,                      // Initial retweets count
+          keywordId || null,
+          selectedAccountId,
+          postResult.replyId || null,
+          tweetId // Store the reply ID
+        ];
+
+        const insertResult = await pool.query(insertQuery, values);
+        const postHistoryId = insertResult.rows[0].id;
+
+        return res.json({
+          success: true,
+          message: "Reply posted successfully",
+          details: {
+            ...postResult.details,
+            post_history_id: postHistoryId,
+            reply_id: postResult.replyId
+          },
+        });
+      } catch (dbError) {
+        console.error("Error saving reply to post history:", dbError);
+        // Still return success since the tweet was posted
+        return res.json({
+          success: true,
+          message: "Reply posted successfully, but failed to save to history",
+          details: postResult.details || {},
+        });
+      }
+    } else {
+      // If posting failed but didn't throw an exception
+      return res.status(400).json({
+        success: false,
+        message: "Failed to post reply",
+        error: postResult.error || "Unknown error",
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error in replying to tweet:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to post reply",
+      error: error.message,
+    });
+  }
+});
+ 
 async function postReplyWithPuppeteerAndGetId(
   username,
   password,
@@ -1879,27 +1987,7 @@ async function postReplyWithPuppeteerAndGetId(
   }
 }
 
-// PUT /api/search/update/:id - Update reply for a tweet
-// router.put("/update/:id", async (req, res) => {
-//   const { id } = req.params;
-//   const { reply } = req.body;
 
-//   if (!reply) {
-//     return res.status(400).json({ message: 'Reply content is required' });
-//   }
-
-//   try {
-//     await db.query(
-//       `UPDATE tweets SET reply = $1 WHERE id = $2`,
-//       [reply, id]
-//     );
-
-//     res.json({ success: true, message: 'Reply updated successfully' });
-//   } catch (err) {
-//     console.error("Update error:", err.message);
-//     res.status(500).json({ error: "Update failed" });
-//   }
-// });
 
 // DELETE /api/history/:id - Delete a post from post history
 router.delete("/history/:id", async (req, res) => {
