@@ -69,7 +69,6 @@ import { getAccountsByPlatform } from "../services/socialMediaAccountsService";
 import TrendingAnalytics from "./TrendingAnalytics";
 import PostHistoryPage from "./PostHistoryPage";
 import { getPostHistoryall } from "../services/postHistoryService";
-import { motion } from "framer-motion";
 
 const drawerWidth = 260;
 
@@ -87,7 +86,11 @@ const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [dataSource, setDataSource] = useState("cache");
   const [postedTweets, setPostedTweets] = useState([]);
-
+  
+  // Prompt management state
+  const [availablePrompts, setAvailablePrompts] = useState([]);
+  const [selectedPromptId, setSelectedPromptId] = useState("");
+  const [isGeneratingReply, setIsGeneratingReply] = useState(false);
   // Twitter accounts state
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -183,7 +186,7 @@ const Dashboard = () => {
   };
 
   // Fetch post history to check which tweets have been replied to
-  const fetchPostHistory = async () => {
+const fetchPostHistory = async () => {
     try {
       // Fetch post history for all accounts
       const result = await getPostHistoryall();
@@ -207,12 +210,47 @@ const Dashboard = () => {
       console.error("Failed to fetch post history:", err);
     }
   };
-
   // Fetch keywords and Twitter accounts on component mount
   useEffect(() => {
     fetchTwitterAccounts();
     fetchPostHistory();
+    fetchPrompts();
   }, []);
+  
+  // Fetch prompts from the database
+  const fetchPrompts = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/prompts");
+      if (response.data.success && response.data.data) {
+        // Map the prompts from the database to the format we need
+        const dbPrompts = response.data.data.map(prompt => ({
+          id: prompt.id.toString(),
+          name: prompt.name,
+          content: prompt.content,
+          model: prompt.model
+        }));
+        
+        setAvailablePrompts(dbPrompts);
+        
+        // Find the default prompt
+        const defaultPrompt = dbPrompts.find(p => p.name === "Default");
+        if (defaultPrompt) {
+          setSelectedPromptId(defaultPrompt.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching prompts:", error);
+      // If we can't fetch prompts from the database, use default ones
+      setAvailablePrompts([
+        {
+          id: "default",
+          name: "Default",
+          content: `Reply smartly to this tweet:\n"{tweetContent}"\nMake it personal, friendly, and relevant.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        }
+      ]);
+    }
+  };
 
   // Fetch posts when selectedAccount changes
   useEffect(() => {
@@ -359,6 +397,47 @@ const Dashboard = () => {
     localStorage.setItem("selected_tweet_reply", tweet.reply || "");
     setPostDialogOpen(true);
   };
+  
+  // Generate reply using selected prompt and model
+  const generateReply = async () => {
+    if (!selectedTweet) return;
+    
+    try {
+      setIsGeneratingReply(true);
+      
+      // Get the selected prompt
+      const selectedPrompt = availablePrompts.find(p => p.id === selectedPromptId);
+      if (!selectedPrompt) {
+        console.error("No prompt selected");
+        return;
+      }
+      
+      // Replace {tweetContent} with the actual tweet text
+      const formattedPrompt = selectedPrompt.content.replace(/{tweetContent}/g, selectedTweet.text);
+      
+      // Call the backend to generate a reply
+      const response = await axios.post("http://localhost:5000/api/generate-reply", {
+        model: selectedPrompt.model,
+        messages: [
+          {
+            role: "user",
+            content: formattedPrompt
+          }
+        ]
+      });
+      
+      if (response.data && response.data.reply) {
+        setEditedReply(response.data.reply);
+      } else {
+        alert("Failed to generate reply");
+      }
+    } catch (error) {
+      console.error("Error generating reply:", error);
+      alert("Error generating reply: " + (error.message || "Unknown error"));
+    } finally {
+      setIsGeneratingReply(false);
+    }
+  };
 
   // Handle post submission
   const handlePostSubmit = async () => {
@@ -377,6 +456,11 @@ const Dashboard = () => {
       console.log('Tweet keyword:', tweetKeyword);
       console.log('Found keyword object:', keywordObj);
       console.log('Using keyword ID:', keywordId);
+      
+      // Get the selected prompt
+      const selectedPrompt = availablePrompts.find(p => p.id === selectedPromptId);
+      const model = selectedPrompt ? selectedPrompt.model : "meta-llama/llama-3-8b-instruct";
+      const promptContent = selectedPrompt ? selectedPrompt.content : "";
 
       // Call the API to post the reply
       // This endpoint already adds the post to history, so we don't need to do it separately
@@ -390,6 +474,8 @@ const Dashboard = () => {
           tweetText: selectedTweet.text,
           likeCount: selectedTweet.like_count,
           retweetCount: selectedTweet.retweet_count,
+          model: model,
+          promptContent: promptContent
         }
       );
 
@@ -712,6 +798,71 @@ const Dashboard = () => {
           </Typography>
 
           {/* Reply Input */}
+          {/* Prompt Selection */}
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{
+              fontFamily: "var(--brand-font)",
+              fontSize: "1.05rem",
+              fontWeight: 600,
+              color: "#333",
+              display: "flex",
+              alignItems: "center",
+              mt: 2,
+              "&::before": {
+                content: '""',
+                display: "inline-block",
+                width: "4px",
+                height: "16px",
+                backgroundColor: "#4D99A3",
+                marginRight: "8px",
+                borderRadius: "2px",
+              },
+            }}
+          >
+            Select Prompt Template
+          </Typography>
+          
+          <TextField
+            select
+            fullWidth
+            size="small"
+            value={selectedPromptId}
+            onChange={(e) => setSelectedPromptId(e.target.value)}
+            variant="outlined"
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "8px",
+              },
+            }}
+          >
+            {availablePrompts.map((prompt) => (
+              <MenuItem key={prompt.id} value={prompt.id}>
+                {prompt.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={generateReply}
+              disabled={isGeneratingReply || !selectedPromptId}
+              startIcon={isGeneratingReply ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                backgroundColor: "#4D99A3",
+                borderRadius: "8px",
+                "&:hover": {
+                  backgroundColor: "#3d7e85",
+                },
+              }}
+            >
+              {isGeneratingReply ? "Generating..." : "Generate Reply"}
+            </Button>
+          </Box>
+          
           <Typography
             variant="subtitle1"
             gutterBottom

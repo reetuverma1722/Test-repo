@@ -98,6 +98,32 @@ const SearchHistory = () => {
   const [successPopup, setSuccessPopup] = useState(false);
   const [errorPopup, setErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  
+  // State for prompt management
+  const [availablePrompts, setAvailablePrompts] = useState([
+    {
+      id: "default",
+      name: "Default",
+      content: `Reply smartly to this tweet:\n"{tweetContent}"\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents`
+    },
+    {
+      id: "professional",
+      name: "Professional",
+      content: `Craft a professional response to this tweet:\n"{tweetContent}".\nUse formal language, be concise, and maintain a business-appropriate tone.`
+    },
+    {
+      id: "engaging",
+      name: "Engaging",
+      content: `Create an engaging reply to this tweet:\n"{tweetContent}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`
+    },
+    {
+      id: "supportive",
+      name: "Supportive",
+      content: `Write a supportive response to this tweet:\n"{tweetContent}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`
+    }
+  ]);
+  const [selectedPromptId, setSelectedPromptId] = useState("default");
+  const [isGeneratingReply, setIsGeneratingReply] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -150,6 +176,12 @@ const SearchHistory = () => {
     fetchLinkedInHistory(selectedAccountId);
     fetchTwitterAccounts();
     fetchLinkedInAccounts();
+    
+    // Load saved prompt settings from localStorage
+    const savedPrompt = localStorage.getItem("selectedPrompt");
+    if (savedPrompt) {
+      setSelectedPromptId(savedPrompt === "custom" ? "default" : savedPrompt);
+    }
   }, []);
   
   // Extract unique keywords from history data
@@ -243,10 +275,27 @@ const SearchHistory = () => {
     try {
       setIsPosting(true);
       const endpoint = tabValue === 0 ? "reply-to-tweet" : "reply-to-linkedin";
+      
+      // Get the selected model from localStorage
+      const selectedModel = localStorage.getItem("selectedModel") || "meta-llama/llama-3-8b-instruct";
+      
+      // Get the selected prompt content
+      let promptContent;
+      const savedPrompt = localStorage.getItem("selectedPrompt");
+      
+      if (savedPrompt === "custom") {
+        promptContent = localStorage.getItem("customPrompt") || availablePrompts[0].content;
+      } else {
+        const promptObj = availablePrompts.find(p => p.id === (selectedPromptId || savedPrompt || "default"));
+        promptContent = promptObj ? promptObj.content : availablePrompts[0].content;
+      }
+      
       const res = await axios.post(`http://localhost:5000/api/${endpoint}`, {
         tweetId,
         replyText,
-        selectedAccountId: selectedAccountId
+        selectedAccountId: selectedAccountId,
+        model: selectedModel,
+        promptContent: promptContent
       });
 
       if (res.data.message === "Reply posted!") {
@@ -346,6 +395,55 @@ const SearchHistory = () => {
     setEditedReply(tweet.reply || "");
     setIsEditing(false);
     setOpen(true);
+  };
+  
+  const generateReply = async () => {
+    if (!selectedTweet) return;
+    
+    try {
+      setIsGeneratingReply(true);
+      
+      // Get the selected model from localStorage
+      const selectedModel = localStorage.getItem("selectedModel") || "meta-llama/llama-3-8b-instruct";
+      
+      // Get the selected prompt content
+      let promptContent;
+      const savedPrompt = localStorage.getItem("selectedPrompt");
+      
+      if (savedPrompt === "custom") {
+        promptContent = localStorage.getItem("customPrompt") || availablePrompts[0].content;
+      } else {
+        const promptObj = availablePrompts.find(p => p.id === (selectedPromptId || savedPrompt || "default"));
+        promptContent = promptObj ? promptObj.content : availablePrompts[0].content;
+      }
+      
+      // Replace {tweetContent} with the actual tweet text
+      const formattedPrompt = promptContent.replace(/{tweetContent}/g, selectedTweet.text);
+      
+      // Call the backend to generate a reply
+      const response = await axios.post("http://localhost:5000/api/generate-reply", {
+        model: selectedModel,
+        messages: [
+          {
+            role: "user",
+            content: formattedPrompt
+          }
+        ]
+      });
+      
+      if (response.data && response.data.reply) {
+        setEditedReply(response.data.reply);
+      } else {
+        setErrorMessage("Failed to generate reply");
+        setErrorPopup(true);
+      }
+    } catch (error) {
+      console.error("Error generating reply:", error);
+      setErrorMessage(error?.response?.data?.message || "Failed to generate reply");
+      setErrorPopup(true);
+    } finally {
+      setIsGeneratingReply(false);
+    }
   };
 
   const handleEdit = (tweet) => {
@@ -825,6 +923,61 @@ const SearchHistory = () => {
             Your Reply
           </Typography>
 
+          {/* Prompt Selection */}
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{
+              fontWeight: 600,
+              color: "#2e7d32",
+              mb: 2,
+            }}
+          >
+            Select Prompt Template
+          </Typography>
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <Select
+              value={selectedPromptId}
+              onChange={(e) => setSelectedPromptId(e.target.value)}
+              sx={{
+                mb: 2,
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "8px",
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#2e7d32",
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#2e7d32",
+                    borderWidth: "2px",
+                  },
+                },
+              }}
+            >
+              {availablePrompts.map((prompt) => (
+                <MenuItem key={prompt.id} value={prompt.id}>
+                  {prompt.name}
+                </MenuItem>
+              ))}
+            </Select>
+            
+            <Button
+              variant="contained"
+              onClick={generateReply}
+              disabled={isGeneratingReply}
+              sx={{
+                backgroundColor: "#2e7d32",
+                "&:hover": { backgroundColor: "#1b5e20" },
+                mb: 2
+              }}
+            >
+              {isGeneratingReply ? (
+                <CircularProgress size={24} sx={{ color: "white" }} />
+              ) : (
+                "Generate Reply"
+              )}
+            </Button>
+          </FormControl>
+
           {isEditing ? (
             <>
               <TextField
@@ -893,21 +1046,21 @@ const SearchHistory = () => {
               >
                 {editedReply || "No reply content yet."}
               </Typography>
-              <Tooltip title="Edit Reply">
-                <IconButton 
-                  onClick={() => setIsEditing(true)} 
-                  sx={{
-                    float: "right",
-                    mb: 2,
-                    color: "#2e7d32",
-                    "&:hover": {
-                      backgroundColor: "rgba(46, 125, 50, 0.08)",
-                    },
-                  }}
-                >
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
+              <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", mb: 2 }}>
+                <Tooltip title="Edit Reply">
+                  <IconButton
+                    onClick={() => setIsEditing(true)}
+                    sx={{
+                      color: "#2e7d32",
+                      "&:hover": {
+                        backgroundColor: "rgba(46, 125, 50, 0.08)",
+                      },
+                    }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
             </>
           )}
 

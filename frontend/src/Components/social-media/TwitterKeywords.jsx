@@ -46,6 +46,7 @@ import {
   getFilteredKeywords,
 } from "../../services/keywordService";
 import { getAccountsByPlatform } from "../../services/socialMediaAccountsService";
+import axios from "axios";
 
 const TwitterKeywords = () => {
   // State for keywords data
@@ -57,6 +58,44 @@ const TwitterKeywords = () => {
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+
+  // State for prompt management
+  const [promptManagementOpen, setPromptManagementOpen] = useState(false);
+  const [availableModels, setAvailableModels] = useState([
+    { id: "meta-llama/llama-3-8b-instruct", name: "Llama 3 8B Instruct" },
+    { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3 70B Instruct" },
+    { id: "anthropic/claude-3-opus-20240229", name: "Claude 3 Opus" },
+    { id: "anthropic/claude-3-sonnet-20240229", name: "Claude 3 Sonnet" },
+    { id: "anthropic/claude-3-haiku-20240307", name: "Claude 3 Haiku" },
+    { id: "openai/gpt-4o", name: "GPT-4o" }
+  ]);
+  const [selectedModel, setSelectedModel] = useState("meta-llama/llama-3-8b-instruct");
+  
+  const [availablePrompts, setAvailablePrompts] = useState([
+    {
+      id: "default",
+      name: "Default",
+      content: `Reply smartly to this tweet:\n"${'{tweetContent}'}".\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents`
+    },
+    {
+      id: "professional",
+      name: "Professional",
+      content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.`
+    },
+    {
+      id: "engaging",
+      name: "Engaging",
+      content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`
+    },
+    {
+      id: "supportive",
+      name: "Supportive",
+      content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`
+    }
+  ]);
+  const [selectedPrompt, setSelectedPrompt] = useState("default");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [isCustomPrompt, setIsCustomPrompt] = useState(false);
 
   // State for form
   const [formOpen, setFormOpen] = useState(false);
@@ -96,7 +135,56 @@ const TwitterKeywords = () => {
   useEffect(() => {
     fetchKeywords();
     fetchTwitterAccounts();
+    fetchPrompts();
   }, []);
+  
+  // Fetch prompts from the database
+  const fetchPrompts = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/prompts");
+      if (response.data.success && response.data.data) {
+        // Map the prompts from the database to the format we need
+        const dbPrompts = response.data.data.map(prompt => ({
+          id: prompt.id.toString(),
+          name: prompt.name,
+          content: prompt.content,
+          model: prompt.model
+        }));
+        
+        setAvailablePrompts(dbPrompts);
+        
+        // Find the default prompt
+        const defaultPrompt = dbPrompts.find(p => p.name === "Default");
+        if (defaultPrompt) {
+          setSelectedPrompt(defaultPrompt.id);
+          setSelectedModel(defaultPrompt.model);
+        }
+        
+        // Check if there's a saved prompt in localStorage
+        const savedPrompt = localStorage.getItem("selectedPrompt");
+        const savedModel = localStorage.getItem("selectedModel");
+        const savedCustomPrompt = localStorage.getItem("customPrompt");
+        
+        if (savedPrompt) {
+          if (savedPrompt === "custom") {
+            setIsCustomPrompt(true);
+            if (savedCustomPrompt) {
+              setCustomPrompt(savedCustomPrompt);
+            }
+          } else {
+            setSelectedPrompt(savedPrompt);
+          }
+        }
+        
+        if (savedModel) {
+          setSelectedModel(savedModel);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching prompts:", error);
+      // If we can't fetch prompts from the database, use the default ones
+    }
+  };
   
   // Fetch keywords when selected account changes
   useEffect(() => {
@@ -336,6 +424,20 @@ const TwitterKeywords = () => {
             sx={{backgroundColor:"#4896A0",border:"none"}}
           >
             Add Keyword
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setPromptManagementOpen(true)}
+            sx={{
+              borderColor: "#4896A0",
+              color: "#4896A0",
+              "&:hover": {
+                borderColor: "#3d7e85",
+                backgroundColor: "rgba(72, 150, 160, 0.04)"
+              }
+            }}
+          >
+            Manage Prompt
           </Button>
         </Box>
       </Box>
@@ -687,6 +789,167 @@ const TwitterKeywords = () => {
       </Dialog>
 
       {/* Filter Dialog removed - filters are now inline */}
+
+      {/* Prompt Management Dialog */}
+      <Dialog
+        open={promptManagementOpen}
+        onClose={() => setPromptManagementOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Manage AI Reply Prompts
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Select Model
+              </Typography>
+              <FormControl fullWidth>
+                <Select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                >
+                  {availableModels.map((model) => (
+                    <MenuItem key={model.id} value={model.id}>
+                      {model.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Select Prompt Template
+              </Typography>
+              <FormControl fullWidth>
+                <Select
+                  value={isCustomPrompt ? "custom" : selectedPrompt}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") {
+                      setIsCustomPrompt(true);
+                    } else {
+                      setIsCustomPrompt(false);
+                      setSelectedPrompt(e.target.value);
+                    }
+                  }}
+                >
+                  {availablePrompts.map((prompt) => (
+                    <MenuItem key={prompt.id} value={prompt.id}>
+                      {prompt.name}
+                    </MenuItem>
+                  ))}
+                  <MenuItem value="custom">Custom Prompt</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            {isCustomPrompt && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Custom Prompt
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="Enter your custom prompt here. Use {tweetContent} as a placeholder for the tweet text."
+                  helperText="Use {tweetContent} as a placeholder for the tweet text."
+                />
+              </Grid>
+            )}
+            
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Preview
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  backgroundColor: "rgba(72, 150, 160, 0.04)",
+                  borderColor: "rgba(72, 150, 160, 0.2)"
+                }}
+              >
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                  {isCustomPrompt
+                    ? customPrompt
+                    : availablePrompts.find(p => p.id === selectedPrompt)?.content || ""}
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPromptManagementOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                // Save to localStorage
+                localStorage.setItem("selectedModel", selectedModel);
+                localStorage.setItem("selectedPrompt", isCustomPrompt ? "custom" : selectedPrompt);
+                
+                // Save to database if it's a custom prompt
+                if (isCustomPrompt) {
+                  localStorage.setItem("customPrompt", customPrompt);
+                  
+                  // Create a new prompt in the database
+                  const promptName = "Custom " + new Date().toLocaleString();
+                  await axios.post("http://localhost:5000/api/prompts", {
+                    name: promptName,
+                    model: selectedModel,
+                    content: customPrompt,
+                    is_default: false
+                  });
+                  
+                  // Refresh prompts
+                  fetchPrompts();
+                } else {
+                  // Update the selected prompt in the database with the selected model
+                  const promptId = selectedPrompt;
+                  const selectedPromptObj = availablePrompts.find(p => p.id === promptId);
+                  
+                  if (selectedPromptObj) {
+                    await axios.put(`http://localhost:5000/api/prompts/${promptId}`, {
+                      name: selectedPromptObj.name,
+                      model: selectedModel,
+                      content: selectedPromptObj.content,
+                      is_default: selectedPromptObj.name === "Default"
+                    });
+                    
+                    // Refresh prompts
+                    fetchPrompts();
+                  }
+                }
+                
+                setPromptManagementOpen(false);
+                setNotification({
+                  open: true,
+                  message: "Prompt settings saved successfully",
+                  severity: "success",
+                });
+              } catch (error) {
+                console.error("Error saving prompt:", error);
+                setNotification({
+                  open: true,
+                  message: "Failed to save prompt settings",
+                  severity: "error",
+                });
+              }
+            }}
+            variant="contained"
+            sx={{ backgroundColor: "#4896A0" }}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Notification Snackbar */}
       <Snackbar

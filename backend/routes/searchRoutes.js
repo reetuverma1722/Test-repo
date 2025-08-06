@@ -398,16 +398,25 @@ const router = express.Router();
 
 const CHROME_PATH = `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"`;
 const USER_DATA_DIR = "C:\\chrome-profile";
-async function generateReply(tweetContent) {
+async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instruct", promptTemplate = null) {
   const apiKey = process.env.OPENROUTER_API_KEY;
+  
+  // Use the provided prompt template or fall back to the default
+  const promptContent = promptTemplate
+    ? promptTemplate.replace(/{tweetContent}/g, tweetContent)
+    : `Reply smartly to this tweet:\n"${tweetContent}"\nMake it personal, friendly, and relevant.Be professional and do not use emojis and crisp and small contents `;
+  
+  console.log(`Generating reply using model: ${model}`);
+  console.log(`Using prompt: ${promptContent}`);
+  
   const response = await axios.post(
     "https://openrouter.ai/api/v1/chat/completions",
     {
-      model: "meta-llama/llama-3-8b-instruct",
+      model: model,
       messages: [
         {
           role: "user",
-          content: `Reply smartly to this tweet:\n"${tweetContent}"\nMake it personal, friendly, and relevant.Be professional and do not use emojis and crisp and small contents `,
+          content: promptContent,
         },
       ],
     },
@@ -420,7 +429,6 @@ async function generateReply(tweetContent) {
   );
 
   const reply = response.data.choices[0]?.message?.content;
-  // console.log("Reply:", reply);
   return reply;
 }
 async function getWebSocketDebuggerUrl() {
@@ -1141,15 +1149,9 @@ router.get("/search", async (req, res) => {
       });
 
       for (const tweet of scrapedTweets) {
-        console.log(`\n========== PROCESSING TWEET ${tweet.id} ==========`);
-        console.log(`Author: ${tweet.author_name} (@${tweet.author_username})`);
-        console.log(`Profile image: ${tweet.profile_image_url || 'None'}`);
-        console.log(`Followers: ${tweet.followers_count}`);
-        console.log(`Engagement: ${tweet.like_count} likes, ${tweet.retweet_count} retweets, ${tweet.view_count} views`);
+        // Don't generate replies automatically - leave reply field null
+        // Replies will only be generated when user clicks "Generate Reply" button on dashboard
         
-        const reply = await generateReply(tweet.text);
-        tweet.reply = reply;
-
         // Check if view_count column exists in tweets table
         const columnCheck = await db.query(`
           SELECT column_name
@@ -1167,7 +1169,7 @@ router.get("/search", async (req, res) => {
             [
               tweet.id,
               tweet.text,
-              reply,
+              null, // Set reply to null initially - will be generated on demand
               tweet.like_count,
               tweet.retweet_count,
               tweet.followers_count || 1000,
@@ -1187,7 +1189,7 @@ router.get("/search", async (req, res) => {
             [
               tweet.id,
               tweet.text,
-              reply,
+              null, // Set reply to null initially - will be generated on demand
               tweet.like_count,
               tweet.retweet_count,
               tweet.followers_count || 1000,
@@ -1713,7 +1715,9 @@ router.post("/reply-to-tweet", async (req, res) => {
     keywordId,
     tweetText,
     likeCount,
-    retweetCount
+    retweetCount,
+    model,
+    promptContent
   } = req.body;
   console.log(req.body);
 
@@ -2016,6 +2020,66 @@ router.delete("/history/:id", async (req, res) => {
       success: false,
       message: "Failed to delete post from history",
       error: err.message
+    });
+  }
+});
+
+// New endpoint to generate replies using OpenRouter API
+router.post("/generate-reply", async (req, res) => {
+  try {
+    const { model, messages } = req.body;
+    
+    if (!model || !messages || !messages.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters: model and messages"
+      });
+    }
+    
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        message: "OpenRouter API key not configured"
+      });
+    }
+    
+    console.log(`Generating reply using model: ${model}`);
+    console.log(`Prompt: ${messages[0].content}`);
+    
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: model,
+        messages: messages,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    
+    const reply = response.data.choices[0]?.message?.content;
+    
+    if (!reply) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate reply"
+      });
+    }
+    
+    res.json({
+      success: true,
+      reply: reply
+    });
+    
+  } catch (error) {
+    console.error("Error generating reply:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to generate reply"
     });
   }
 });

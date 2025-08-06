@@ -184,6 +184,28 @@ async function checkAndCreateTables() {
       }
     }
     
+    // Check if prompts table exists
+    const promptsTableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'prompts'
+      );
+    `);
+    
+    if (!promptsTableCheck.rows[0].exists) {
+      console.log('Creating prompts table...');
+      
+      // Read the SQL file
+      const promptsSqlPath = path.join(__dirname, '../sql/create_prompts_table.sql');
+      const promptsSql = fs.readFileSync(promptsSqlPath, 'utf8');
+      // Execute the SQL query
+      await client.query(promptsSql);
+      console.log('Prompts table created successfully.');
+    } else {
+      console.log('Prompts table already exists.');
+    }
+    
     // Check if twitter_password column exists in social_media_accounts table
     try {
       const passwordColumnCheck = await client.query(`

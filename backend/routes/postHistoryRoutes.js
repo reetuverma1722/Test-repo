@@ -343,5 +343,21 @@ router.put('/update-engagement/:id', checkAuth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+//get entire data for post history
+router.get('/historyAll', checkAuth, async (req, res) => {
+  try {
 
+    // Fetch all post history for the user
+    const result = await pool.query(
+      `SELECT tweetId FROM post_history`,
+      []
+    );
+    console.log("wohoooo",result)
+  
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error fetching all post history:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 module.exports = router;
