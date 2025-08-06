@@ -1764,27 +1764,7 @@ const Dashboard = () => {
                       Your Keywords & Posts
                     </Typography>
 
-                    {tweets.length > 0 && (
-                      <Chip
-                        label={
-                          dataSource === "twitter"
-                            ? "Fresh from Twitter"
-                            : "From Cache"
-                        }
-                        color={dataSource === "twitter" ? "success" : "default"}
-                        size="medium"
-                        sx={{
-                          padding: "10px",
-                          fontWeight: 500,
-                          backgroundColor:
-                            dataSource === "twitter" ? "#4896a1" : "#e0e0e0",
-                          color:
-                            dataSource === "twitter"
-                              ? "white"
-                              : "text.secondary",
-                        }}
-                      />
-                    )}
+                   
                   </Box>
 
                   {/* Twitter Account Selection */}
