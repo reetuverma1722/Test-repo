@@ -461,7 +461,7 @@ const PostHistory = () => {
                 <TableCell>Post Content</TableCell>
                 <TableCell>Keyword</TableCell>
                 <TableCell>Posted At</TableCell>
-                <TableCell>Engagement</TableCell>
+               
                 <TableCell>Last Posted</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
@@ -537,19 +537,7 @@ const PostHistory = () => {
                         <TableCell>
                           {new Date(post.posted_at).toLocaleString()}
                         </TableCell>
-                        <TableCell>
-                          <Tooltip title="View detailed engagement">
-                            <IconButton
-                              size="small"
-                              onClick={(e) =>
-                                handleEngagementViewClick(e, post.id)
-                              }
-                              sx={{ alignSelf: "center", color: "#4896a1" }}
-                            >
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
+                       
                         <TableCell>
                           <Box
                             sx={{
@@ -572,24 +560,7 @@ const PostHistory = () => {
                               justifyContent: "center",
                             }}
                           >
-                            <Tooltip title="Update reply engagement metrics">
-                              <IconButton
-                                color="primary"
-                                size="small"
-                                onClick={() => handleUpdateEngagement(post.id)}
-                                disabled={updating === post.id}
-                                sx={{
-                                  border: "none",
-                                  borderRadius: 1,
-                                }}
-                              >
-                                {updating === post.id ? (
-                                  <CircularProgress size={20} color="#4896a1" />
-                                ) : (
-                                  <UpdateIcon fontSize="small" sx={{color:"#4896a1"}}/>
-                                )}
-                              </IconButton>
-                            </Tooltip>
+                           
 
                             <Tooltip title="Delete post">
                               <IconButton

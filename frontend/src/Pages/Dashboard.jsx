@@ -182,7 +182,7 @@ const Dashboard = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setLogoutOpen(false);
-    navigate("/login");
+    navigate("/");
   };
 
   // Fetch all keywords
@@ -1306,17 +1306,17 @@ const Dashboard = () => {
                 icon: <HistoryIcon fontSize="small" />,
                 key: "search-history",
               },
-              {
-                label: "Social Media Settings",
-                path: "/social-media-settings",
-                icon: <SettingsIcon fontSize="small" />,
-                key: "social-media-settings",
-              },
+             
               {
                 label: "Post History",
                 path: "/post-history",
                 icon: <PostAddIcon fontSize="small" />,
                 key: "post-history",
+              }, {
+                label: "Social Media Settings",
+                path: "/social-media-settings",
+                icon: <SettingsIcon fontSize="small" />,
+                key: "social-media-settings",
               },
             ].map((item,index) => {
               const isSelected = location.pathname.includes(item.path);
@@ -1764,27 +1764,7 @@ const Dashboard = () => {
                       Your Keywords & Posts
                     </Typography>
 
-                    {tweets.length > 0 && (
-                      <Chip
-                        label={
-                          dataSource === "twitter"
-                            ? "Fresh from Twitter"
-                            : "From Cache"
-                        }
-                        color={dataSource === "twitter" ? "success" : "default"}
-                        size="medium"
-                        sx={{
-                          padding: "10px",
-                          fontWeight: 500,
-                          backgroundColor:
-                            dataSource === "twitter" ? "#4896a1" : "#e0e0e0",
-                          color:
-                            dataSource === "twitter"
-                              ? "white"
-                              : "text.secondary",
-                        }}
-                      />
-                    )}
+                   
                   </Box>
 
                   {/* Twitter Account Selection */}
