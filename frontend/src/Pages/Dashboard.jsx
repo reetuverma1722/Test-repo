@@ -68,6 +68,7 @@ import SocialMediaSettings from "./SocialMediaSettings";
 import { getAccountsByPlatform } from "../services/socialMediaAccountsService";
 import TrendingAnalytics from "./TrendingAnalytics";
 import PostHistoryPage from "./PostHistoryPage";
+import { getPostHistoryall } from "../services/postHistoryService";
 import { motion } from "framer-motion";
 
 const drawerWidth = 260;
@@ -91,6 +92,7 @@ const Dashboard = () => {
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [posts, setPosts] = useState([]);
 
   // Update current time every minute to keep time displays fresh
   useEffect(() => {
@@ -184,14 +186,24 @@ const Dashboard = () => {
   const fetchPostHistory = async () => {
     try {
       // Fetch post history for all accounts
-      const response = await fetch("http://localhost:5000/api/search/history");
-      const data = await response.json();
-      
-      // Extract tweet IDs from post history
-      const postedIds = data.map(post => post.id);
-      setPostedTweets(postedIds);
-      console.log("Tweets already posted:", postedIds);
-    } catch (err) {
+      const result = await getPostHistoryall();
+      console.log(result.data,"result")
+              if
+ (result.success && result.data) {
+  setPosts(result.data); // still okay if you need it
+ 
+  // Extract only the tweet IDs into a list
+  const tweetIds = result.data.map(post => post.tweetid);
+ 
+  // Set posted tweet IDs
+  setPostedTweets(tweetIds);
+ 
+  console.log("✅ Posted tweet IDs set:", tweetIds);
+}
+ 
+     
+      //console.log("Tweets already posted:", posts);
+    }catch (err) {
       console.error("Failed to fetch post history:", err);
     }
   };
@@ -1925,13 +1937,13 @@ const Dashboard = () => {
                             borderRadius: 4,
                             overflow: "hidden",
                             border: postedTweets.includes(tweet.id)
-                              ? "2px solid #4caf50" // Green border for posted tweets
+                              ? "1px solid #e5e7eb" // Green border for posted tweets
                               : "1px solid #e5e7eb",
                             transition: "all 0.3s ease",
                             height: "100%",
                             width: "18.98vw",
                             backgroundColor: postedTweets.includes(tweet.id)
-                              ? "#f1f8e9" // Light green background for posted tweets
+                              ? "#fafafa" // Light green background for posted tweets
                               : "#fafafa",
                             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                             cursor: "pointer", // pointer on hover
@@ -1939,7 +1951,7 @@ const Dashboard = () => {
                               transform: "translateY(-4px)",
                               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
                               borderColor: postedTweets.includes(tweet.id)
-                                ? "#43a047" // Darker green on hover
+                                ? "#d1d5db" // Darker green on hover
                                 : "#d1d5db",
                             },
                           }}
@@ -2221,7 +2233,8 @@ const Dashboard = () => {
                               >
                                 {dataSource === "twitter" && !tweet?.created_at
                                   ? "Freshly fetched from Twitter"
-                                  : `Fetched ${getTimeAgo(tweet?.created_at)}`}
+                                  : `Fetched ${getTimeAgo(tweet?.created_at)}`
+                                  }
                               </Typography>
                             </Box>
 

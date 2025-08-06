@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports["default"] = exports.isRepostAllowed = exports.formatTimeSince = exports.addFromSearch = exports.scrapeReplyEngagement = exports.updateLinkedInEngagementMetrics = exports.updateEngagementMetrics = exports.deleteLinkedInPost = exports.deletePost = exports.repostLinkedInPost = exports.repostPost = exports.getLinkedInPostHistory = exports.getPostHistory = exports.getLinkedInAccounts = exports.getAccounts = void 0;
+exports["default"] = exports.isRepostAllowed = exports.formatTimeSince = exports.addFromSearch = exports.scrapeReplyEngagement = exports.updateLinkedInEngagementMetrics = exports.updateEngagementMetrics = exports.deleteLinkedInPost = exports.deletePost = exports.repostLinkedInPost = exports.repostPost = exports.getLinkedInPostHistory = exports.getPostHistoryall = exports.getPostHistory = exports.getLinkedInAccounts = exports.getAccounts = void 0;
 var BASE_URL = 'http://localhost:5000/api'; // Helper function for GET requests
 
 var apiGet = function apiGet(endpoint) {
@@ -255,46 +255,42 @@ var getPostHistory = function getPostHistory(id) {
       }
     }
   });
-}; // Get LinkedIn post history for a specific account
-
+};
 
 exports.getPostHistory = getPostHistory;
 
-var getLinkedInPostHistory = function getLinkedInPostHistory(id) {
-  var token,
-      _args6 = arguments;
-  return regeneratorRuntime.async(function getLinkedInPostHistory$(_context6) {
+var getPostHistoryall = function getPostHistoryall() {
+  return regeneratorRuntime.async(function getPostHistoryall$(_context6) {
     while (1) {
       switch (_context6.prev = _context6.next) {
         case 0:
-          token = _args6.length > 1 && _args6[1] !== undefined ? _args6[1] : null;
-          _context6.next = 3;
-          return regeneratorRuntime.awrap(apiGet("/history/linkedin/".concat(id), token));
+          _context6.next = 2;
+          return regeneratorRuntime.awrap(apiGet('/historyAll'));
 
-        case 3:
+        case 2:
           return _context6.abrupt("return", _context6.sent);
 
-        case 4:
+        case 3:
         case "end":
           return _context6.stop();
       }
     }
   });
-}; // Repost a specific post
+}; // Get LinkedIn post history for a specific account
 
 
-exports.getLinkedInPostHistory = getLinkedInPostHistory;
+exports.getPostHistoryall = getPostHistoryall;
 
-var repostPost = function repostPost(postId) {
+var getLinkedInPostHistory = function getLinkedInPostHistory(id) {
   var token,
       _args7 = arguments;
-  return regeneratorRuntime.async(function repostPost$(_context7) {
+  return regeneratorRuntime.async(function getLinkedInPostHistory$(_context7) {
     while (1) {
       switch (_context7.prev = _context7.next) {
         case 0:
           token = _args7.length > 1 && _args7[1] !== undefined ? _args7[1] : null;
           _context7.next = 3;
-          return regeneratorRuntime.awrap(apiPost("/repost/".concat(postId), {}, token));
+          return regeneratorRuntime.awrap(apiGet("/history/linkedin/".concat(id), token));
 
         case 3:
           return _context7.abrupt("return", _context7.sent);
@@ -305,21 +301,21 @@ var repostPost = function repostPost(postId) {
       }
     }
   });
-}; // Repost a specific LinkedIn post
+}; // Repost a specific post
 
 
-exports.repostPost = repostPost;
+exports.getLinkedInPostHistory = getLinkedInPostHistory;
 
-var repostLinkedInPost = function repostLinkedInPost(postId) {
+var repostPost = function repostPost(postId) {
   var token,
       _args8 = arguments;
-  return regeneratorRuntime.async(function repostLinkedInPost$(_context8) {
+  return regeneratorRuntime.async(function repostPost$(_context8) {
     while (1) {
       switch (_context8.prev = _context8.next) {
         case 0:
           token = _args8.length > 1 && _args8[1] !== undefined ? _args8[1] : null;
           _context8.next = 3;
-          return regeneratorRuntime.awrap(apiPost("/repost/linkedin/".concat(postId), {}, token));
+          return regeneratorRuntime.awrap(apiPost("/repost/".concat(postId), {}, token));
 
         case 3:
           return _context8.abrupt("return", _context8.sent);
@@ -327,6 +323,31 @@ var repostLinkedInPost = function repostLinkedInPost(postId) {
         case 4:
         case "end":
           return _context8.stop();
+      }
+    }
+  });
+}; // Repost a specific LinkedIn post
+
+
+exports.repostPost = repostPost;
+
+var repostLinkedInPost = function repostLinkedInPost(postId) {
+  var token,
+      _args9 = arguments;
+  return regeneratorRuntime.async(function repostLinkedInPost$(_context9) {
+    while (1) {
+      switch (_context9.prev = _context9.next) {
+        case 0:
+          token = _args9.length > 1 && _args9[1] !== undefined ? _args9[1] : null;
+          _context9.next = 3;
+          return regeneratorRuntime.awrap(apiPost("/repost/linkedin/".concat(postId), {}, token));
+
+        case 3:
+          return _context9.abrupt("return", _context9.sent);
+
+        case 4:
+        case "end":
+          return _context9.stop();
       }
     }
   });
@@ -340,65 +361,8 @@ var deletePost = function deletePost(postId) {
       headers,
       res,
       result,
-      _args9 = arguments;
-  return regeneratorRuntime.async(function deletePost$(_context9) {
-    while (1) {
-      switch (_context9.prev = _context9.next) {
-        case 0:
-          token = _args9.length > 1 && _args9[1] !== undefined ? _args9[1] : null;
-          _context9.prev = 1;
-          headers = {
-            'Content-Type': 'application/json'
-          }; // Always include Authorization header, even with a dummy token for development
-
-          headers.Authorization = "Bearer ".concat(token || 'dummy-token');
-          _context9.next = 6;
-          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/history/").concat(postId), {
-            method: 'DELETE',
-            headers: headers
-          }));
-
-        case 6:
-          res = _context9.sent;
-          _context9.next = 9;
-          return regeneratorRuntime.awrap(res.json());
-
-        case 9:
-          result = _context9.sent;
-
-          if (res.ok) {
-            _context9.next = 12;
-            break;
-          }
-
-          throw new Error(result.message || 'API error');
-
-        case 12:
-          return _context9.abrupt("return", result);
-
-        case 15:
-          _context9.prev = 15;
-          _context9.t0 = _context9["catch"](1);
-          throw new Error(_context9.t0.message || 'Network error');
-
-        case 18:
-        case "end":
-          return _context9.stop();
-      }
-    }
-  }, null, null, [[1, 15]]);
-}; // Delete a LinkedIn post from history
-
-
-exports.deletePost = deletePost;
-
-var deleteLinkedInPost = function deleteLinkedInPost(postId) {
-  var token,
-      headers,
-      res,
-      result,
       _args10 = arguments;
-  return regeneratorRuntime.async(function deleteLinkedInPost$(_context10) {
+  return regeneratorRuntime.async(function deletePost$(_context10) {
     while (1) {
       switch (_context10.prev = _context10.next) {
         case 0:
@@ -410,7 +374,7 @@ var deleteLinkedInPost = function deleteLinkedInPost(postId) {
 
           headers.Authorization = "Bearer ".concat(token || 'dummy-token');
           _context10.next = 6;
-          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/history/linkedin/").concat(postId), {
+          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/history/").concat(postId), {
             method: 'DELETE',
             headers: headers
           }));
@@ -444,6 +408,63 @@ var deleteLinkedInPost = function deleteLinkedInPost(postId) {
       }
     }
   }, null, null, [[1, 15]]);
+}; // Delete a LinkedIn post from history
+
+
+exports.deletePost = deletePost;
+
+var deleteLinkedInPost = function deleteLinkedInPost(postId) {
+  var token,
+      headers,
+      res,
+      result,
+      _args11 = arguments;
+  return regeneratorRuntime.async(function deleteLinkedInPost$(_context11) {
+    while (1) {
+      switch (_context11.prev = _context11.next) {
+        case 0:
+          token = _args11.length > 1 && _args11[1] !== undefined ? _args11[1] : null;
+          _context11.prev = 1;
+          headers = {
+            'Content-Type': 'application/json'
+          }; // Always include Authorization header, even with a dummy token for development
+
+          headers.Authorization = "Bearer ".concat(token || 'dummy-token');
+          _context11.next = 6;
+          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/history/linkedin/").concat(postId), {
+            method: 'DELETE',
+            headers: headers
+          }));
+
+        case 6:
+          res = _context11.sent;
+          _context11.next = 9;
+          return regeneratorRuntime.awrap(res.json());
+
+        case 9:
+          result = _context11.sent;
+
+          if (res.ok) {
+            _context11.next = 12;
+            break;
+          }
+
+          throw new Error(result.message || 'API error');
+
+        case 12:
+          return _context11.abrupt("return", result);
+
+        case 15:
+          _context11.prev = 15;
+          _context11.t0 = _context11["catch"](1);
+          throw new Error(_context11.t0.message || 'Network error');
+
+        case 18:
+        case "end":
+          return _context11.stop();
+      }
+    }
+  }, null, null, [[1, 15]]);
 }; // Update engagement metrics for a post
 
 
@@ -454,15 +475,15 @@ var updateEngagementMetrics = function updateEngagementMetrics(postId, metrics) 
       headers,
       res,
       result,
-      _args11 = arguments;
-  return regeneratorRuntime.async(function updateEngagementMetrics$(_context11) {
+      _args12 = arguments;
+  return regeneratorRuntime.async(function updateEngagementMetrics$(_context12) {
     while (1) {
-      switch (_context11.prev = _context11.next) {
+      switch (_context12.prev = _context12.next) {
         case 0:
-          token = _args11.length > 2 && _args11[2] !== undefined ? _args11[2] : null;
+          token = _args12.length > 2 && _args12[2] !== undefined ? _args12[2] : null;
           // Ensure postId is a string
           postId = String(postId);
-          _context11.prev = 2;
+          _context12.prev = 2;
           console.log("Updating engagement metrics for post ID: ".concat(postId), metrics);
           headers = {
             'Content-Type': 'application/json'
@@ -471,83 +492,8 @@ var updateEngagementMetrics = function updateEngagementMetrics(postId, metrics) 
           headers.Authorization = "Bearer ".concat(token || 'dummy-token');
           console.log('Request URL:', "".concat(BASE_URL, "/update-engagement/").concat(postId));
           console.log('Request headers:', headers);
-          _context11.next = 10;
-          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/update-engagement/").concat(postId), {
-            method: 'PUT',
-            headers: headers,
-            body: JSON.stringify(metrics)
-          }));
-
-        case 10:
-          res = _context11.sent;
-          console.log('Response status:', res.status);
-          _context11.next = 14;
-          return regeneratorRuntime.awrap(res.json());
-
-        case 14:
-          result = _context11.sent;
-          console.log('Response data:', result);
-
-          if (res.ok) {
-            _context11.next = 19;
-            break;
-          }
-
-          console.error('API error:', result);
-          return _context11.abrupt("return", {
-            success: false,
-            message: result.message || "API error: ".concat(res.status),
-            error: result
-          });
-
-        case 19:
-          return _context11.abrupt("return", result);
-
-        case 22:
-          _context11.prev = 22;
-          _context11.t0 = _context11["catch"](2);
-          console.error('Network or parsing error:', _context11.t0);
-          return _context11.abrupt("return", {
-            success: false,
-            message: _context11.t0.message || 'Network error',
-            error: _context11.t0
-          });
-
-        case 26:
-        case "end":
-          return _context11.stop();
-      }
-    }
-  }, null, null, [[2, 22]]);
-}; // Update engagement metrics for a LinkedIn post
-
-
-exports.updateEngagementMetrics = updateEngagementMetrics;
-
-var updateLinkedInEngagementMetrics = function updateLinkedInEngagementMetrics(postId, metrics) {
-  var token,
-      headers,
-      res,
-      result,
-      _args12 = arguments;
-  return regeneratorRuntime.async(function updateLinkedInEngagementMetrics$(_context12) {
-    while (1) {
-      switch (_context12.prev = _context12.next) {
-        case 0:
-          token = _args12.length > 2 && _args12[2] !== undefined ? _args12[2] : null;
-          // Ensure postId is a string
-          postId = String(postId);
-          _context12.prev = 2;
-          console.log("Updating LinkedIn engagement metrics for post ID: ".concat(postId), metrics);
-          headers = {
-            'Content-Type': 'application/json'
-          }; // Always include Authorization header, even with a dummy token for development
-
-          headers.Authorization = "Bearer ".concat(token || 'dummy-token');
-          console.log('Request URL:', "".concat(BASE_URL, "/update-engagement/linkedin/").concat(postId));
-          console.log('Request headers:', headers);
           _context12.next = 10;
-          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/update-engagement/linkedin/").concat(postId), {
+          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/update-engagement/").concat(postId), {
             method: 'PUT',
             headers: headers,
             body: JSON.stringify(metrics)
@@ -594,6 +540,81 @@ var updateLinkedInEngagementMetrics = function updateLinkedInEngagementMetrics(p
       }
     }
   }, null, null, [[2, 22]]);
+}; // Update engagement metrics for a LinkedIn post
+
+
+exports.updateEngagementMetrics = updateEngagementMetrics;
+
+var updateLinkedInEngagementMetrics = function updateLinkedInEngagementMetrics(postId, metrics) {
+  var token,
+      headers,
+      res,
+      result,
+      _args13 = arguments;
+  return regeneratorRuntime.async(function updateLinkedInEngagementMetrics$(_context13) {
+    while (1) {
+      switch (_context13.prev = _context13.next) {
+        case 0:
+          token = _args13.length > 2 && _args13[2] !== undefined ? _args13[2] : null;
+          // Ensure postId is a string
+          postId = String(postId);
+          _context13.prev = 2;
+          console.log("Updating LinkedIn engagement metrics for post ID: ".concat(postId), metrics);
+          headers = {
+            'Content-Type': 'application/json'
+          }; // Always include Authorization header, even with a dummy token for development
+
+          headers.Authorization = "Bearer ".concat(token || 'dummy-token');
+          console.log('Request URL:', "".concat(BASE_URL, "/update-engagement/linkedin/").concat(postId));
+          console.log('Request headers:', headers);
+          _context13.next = 10;
+          return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/update-engagement/linkedin/").concat(postId), {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(metrics)
+          }));
+
+        case 10:
+          res = _context13.sent;
+          console.log('Response status:', res.status);
+          _context13.next = 14;
+          return regeneratorRuntime.awrap(res.json());
+
+        case 14:
+          result = _context13.sent;
+          console.log('Response data:', result);
+
+          if (res.ok) {
+            _context13.next = 19;
+            break;
+          }
+
+          console.error('API error:', result);
+          return _context13.abrupt("return", {
+            success: false,
+            message: result.message || "API error: ".concat(res.status),
+            error: result
+          });
+
+        case 19:
+          return _context13.abrupt("return", result);
+
+        case 22:
+          _context13.prev = 22;
+          _context13.t0 = _context13["catch"](2);
+          console.error('Network or parsing error:', _context13.t0);
+          return _context13.abrupt("return", {
+            success: false,
+            message: _context13.t0.message || 'Network error',
+            error: _context13.t0
+          });
+
+        case 26:
+        case "end":
+          return _context13.stop();
+      }
+    }
+  }, null, null, [[2, 22]]);
 }; // Scrape engagement data for a reply ID
 
 
@@ -605,13 +626,13 @@ var scrapeReplyEngagement = function scrapeReplyEngagement(replyId, accountId) {
       body,
       res,
       result,
-      _args13 = arguments;
-  return regeneratorRuntime.async(function scrapeReplyEngagement$(_context13) {
+      _args14 = arguments;
+  return regeneratorRuntime.async(function scrapeReplyEngagement$(_context14) {
     while (1) {
-      switch (_context13.prev = _context13.next) {
+      switch (_context14.prev = _context14.next) {
         case 0:
-          token = _args13.length > 2 && _args13[2] !== undefined ? _args13[2] : null;
-          _context13.prev = 1;
+          token = _args14.length > 2 && _args14[2] !== undefined ? _args14[2] : null;
+          _context14.prev = 1;
           console.log("Scraping engagement for reply ID: ".concat(replyId));
           headers = {
             'Content-Type': 'application/json',
@@ -624,7 +645,7 @@ var scrapeReplyEngagement = function scrapeReplyEngagement(replyId, accountId) {
           console.log('Request URL:', "".concat(BASE_URL, "/scrape-reply-engagement"));
           console.log('Request headers:', headers);
           console.log('Request body:', body);
-          _context13.next = 10;
+          _context14.next = 10;
           return regeneratorRuntime.awrap(fetch("".concat(BASE_URL, "/scrape-reply-engagement"), {
             method: 'POST',
             headers: headers,
@@ -632,44 +653,44 @@ var scrapeReplyEngagement = function scrapeReplyEngagement(replyId, accountId) {
           }));
 
         case 10:
-          res = _context13.sent;
+          res = _context14.sent;
           console.log(body, "body");
           console.log('Response status:', res.status);
-          _context13.next = 15;
+          _context14.next = 15;
           return regeneratorRuntime.awrap(res.json());
 
         case 15:
-          result = _context13.sent;
+          result = _context14.sent;
           console.log('Response data:', result);
 
           if (res.ok) {
-            _context13.next = 20;
+            _context14.next = 20;
             break;
           }
 
           console.error('API error:', result);
-          return _context13.abrupt("return", {
+          return _context14.abrupt("return", {
             success: false,
             message: result.message || "API error: ".concat(res.status),
             error: result
           });
 
         case 20:
-          return _context13.abrupt("return", result);
+          return _context14.abrupt("return", result);
 
         case 23:
-          _context13.prev = 23;
-          _context13.t0 = _context13["catch"](1);
-          console.error('Network or parsing error:', _context13.t0);
-          return _context13.abrupt("return", {
+          _context14.prev = 23;
+          _context14.t0 = _context14["catch"](1);
+          console.error('Network or parsing error:', _context14.t0);
+          return _context14.abrupt("return", {
             success: false,
-            message: _context13.t0.message || 'Network error',
-            error: _context13.t0
+            message: _context14.t0.message || 'Network error',
+            error: _context14.t0
           });
 
         case 27:
         case "end":
-          return _context13.stop();
+          return _context14.stop();
       }
     }
   }, null, null, [[1, 23]]);
@@ -680,21 +701,21 @@ exports.scrapeReplyEngagement = scrapeReplyEngagement;
 
 var addFromSearch = function addFromSearch(postData) {
   var token,
-      _args14 = arguments;
-  return regeneratorRuntime.async(function addFromSearch$(_context14) {
+      _args15 = arguments;
+  return regeneratorRuntime.async(function addFromSearch$(_context15) {
     while (1) {
-      switch (_context14.prev = _context14.next) {
+      switch (_context15.prev = _context15.next) {
         case 0:
-          token = _args14.length > 1 && _args14[1] !== undefined ? _args14[1] : null;
-          _context14.next = 3;
+          token = _args15.length > 1 && _args15[1] !== undefined ? _args15[1] : null;
+          _context15.next = 3;
           return regeneratorRuntime.awrap(apiPost('/add-from-search', postData, token));
 
         case 3:
-          return _context14.abrupt("return", _context14.sent);
+          return _context15.abrupt("return", _context15.sent);
 
         case 4:
         case "end":
-          return _context14.stop();
+          return _context15.stop();
       }
     }
   });

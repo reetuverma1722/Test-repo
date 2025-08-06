@@ -110,6 +110,11 @@ export const getPostHistory = async (id, token = null) => {
   return await apiGet(`/history/${id}`, token);
 };
 
+
+export const getPostHistoryall=async()=>{
+  return await apiGet('/historyAll')
+}
+
 // Get LinkedIn post history for a specific account
 export const getLinkedInPostHistory = async (id, token = null) => {
   return await apiGet(`/history/linkedin/${id}`, token);

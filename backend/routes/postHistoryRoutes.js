@@ -76,7 +76,7 @@ router.get('/history/:id', checkAuth, async (req, res) => {
     
     // Fetch post history for the account
     const result = await pool.query(
-      `SELECT ph.id, ph.post_text, ph.post_url, ph.posted_at, ph.engagement_count,ph.reply_id,ph.account_id,
+      `SELECT ph.id, ph.post_text, ph.post_url, ph.posted_at, ph.engagement_count,ph.reply_id,ph.account_id,ph.tweetId,
               ph.likes_count, ph.retweets_count, ph.created_at, ph.updated_at,
               k.text as keyword, k.min_likes, k.min_retweets, k.min_followers,
               (NOW() - ph.created_at) as time_since_fetch
@@ -93,6 +93,27 @@ router.get('/history/:id', checkAuth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+
+
+//get entire data for post history
+router.get('/historyAll', checkAuth, async (req, res) => {
+  try {
+    
+    // Fetch all post history for the user
+    const result = await pool.query(
+      `SELECT tweetId FROM post_history`,
+      []
+    );
+    console.log("wohoooo")
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error fetching all post history:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
 
 // Repost a specific post
 router.post('/repost/:postId', checkAuth, async (req, res) => {
