@@ -1306,17 +1306,17 @@ const Dashboard = () => {
                 icon: <HistoryIcon fontSize="small" />,
                 key: "search-history",
               },
-              {
-                label: "Social Media Settings",
-                path: "/social-media-settings",
-                icon: <SettingsIcon fontSize="small" />,
-                key: "social-media-settings",
-              },
+             
               {
                 label: "Post History",
                 path: "/post-history",
                 icon: <PostAddIcon fontSize="small" />,
                 key: "post-history",
+              }, {
+                label: "Social Media Settings",
+                path: "/social-media-settings",
+                icon: <SettingsIcon fontSize="small" />,
+                key: "social-media-settings",
               },
             ].map((item,index) => {
               const isSelected = location.pathname.includes(item.path);
