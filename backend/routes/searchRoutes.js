@@ -1760,13 +1760,14 @@ router.post("/reply-to-tweet", async (req, res) => {
 
         const insertQuery = `
           INSERT INTO post_history
-            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id,tweetId)
+            (post_text, post_url, posted_at, engagement_count, likes_count, retweets_count, created_at, updated_at, keyword_id, account_id, reply_id, tweetId)
           VALUES
-            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8,$9)
+            ($1, $2, NOW(), $3, $4, $5, NOW(), NOW(), $6, $7, $8, $9)
           RETURNING id
         `;
 
-        // Use the provided like and retweet counts if available, otherwise default to 0
+        // Always store the reply in the database, even if we couldn't get the reply ID
+        // The reply ID is optional, but the tweet ID is required
         const values = [
           replyText,
           tweetUrl,
@@ -1775,8 +1776,8 @@ router.post("/reply-to-tweet", async (req, res) => {
           retweetCount || 0,                      // Initial retweets count
           keywordId || null,
           selectedAccountId,
-          postResult.replyId || null,
-          tweetId // Store the reply ID
+          postResult.replyId || null,             // Reply ID might be null if we couldn't find it
+          tweetId                                 // Original tweet ID is always available
         ];
 
         const insertResult = await pool.query(insertQuery, values);
@@ -1921,38 +1922,48 @@ async function postReplyWithPuppeteerAndGetId(
     // Click on "Replies" tab
     await page.waitForSelector('a[href$="/with_replies"]', { timeout: 10000 });
     await page.click('a[href$="/with_replies"]');
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  // Wait longer to ensure the page loads completely
+  await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log("🔍 Scanning replies for the posted reply...");
+    
+    // Scroll down a bit to make sure we see the latest replies
+    await page.evaluate(() => window.scrollBy(0, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Look for the reply we just posted
-    const replyId = await page.evaluate((originalTweetId, replyContent) => {
-      const articles = document.querySelectorAll('article');
-      
-      for (const article of articles) {
-        // Check if this article contains our reply text
-        const tweetText = article.querySelector('div[lang]')?.innerText || '';
+    // Improved reply ID extraction with multiple attempts
+    let replyId = null;
+    
+    // First attempt: Look for the reply we just posted
+    try {
+      replyId = await page.evaluate((originalTweetId, replyContent) => {
+        const articles = document.querySelectorAll('article');
+        console.log(`Found ${articles.length} articles to check`);
         
-        if (tweetText.includes(replyContent)) {
-          // Check if this is a reply to our target tweet
-          const links = article.querySelectorAll('a[href*="/status/"]');
+        for (const article of articles) {
+          // Check if this article contains our reply text
+          const tweetText = article.querySelector('div[lang]')?.innerText || '';
           
-          for (const link of links) {
-            const href = link.getAttribute('href');
-            if (href && href.includes('/status/')) {
-              const statusId = href.match(/\/status\/(\d+)/);
-              if (statusId && statusId[1]) {
+          if (tweetText.includes(replyContent)) {
+            console.log(`Found article with matching text: ${tweetText.substring(0, 50)}...`);
+            
+            // Check if this is a reply to our target tweet
+            const links = article.querySelectorAll('a[href*="/status/"]');
+            
+            for (const link of links) {
+              const href = link.getAttribute('href');
+              if (href && href.includes('/status/')) {
+                console.log(`Found link with href: ${href}`);
+                
                 // If this is our reply, extract the reply ID
-                if (href.includes(`/${originalTweetId}`) || tweetText.includes(replyContent)) {
-                  // Find the reply's own status link
-                  const replyLinks = article.querySelectorAll('a[href*="/status/"]');
-                  for (const replyLink of replyLinks) {
-                    const replyHref = replyLink.getAttribute('href');
-                    if (replyHref && replyHref.includes('/status/') && !replyHref.includes(`/${originalTweetId}`)) {
-                      const replyMatch = replyHref.match(/\/status\/(\d+)/);
-                      if (replyMatch && replyMatch[1]) {
-                        return replyMatch[1];
-                      }
+                const replyLinks = article.querySelectorAll('a[href*="/status/"]');
+                for (const replyLink of replyLinks) {
+                  const replyHref = replyLink.getAttribute('href');
+                  if (replyHref && replyHref.includes('/status/') && !replyHref.includes(`/${originalTweetId}`)) {
+                    const replyMatch = replyHref.match(/\/status\/(\d+)/);
+                    if (replyMatch && replyMatch[1]) {
+                      console.log(`Found reply ID: ${replyMatch[1]}`);
+                      return replyMatch[1];
                     }
                   }
                 }
@@ -1960,9 +1971,45 @@ async function postReplyWithPuppeteerAndGetId(
             }
           }
         }
+        return null;
+      }, tweetId, replyText);
+    } catch (error) {
+      console.error("Error in first attempt to find reply ID:", error.message);
+    }
+    
+    // Second attempt: If we couldn't find the reply ID, try a different approach
+    if (!replyId) {
+      console.log("First attempt failed, trying second approach...");
+      try {
+        // Wait a bit more and try again
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try to find any recent tweet from this user that contains our reply text
+        replyId = await page.evaluate((replyContent) => {
+          const articles = document.querySelectorAll('article');
+          
+          for (const article of articles) {
+            const tweetText = article.querySelector('div[lang]')?.innerText || '';
+            
+            // If this article contains our reply text, it's likely our reply
+            if (tweetText.includes(replyContent)) {
+              // Get the tweet ID from any status link in this article
+              const statusLinks = article.querySelectorAll('a[href*="/status/"]');
+              for (const link of statusLinks) {
+                const href = link.getAttribute('href');
+                const match = href.match(/\/status\/(\d+)/);
+                if (match && match[1]) {
+                  return match[1];
+                }
+              }
+            }
+          }
+          return null;
+        }, replyText);
+      } catch (error) {
+        console.error("Error in second attempt to find reply ID:", error.message);
       }
-      return null;
-    }, tweetId, replyText);
+    }
 
     if (replyId) {
       console.log("✅ Found reply ID:", replyId);
@@ -1974,9 +2021,10 @@ async function postReplyWithPuppeteerAndGetId(
       };
     } else {
       console.log("⚠️ Reply posted but couldn't find reply ID");
+      // Still mark as success since the reply was posted
       result.success = true;
       result.details = {
-        warning: "Reply posted but couldn't retrieve reply ID",
+        warning: "Reply posted but couldn't retrieve reply ID. The reply will still be stored in the database.",
       };
     }
 
