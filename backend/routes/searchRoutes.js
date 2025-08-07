@@ -1772,6 +1772,7 @@ router.post("/reply-to-tweet", async (req, res) => {
         });
     }
 
+    console.log(result.rows[0])
     const { account_name, twitter_password  } = result.rows[0];
 
     // Run Puppeteer login and reply - now returns a result object with reply ID
@@ -1850,7 +1851,6 @@ router.post("/reply-to-tweet", async (req, res) => {
  
 async function postReplyWithPuppeteerAndGetId(
   username,
-  twitter_password,
   twitter_password,
   tweetId,
   replyText
