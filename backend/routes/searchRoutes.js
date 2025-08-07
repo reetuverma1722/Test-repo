@@ -1604,7 +1604,7 @@ router.post("/reply-to-tweet", async (req, res) => {
   try {
     // Fetch user credentials from DB
     const result = await pool.query(
-      "SELECT account_name,password FROM social_media_accounts WHERE id = $1",
+      "SELECT account_name,twitter_password FROM social_media_accounts WHERE id = $1",
       [selectedAccountId]
     );
 
@@ -1617,12 +1617,12 @@ router.post("/reply-to-tweet", async (req, res) => {
         });
     }
 
-    const { account_name, password  } = result.rows[0];
+    const { account_name, twitter_password  } = result.rows[0];
 
     // Run Puppeteer login and reply - now returns a result object with reply ID
     const postResult = await postReplyWithPuppeteerAndGetId(
       account_name,
-      password ,
+      twitter_password ,
       tweetId,
       replyText
     );
@@ -1695,7 +1695,7 @@ router.post("/reply-to-tweet", async (req, res) => {
  
 async function postReplyWithPuppeteerAndGetId(
   username,
-  password,
+  twitter_password,
   tweetId,
   replyText
 ) {
@@ -1720,20 +1720,32 @@ async function postReplyWithPuppeteerAndGetId(
 
   try {
     console.log("🔐 Logging in...");
+ await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
-    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
-
-    // Fill username
+//     // Fill username
+    console.log("1");
     await page.waitForSelector('input[name="text"]');
+    console.log("2");
     await page.type('input[name="text"]', username);
+    console.log("3");
     await page.keyboard.press("Enter");
+    console.log("4");
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
+    console.log("5");
     // Fill password
     await page.waitForSelector('input[name="password"]', { timeout: 10000 });
-    await page.type('input[name="password"]', password);
+    console.log("6");
+    console.log("🔑 Username:", username);
+    console.log("🔑 Password:", twitter_password);
+    console.log("🧪 typeof Password:", typeof twitter_password);
+
+    await page.type('input[name="password"]', twitter_password);
+    console.log("7");
     await page.keyboard.press("Enter");
+    console.log("8");
     await page.waitForNavigation({ waitUntil: "networkidle2" });
+    console.log("9");
     console.log("✅ Logged in");
 
     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
