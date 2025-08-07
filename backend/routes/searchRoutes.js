@@ -117,6 +117,25 @@ router.get("/search", async (req, res) => {
       // Continue with the rest of the function even if this fails
     }
 
+    // Check if posted_time column exists in tweets table, add it if it doesn't
+    try {
+      const postedTimeColumnCheck = await db.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'tweets' AND column_name = 'posted_time'
+      `);
+      
+      if (postedTimeColumnCheck.rows.length === 0) {
+        await db.query(`ALTER TABLE tweets ADD COLUMN posted_time TEXT`);
+        console.log("posted_time column added to tweets table");
+      } else {
+        console.log("posted_time column already exists in tweets table");
+      }
+    } catch (columnError) {
+      console.error("Error checking/adding posted_time column:", columnError.message);
+      // Continue with the rest of the function even if this fails
+    }
+
     for (const keyword of keywords) {
       // 1. Store in history
       await db.query(`INSERT INTO search_history (keyword) VALUES ($1)`, [
@@ -594,6 +613,127 @@ await page.waitForNavigation({ waitUntil: 'networkidle2' });
             } catch (e) {
               console.log("Error extracting author name:", e);
             }
+
+
+            //Extract tweet Posted time
+            let postedTime = "";
+            let postedTimeMethod = "default";
+            try {
+              console.log(`Tweet ID: ${id}, Starting posted time extraction...`);
+              
+              // METHOD 1: Try to extract from time element with datetime attribute
+              console.log(`METHOD 1: Looking for time element with datetime attribute...`);
+              const timeElement = article.querySelector('time[datetime]');
+              if (timeElement) {
+                const datetime = timeElement.getAttribute('datetime');
+                if (datetime) {
+                  postedTime = datetime;
+                  postedTimeMethod = "datetime_attribute";
+                  console.log(`METHOD 1 SUCCESS: Found posted time ${postedTime} from datetime attribute`);
+                }
+              } else {
+                console.log(`METHOD 1: No time element with datetime found`);
+              }
+              
+              // METHOD 2: Try to extract from time element text content
+              if (!postedTime) {
+                console.log(`METHOD 2: Looking for time element text content...`);
+                const timeElements = article.querySelectorAll('time');
+                for (const timeEl of timeElements) {
+                  const timeText = timeEl.innerText || "";
+                  console.log(`METHOD 2: Examining time element text: "${timeText}"`);
+                  
+                  // Look for relative time patterns like "2h", "1d", "3m", etc.
+                  if (/^\d+[smhd]$/.test(timeText.trim())) {
+                    postedTime = timeText.trim();
+                    postedTimeMethod = "relative_time_text";
+                    console.log(`METHOD 2 SUCCESS: Found relative time ${postedTime}`);
+                    break;
+                  }
+                  
+                  // Look for date patterns like "Dec 25", "Jan 1, 2023", etc.
+                  if (/^[A-Za-z]{3}\s+\d{1,2}(,\s+\d{4})?$/.test(timeText.trim())) {
+                    postedTime = timeText.trim();
+                    postedTimeMethod = "date_text";
+                    console.log(`METHOD 2 SUCCESS: Found date ${postedTime}`);
+                    break;
+                  }
+                }
+              }
+              
+              // METHOD 3: Try to extract from aria-label containing time information
+              if (!postedTime) {
+                console.log(`METHOD 3: Looking for time in aria-labels...`);
+                const ariaElements = article.querySelectorAll('[aria-label]');
+                for (const element of ariaElements) {
+                  const ariaLabel = element.getAttribute('aria-label') || "";
+                  console.log(`METHOD 3: Examining aria-label: "${ariaLabel.substring(0, 50)}..."`);
+                  
+                  // Look for time patterns in aria-label
+                  const timeMatch = ariaLabel.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/i) ||
+                                   ariaLabel.match(/(\d+[smhd])\s*ago/i) ||
+                                   ariaLabel.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,\s*\d{4})?/i);
+                  
+                  if (timeMatch && timeMatch[1]) {
+                    postedTime = timeMatch[1];
+                    postedTimeMethod = "aria_label_time";
+                    console.log(`METHOD 3 SUCCESS: Found time ${postedTime} in aria-label`);
+                    break;
+                  }
+                }
+              }
+              
+              // METHOD 4: Try to extract from any text that looks like a timestamp
+              if (!postedTime) {
+                console.log(`METHOD 4: Looking for timestamp patterns in all text...`);
+                const allText = article.innerText;
+                
+                // Look for relative time patterns
+                const relativeTimeMatch = allText.match(/(\d+[smhd])\s*(?:ago)?/i);
+                if (relativeTimeMatch && relativeTimeMatch[1]) {
+                  postedTime = relativeTimeMatch[1];
+                  postedTimeMethod = "text_relative_time";
+                  console.log(`METHOD 4 SUCCESS: Found relative time ${postedTime} in text`);
+                } else {
+                  // Look for date patterns
+                  const dateMatch = allText.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,\s*\d{4})?/i);
+                  if (dateMatch && dateMatch[0]) {
+                    postedTime = dateMatch[0];
+                    postedTimeMethod = "text_date_pattern";
+                    console.log(`METHOD 4 SUCCESS: Found date ${postedTime} in text`);
+                  }
+                }
+              }
+              
+              // METHOD 5: Try to extract from link href containing timestamp
+              if (!postedTime) {
+                console.log(`METHOD 5: Looking for timestamp in status links...`);
+                const statusLinks = article.querySelectorAll('a[href*="/status/"]');
+                for (const link of statusLinks) {
+                  const href = link.getAttribute('href') || "";
+                  // Sometimes Twitter includes timestamp info in URL parameters
+                  if (href.includes('?') || href.includes('&')) {
+                    console.log(`METHOD 5: Found status link with parameters: ${href}`);
+                    // This method is less reliable, so we'll skip it for now
+                  }
+                }
+              }
+              
+              // Final result
+              if (!postedTime) {
+                console.log(`FAILED: Could not extract posted time for tweet ${id}`);
+                postedTime = new Date().toISOString(); // Default to current time
+                postedTimeMethod = "default_fallback";
+                console.log(`Using default fallback posted time: ${postedTime}`);
+              } else {
+                console.log(`SUCCESS: Extracted posted time '${postedTime}' for tweet ${id} using method: ${postedTimeMethod}`);
+              }
+              
+            } catch (e) {
+              console.log("Error extracting posted time:", e);
+              postedTime = new Date().toISOString(); // Default fallback on error
+              postedTimeMethod = "error_fallback";
+            }
             
             // Extract username (handle) using multiple methods for reliability
             let authorUsername = "username";
@@ -800,7 +940,8 @@ await page.waitForNavigation({ waitUntil: 'networkidle2' });
               followers_count: followers,
               author_name: authorName,
               author_username: authorUsername,
-              profile_image_url: profileImageUrl
+              profile_image_url: profileImageUrl,
+              posted_time: postedTime
             };
           })
           .filter(Boolean);
@@ -817,9 +958,16 @@ await page.waitForNavigation({ waitUntil: 'networkidle2' });
           WHERE table_name = 'tweets' AND column_name = 'view_count'
         `);
         
-        if (columnCheck.rows.length === 0) {
-          // If view_count column doesn't exist, don't include it in the query
-          console.log("view_count column doesn't exist, using insertion query without it");
+        // Check if posted_time column exists
+        const postedTimeColumnCheck = await db.query(`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_name = 'tweets' AND column_name = 'posted_time'
+        `);
+        
+        if (columnCheck.rows.length === 0 && postedTimeColumnCheck.rows.length === 0) {
+          // Neither view_count nor posted_time columns exist
+          console.log("view_count and posted_time columns don't exist, using insertion query without them");
           await db.query(
             `INSERT INTO tweets (id, text, reply, like_count, retweet_count, followers_count, keyword, created_at, author_name, author_username, profile_image_url)
              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10)
@@ -837,9 +985,30 @@ await page.waitForNavigation({ waitUntil: 'networkidle2' });
               tweet.profile_image_url || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"
             ]
           );
-        } else {
-          // If view_count column exists, include it in the query
-          console.log("view_count column exists, including it in the insertion query");
+        } else if (columnCheck.rows.length === 0 && postedTimeColumnCheck.rows.length > 0) {
+          // Only posted_time column exists
+          console.log("Only posted_time column exists, including it in the insertion query");
+          await db.query(
+            `INSERT INTO tweets (id, text, reply, like_count, retweet_count, followers_count, keyword, created_at, author_name, author_username, profile_image_url, posted_time)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, $11)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              tweet.id,
+              tweet.text,
+              null, // Set reply to null initially - will be generated on demand
+              tweet.like_count,
+              tweet.retweet_count,
+              tweet.followers_count || 1000,
+              keyword,
+              tweet.author_name || "Unknown User",
+              tweet.author_username !== "username" ? tweet.author_username : "user_" + tweet.id.substring(0, 8),
+              tweet.profile_image_url || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png",
+              tweet.posted_time || new Date().toISOString()
+            ]
+          );
+        } else if (columnCheck.rows.length > 0 && postedTimeColumnCheck.rows.length === 0) {
+          // Only view_count column exists
+          console.log("Only view_count column exists, including it in the insertion query");
           await db.query(
             `INSERT INTO tweets (id, text, reply, like_count, retweet_count, followers_count, keyword, created_at, author_name, author_username, profile_image_url, view_count)
              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, $11)
@@ -856,6 +1025,28 @@ await page.waitForNavigation({ waitUntil: 'networkidle2' });
               tweet.author_username !== "username" ? tweet.author_username : "user_" + tweet.id.substring(0, 8),
               tweet.profile_image_url || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png",
               tweet.view_count || 0
+            ]
+          );
+        } else {
+          // Both view_count and posted_time columns exist
+          console.log("Both view_count and posted_time columns exist, including them in the insertion query");
+          await db.query(
+            `INSERT INTO tweets (id, text, reply, like_count, retweet_count, followers_count, keyword, created_at, author_name, author_username, profile_image_url, view_count, posted_time)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, $11, $12)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              tweet.id,
+              tweet.text,
+              null, // Set reply to null initially - will be generated on demand
+              tweet.like_count,
+              tweet.retweet_count,
+              tweet.followers_count || 1000,
+              keyword,
+              tweet.author_name || "Unknown User",
+              tweet.author_username !== "username" ? tweet.author_username : "user_" + tweet.id.substring(0, 8),
+              tweet.profile_image_url || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png",
+              tweet.view_count || 0,
+              tweet.posted_time || new Date().toISOString()
             ]
           );
         }
@@ -911,22 +1102,47 @@ router.get("/search/history", async (req, res) => {
       WHERE table_name = 'tweets' AND column_name = 'view_count'
     `);
     
+    // Check if posted_time column exists in tweets table
+    const postedTimeColumnCheck = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'tweets' AND column_name = 'posted_time'
+    `);
+    
     let query;
-    if (columnCheck.rows.length === 0) {
-      // If view_count column doesn't exist, don't include it in the query
-      console.log("view_count column doesn't exist, using query without it");
+    if (columnCheck.rows.length === 0 && postedTimeColumnCheck.rows.length === 0) {
+      // Neither view_count nor posted_time columns exist
+      console.log("view_count and posted_time columns don't exist, using query without them");
       query = `
         SELECT id, text, reply, like_count, retweet_count, keyword, created_at,
                followers_count, author_name, author_username, profile_image_url
         FROM tweets
         ORDER BY created_at DESC
       `;
-    } else {
-      // If view_count column exists, include it in the query
-      console.log("view_count column exists, including it in the query");
+    } else if (columnCheck.rows.length === 0 && postedTimeColumnCheck.rows.length > 0) {
+      // Only posted_time column exists
+      console.log("Only posted_time column exists, including it in the query");
+      query = `
+        SELECT id, text, reply, like_count, retweet_count, keyword, created_at,
+               followers_count, author_name, author_username, profile_image_url, posted_time
+        FROM tweets
+        ORDER BY created_at DESC
+      `;
+    } else if (columnCheck.rows.length > 0 && postedTimeColumnCheck.rows.length === 0) {
+      // Only view_count column exists
+      console.log("Only view_count column exists, including it in the query");
       query = `
         SELECT id, text, reply, like_count, retweet_count, keyword, created_at,
                followers_count, author_name, author_username, profile_image_url, view_count
+        FROM tweets
+        ORDER BY created_at DESC
+      `;
+    } else {
+      // Both view_count and posted_time columns exist
+      console.log("Both view_count and posted_time columns exist, including them in the query");
+      query = `
+        SELECT id, text, reply, like_count, retweet_count, keyword, created_at,
+               followers_count, author_name, author_username, profile_image_url, view_count, posted_time
         FROM tweets
         ORDER BY created_at DESC
       `;
