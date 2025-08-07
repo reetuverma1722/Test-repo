@@ -217,6 +217,10 @@ const SocialMediaAccounts = () => {
   // State for delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState(null);
+  
+  // State for default account confirmation
+  const [defaultConfirmDialogOpen, setDefaultConfirmDialogOpen] = useState(false);
+  const [accountToSetDefault, setAccountToSetDefault] = useState(null);
 
   // State for notifications
   const [notification, setNotification] = useState({
@@ -774,19 +778,21 @@ const SocialMediaAccounts = () => {
               <TableCell>Platform</TableCell>
               <TableCell>Account Name</TableCell>
               <TableCell>Account ID</TableCell>
+              <TableCell>Premium</TableCell>
+              <TableCell>Default</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={6} align="center">
                   <CircularProgress size={24} sx={{ my: 2 }} />
                 </TableCell>
               </TableRow>
             ) : accounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={6} align="center">
                   <Typography
                     variant="body2"
                     color="text.secondary"
@@ -812,6 +818,60 @@ const SocialMediaAccounts = () => {
                   </TableCell>
                   <TableCell>{account.accountName}</TableCell>
                   <TableCell>{account.accountId}</TableCell>
+                  <TableCell>
+                    <Checkbox
+                      checked={Boolean(account.isPremium)}
+                      onChange={(e) => {
+                        // Update the account's premium status
+                        const updatedAccount = {
+                          ...account,
+                          isPremium: e.target.checked
+                        };
+                        updateAccount(account.id, updatedAccount, localStorage.getItem("token"))
+                          .then(() => fetchAccounts())
+                          .catch(err => {
+                            console.error("Error updating premium status:", err);
+                            setNotification({
+                              open: true,
+                              message: "Failed to update premium status",
+                              severity: "error"
+                            });
+                          });
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Checkbox
+                      checked={Boolean(account.isDefault)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          // If trying to set as default, show confirmation dialog
+                          setAccountToSetDefault({
+                            id: account.id,
+                            platform: account.platform,
+                            accountName: account.accountName
+                          });
+                          setDefaultConfirmDialogOpen(true);
+                        } else {
+                          // If unchecking, just update directly
+                          const updatedAccount = {
+                            ...account,
+                            isDefault: false
+                          };
+                          updateAccount(account.id, updatedAccount, localStorage.getItem("token"))
+                            .then(() => fetchAccounts())
+                            .catch(err => {
+                              console.error("Error updating default status:", err);
+                              setNotification({
+                                open: true,
+                                message: "Failed to update default status",
+                                severity: "error"
+                              });
+                            });
+                        }
+                      }}
+                    />
+                  </TableCell>
                   <TableCell align="center">
                     <Tooltip title="Delete">
                       <IconButton
@@ -937,6 +997,10 @@ const SocialMediaAccounts = () => {
                             twitterUsername: e.target.value,
                           })
                         }
+                        // Username field is editable only when adding a new account
+                        InputProps={{
+                          readOnly: isEditing,
+                        }}
                       />
 
                       <TextField
@@ -953,7 +1017,9 @@ const SocialMediaAccounts = () => {
                             twitterPassword: e.target.value,
                           })
                         }
+                        // Password field is editable only when adding a new account
                         InputProps={{
+                          readOnly: isEditing,
                           endAdornment: (
                             <InputAdornment position="end">
                               <IconButton
@@ -962,6 +1028,7 @@ const SocialMediaAccounts = () => {
                                   setShowTwitterPassword(!showTwitterPassword)
                                 }
                                 edge="end"
+                                disabled={isEditing}
                               >
                                 {showTwitterPassword ? (
                                   <VisibilityOffIcon />
@@ -972,6 +1039,7 @@ const SocialMediaAccounts = () => {
                             </InputAdornment>
                           ),
                         }}
+                        helperText={isEditing ? "Password cannot be edited" : ""}
                       />
                       
                       {/* Account Settings Checkboxes */}
@@ -1000,7 +1068,30 @@ const SocialMediaAccounts = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Checkbox
                               checked={isDefaultAccount}
-                              onChange={(e) => setIsDefaultAccount(e.target.checked)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  // Check if there are existing accounts for this platform
+                                  const existingAccounts = accounts.filter(
+                                    acc => acc.platform === currentAccount.platform
+                                  );
+                                  
+                                  if (existingAccounts.length > 0) {
+                                    // If there are existing accounts, show confirmation dialog
+                                    setAccountToSetDefault({
+                                      platform: currentAccount.platform,
+                                      accountName: currentAccount.twitterUsername || "New account",
+                                      isNewAccount: true
+                                    });
+                                    setDefaultConfirmDialogOpen(true);
+                                  } else {
+                                    // If no existing accounts, just set it
+                                    setIsDefaultAccount(true);
+                                  }
+                                } else {
+                                  // If unchecking, just update directly
+                                  setIsDefaultAccount(false);
+                                }
+                              }}
                               sx={{
                                 color: '#1DA1F2',
                                 '&.Mui-checked': {
@@ -1074,6 +1165,10 @@ const SocialMediaAccounts = () => {
                             linkedinUsername: e.target.value,
                           })
                         }
+                        // Username field is editable only when adding a new account
+                        InputProps={{
+                          readOnly: isEditing,
+                        }}
                       />
 
                       <TextField
@@ -1090,7 +1185,9 @@ const SocialMediaAccounts = () => {
                             linkedinPassword: e.target.value,
                           })
                         }
+                        // Password field is editable only when adding a new account
                         InputProps={{
+                          readOnly: isEditing,
                           endAdornment: (
                             <InputAdornment position="end">
                               <IconButton
@@ -1099,6 +1196,7 @@ const SocialMediaAccounts = () => {
                                   setShowLinkedInPassword(!showLinkedInPassword)
                                 }
                                 edge="end"
+                                disabled={isEditing}
                               >
                                 {showLinkedInPassword ? (
                                   <VisibilityOffIcon />
@@ -1109,6 +1207,7 @@ const SocialMediaAccounts = () => {
                             </InputAdornment>
                           ),
                         }}
+                        helperText={isEditing ? "Password cannot be edited" : ""}
                       />
 
                       <Button
@@ -1168,6 +1267,63 @@ const SocialMediaAccounts = () => {
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
           <Button onClick={confirmDelete} color="error" disabled={loading}>
             {loading ? <CircularProgress size={24} /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Default Account Confirmation Dialog */}
+      <Dialog
+        open={defaultConfirmDialogOpen}
+        onClose={() => setDefaultConfirmDialogOpen(false)}
+      >
+        <DialogTitle>Set Default Account</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to set {accountToSetDefault?.accountName} as your default {accountToSetDefault?.platform} account?
+            This will unset any other default {accountToSetDefault?.platform} account.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDefaultConfirmDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              // Update the account's default status
+              if (accountToSetDefault) {
+                if (accountToSetDefault.isNewAccount) {
+                  // For new account being created, just update the state
+                  setIsDefaultAccount(true);
+                } else {
+                  // For existing account, update in the database
+                  const updatedAccount = {
+                    id: accountToSetDefault.id,
+                    isDefault: true
+                  };
+                  updateAccount(accountToSetDefault.id, updatedAccount, localStorage.getItem("token"))
+                    .then(() => {
+                      fetchAccounts();
+                      setNotification({
+                        open: true,
+                        message: `${accountToSetDefault.accountName} is now your default ${accountToSetDefault.platform} account`,
+                        severity: "success"
+                      });
+                    })
+                    .catch(err => {
+                      console.error("Error updating default status:", err);
+                      setNotification({
+                        open: true,
+                        message: "Failed to update default status",
+                        severity: "error"
+                      });
+                    });
+                }
+              }
+              setDefaultConfirmDialogOpen(false);
+            }}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Confirm"}
           </Button>
         </DialogActions>
       </Dialog>

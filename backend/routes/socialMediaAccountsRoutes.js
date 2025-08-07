@@ -335,7 +335,9 @@ router.get('/accounts', checkAuth, async (req, res) => {
     try {
       const result = await pool.query(
         `SELECT id, platform, account_id AS "accountId", account_name AS "accountName",
-         created_at AS "createdAt", updated_at AS "updatedAt", is_premium AS "isPremium", is_default AS "isDefault"
+         created_at AS "createdAt", updated_at AS "updatedAt",
+         COALESCE(is_premium, FALSE) AS "isPremium",
+         COALESCE(is_default, FALSE) AS "isDefault"
          FROM social_media_accounts
          WHERE user_id = $1 AND deleted_at IS NULL
          ORDER BY platform, created_at DESC`,
@@ -388,7 +390,9 @@ router.get('/accounts/:platform', checkAuth, async (req, res) => {
     try {
       const result = await pool.query(
         `SELECT id, platform, account_id AS "accountId", account_name AS "accountName",
-         created_at AS "createdAt", updated_at AS "updatedAt", is_premium AS "isPremium", is_default AS "isDefault"
+         created_at AS "createdAt", updated_at AS "updatedAt",
+         COALESCE(is_premium, FALSE) AS "isPremium",
+         COALESCE(is_default, FALSE) AS "isDefault"
          FROM social_media_accounts
          WHERE user_id = $1 AND platform = $2 AND deleted_at IS NULL
          ORDER BY created_at DESC`,
@@ -473,9 +477,21 @@ router.post('/accounts', checkAuth, async (req, res) => {
          (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, twitter_password, is_premium, is_default)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id, platform, account_id AS "accountId", account_name AS "accountName",
-         created_at AS "createdAt", updated_at AS "updatedAt", is_premium AS "isPremium", is_default AS "isDefault"`,
+         created_at AS "createdAt", updated_at AS "updatedAt",
+         COALESCE(is_premium, FALSE)::boolean AS "isPremium",
+         COALESCE(is_default, FALSE)::boolean AS "isDefault"`,
         [userId, platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt, twitterPassword, isPremium || false, isDefault || false]
       );
+      
+      // If this account is set as default, unset any other default accounts for this platform
+      if (isDefault) {
+        await pool.query(
+          'UPDATE social_media_accounts SET is_default = FALSE WHERE platform = $1 AND user_id = $2 AND id != $3 AND is_default = TRUE',
+          [platform, userId, result.rows[0].id]
+        );
+        
+        console.log(`Set account ${result.rows[0].id} as default and unset others for platform ${platform}`);
+      }
       
       console.log('Account successfully added to database with premium and default status:', result.rows[0]);
       res.status(201).json({ success: true, data: result.rows[0] });
@@ -520,7 +536,15 @@ router.post('/accounts', checkAuth, async (req, res) => {
                 `ALTER TABLE social_media_accounts ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT FALSE;`
               );
               
-              // Update the newly inserted record with isDefault=true
+              // First unset any existing default accounts for this platform
+              await pool.query(
+                'UPDATE social_media_accounts SET is_default = FALSE WHERE platform = $1 AND user_id = $2 AND is_default = TRUE',
+                [platform, userId]
+              );
+              
+              console.log(`Unset default status for other ${platform} accounts`);
+              
+              // Then update the newly inserted record with isDefault=true
               await pool.query(
                 `UPDATE social_media_accounts SET is_default = TRUE WHERE id = $1`,
                 [result.rows[0].id]
@@ -537,8 +561,8 @@ router.post('/accounts', checkAuth, async (req, res) => {
         // Add isPremium and isDefault properties to the returned data based on the input values
         const dataWithDefaults = {
           ...result.rows[0],
-          isPremium: isPremium || false,
-          isDefault: isDefault || false
+          isPremium: Boolean(isPremium || false),
+          isDefault: Boolean(isDefault || false)
         };
         
         console.log('Account successfully added to database with user-specified premium/default status:', dataWithDefaults);
@@ -609,7 +633,36 @@ router.put('/accounts/:id', checkAuth, async (req, res) => {
         paramIndex++;
       }
       
+      // Handle the default account logic
       if (isDefault !== undefined) {
+        // If setting an account as default
+        if (isDefault === true) {
+          // First, unset any existing default accounts for this platform
+          try {
+            // Get the platform of the account being updated
+            const platformResult = await pool.query(
+              'SELECT platform FROM social_media_accounts WHERE id = $1',
+              [accountId]
+            );
+            
+            if (platformResult.rows.length > 0) {
+              const platform = platformResult.rows[0].platform;
+              
+              // Unset default for all other accounts of the same platform
+              await pool.query(
+                'UPDATE social_media_accounts SET is_default = FALSE WHERE platform = $1 AND user_id = $2 AND id != $3 AND is_default = TRUE',
+                [platform, userId, accountId]
+              );
+              
+              console.log(`Unset default status for other ${platform} accounts`);
+            }
+          } catch (error) {
+            console.error('Error updating other accounts default status:', error);
+            // Continue with the update even if this fails
+          }
+        }
+        
+        // Now set the default status for this account
         updateFields.push(`is_default = $${paramIndex}`);
         queryParams.push(isDefault);
         paramIndex++;
@@ -632,7 +685,7 @@ router.put('/accounts/:id', checkAuth, async (req, res) => {
         WHERE id = $1 AND user_id = $2
         RETURNING id, platform, account_id AS "accountId", account_name AS "accountName",
         created_at AS "createdAt", updated_at AS "updatedAt",
-        COALESCE(is_premium, FALSE) AS "isPremium", COALESCE(is_default, FALSE) AS "isDefault"
+        COALESCE(is_premium, FALSE)::boolean AS "isPremium", COALESCE(is_default, FALSE)::boolean AS "isDefault"
       `;
       
       const result = await pool.query(updateQuery, queryParams);
@@ -722,6 +775,28 @@ router.put('/accounts/:id', checkAuth, async (req, res) => {
         
         if (isDefault !== undefined) {
           try {
+            // If setting an account as default
+            if (isDefault === true) {
+              // Get the platform of the account being updated
+              const platformResult = await pool.query(
+                'SELECT platform FROM social_media_accounts WHERE id = $1',
+                [accountId]
+              );
+              
+              if (platformResult.rows.length > 0) {
+                const platform = platformResult.rows[0].platform;
+                
+                // Unset default for all other accounts of the same platform
+                await pool.query(
+                  'UPDATE social_media_accounts SET is_default = FALSE WHERE platform = $1 AND user_id = $2 AND id != $3 AND is_default = TRUE',
+                  [platform, userId, accountId]
+                );
+                
+                console.log(`Unset default status for other ${platform} accounts`);
+              }
+            }
+            
+            // Now set the default status for this account
             await pool.query(
               `UPDATE social_media_accounts SET is_default = $1 WHERE id = $2 AND user_id = $3`,
               [isDefault, accountId, userId]
@@ -735,8 +810,8 @@ router.put('/accounts/:id', checkAuth, async (req, res) => {
         // Add isPremium and isDefault properties to the returned data based on the input values
         const dataWithDefaults = {
           ...result.rows[0],
-          isPremium: isPremium !== undefined ? isPremium : false,
-          isDefault: isDefault !== undefined ? isDefault : false
+          isPremium: isPremium !== undefined ? Boolean(isPremium) : false,
+          isDefault: isDefault !== undefined ? Boolean(isDefault) : false
         };
         
         res.json({ success: true, data: dataWithDefaults });
