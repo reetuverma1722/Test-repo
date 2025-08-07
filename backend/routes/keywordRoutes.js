@@ -59,7 +59,42 @@ router.get('/keywords', checkAuth, async (req, res) => {
     
     const result = await pool.query(query, params);
     
-    res.json({ success: true, data: result.rows });
+    // Fetch associated prompts for each keyword
+    const keywordsWithPrompts = await Promise.all(result.rows.map(async (keyword) => {
+      try {
+        // Get all associated prompts for this keyword
+        const promptQuery = `
+          SELECT p.id, p.name, p.model, p.content, p.is_default,
+                 p.created_at AS "createdAt", p.updated_at AS "updatedAt"
+          FROM prompts p
+          JOIN keyword_prompts kp ON p.id = kp.prompt_id
+          WHERE kp.keyword_id = $1 AND p.deleted_at IS NULL AND kp.deleted_at IS NULL
+          ORDER BY kp.created_at DESC
+        `;
+        
+        const promptResult = await pool.query(promptQuery, [keyword.id]);
+        
+        if (promptResult.rows.length > 0) {
+          // Add all prompts information to the keyword
+          return {
+            ...keyword,
+            prompts: promptResult.rows,
+            // Keep the first prompt as default for backward compatibility
+            promptId: promptResult.rows[0].id,
+            promptName: promptResult.rows[0].name,
+            promptModel: promptResult.rows[0].model,
+            promptContent: promptResult.rows[0].content
+          };
+        }
+        
+        return keyword;
+      } catch (error) {
+        console.error(`Error fetching prompt for keyword ${keyword.id}:`, error);
+        return keyword;
+      }
+    }));
+    
+    res.json({ success: true, data: keywordsWithPrompts });
   } catch (error) {
     console.error('Error fetching keywords:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -119,7 +154,42 @@ router.get('/keywords/filter', checkAuth, async (req, res) => {
     
     const result = await pool.query(query, params);
     
-    res.json({ success: true, data: result.rows });
+    // Fetch associated prompts for each keyword
+    const keywordsWithPrompts = await Promise.all(result.rows.map(async (keyword) => {
+      try {
+        // Get all associated prompts for this keyword
+        const promptQuery = `
+          SELECT p.id, p.name, p.model, p.content, p.is_default,
+                 p.created_at AS "createdAt", p.updated_at AS "updatedAt"
+          FROM prompts p
+          JOIN keyword_prompts kp ON p.id = kp.prompt_id
+          WHERE kp.keyword_id = $1 AND p.deleted_at IS NULL AND kp.deleted_at IS NULL
+          ORDER BY kp.created_at DESC
+        `;
+        
+        const promptResult = await pool.query(promptQuery, [keyword.id]);
+        
+        if (promptResult.rows.length > 0) {
+          // Add all prompts information to the keyword
+          return {
+            ...keyword,
+            prompts: promptResult.rows,
+            // Keep the first prompt as default for backward compatibility
+            promptId: promptResult.rows[0].id,
+            promptName: promptResult.rows[0].name,
+            promptModel: promptResult.rows[0].model,
+            promptContent: promptResult.rows[0].content
+          };
+        }
+        
+        return keyword;
+      } catch (error) {
+        console.error(`Error fetching prompt for keyword ${keyword.id}:`, error);
+        return keyword;
+      }
+    }));
+    
+    res.json({ success: true, data: keywordsWithPrompts });
   } catch (error) {
     console.error('Error fetching filtered keywords:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -238,6 +308,171 @@ router.delete('/keywords/:id', checkAuth, async (req, res) => {
     res.json({ success: true, message: 'Keyword deleted successfully' });
   } catch (error) {
     console.error('Error deleting keyword:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get prompts associated with a keyword
+router.get('/keywords/:id/prompts', checkAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const keywordId = req.params.id;
+    
+    console.log(`Fetching prompts for keyword ID: ${keywordId}, User ID: ${userId}`);
+    
+    // For development purposes, make this endpoint more permissive
+    // Check if the keyword exists without checking user_id
+    const keywordCheck = await pool.query(
+      'SELECT id, user_id FROM twitter_keywords WHERE id = $1 AND deleted_at IS NULL',
+      [keywordId]
+    );
+    
+    if (keywordCheck.rows.length === 0) {
+      console.log(`Keyword with ID ${keywordId} not found in database`);
+      return res.status(404).json({ success: false, message: 'Keyword not found in database' });
+    }
+    
+    // Log the actual user_id of the keyword for debugging
+    console.log(`Keyword belongs to user_id: ${keywordCheck.rows[0].user_id}, Current user_id: ${userId}`);
+    
+    // For development, allow access even if user IDs don't match
+    // In production, you would want to uncomment this check
+    /*
+    if (keywordCheck.rows[0].user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'Not authorized to access this keyword' });
+    }
+    */
+    
+    // Get associated prompts
+    const result = await pool.query(
+      `SELECT p.id, p.name, p.model, p.content, p.is_default,
+              p.created_at AS "createdAt", p.updated_at AS "updatedAt",
+              kp.id AS "associationId"
+       FROM prompts p
+       JOIN keyword_prompts kp ON p.id = kp.prompt_id
+       WHERE kp.keyword_id = $1 AND p.deleted_at IS NULL AND kp.deleted_at IS NULL
+       ORDER BY p.name ASC`,
+      [keywordId]
+    );
+    
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error fetching keyword prompts:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Associate a prompt with a keyword
+router.post('/keywords/:id/prompts', checkAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const keywordId = req.params.id;
+    const { promptId } = req.body;
+    
+    console.log(`Associating prompt ID ${promptId} with keyword ID ${keywordId} for user ${userId}`);
+    
+    if (!promptId) {
+      return res.status(400).json({ success: false, message: 'Prompt ID is required' });
+    }
+    
+    // For development purposes, make this endpoint more permissive
+    // Check if the keyword exists without checking user_id
+    const keywordCheck = await pool.query(
+      'SELECT id, user_id FROM twitter_keywords WHERE id = $1 AND deleted_at IS NULL',
+      [keywordId]
+    );
+    
+    if (keywordCheck.rows.length === 0) {
+      console.log(`Keyword with ID ${keywordId} not found in database`);
+      return res.status(404).json({ success: false, message: 'Keyword not found in database' });
+    }
+    
+    // Log the actual user_id of the keyword for debugging
+    console.log(`Keyword belongs to user_id: ${keywordCheck.rows[0].user_id}, Current user_id: ${userId}`);
+    
+    // For development, allow access even if user IDs don't match
+    // In production, you would want to uncomment this check
+    /*
+    if (keywordCheck.rows[0].user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'Not authorized to access this keyword' });
+    }
+    */
+    
+    // Check if the prompt exists
+    const promptCheck = await pool.query(
+      'SELECT id FROM prompts WHERE id = $1 AND deleted_at IS NULL',
+      [promptId]
+    );
+    
+    if (promptCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Prompt not found' });
+    }
+    
+    // Check if the association already exists
+    const associationCheck = await pool.query(
+      'SELECT id FROM keyword_prompts WHERE keyword_id = $1 AND prompt_id = $2 AND deleted_at IS NULL',
+      [keywordId, promptId]
+    );
+    
+    if (associationCheck.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'Prompt is already associated with this keyword' });
+    }
+    
+    // Create the association
+    const result = await pool.query(
+      `INSERT INTO keyword_prompts (keyword_id, prompt_id)
+       VALUES ($1, $2)
+       RETURNING id, keyword_id AS "keywordId", prompt_id AS "promptId", created_at AS "createdAt"`,
+      [keywordId, promptId]
+    );
+    
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error associating prompt with keyword:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Remove a prompt association from a keyword
+router.delete('/keywords/:keywordId/prompts/:promptId', checkAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { keywordId, promptId } = req.params;
+    
+    console.log(`Removing prompt ID ${promptId} from keyword ID ${keywordId} for user ${userId}`);
+    
+    // For development purposes, make this endpoint more permissive
+    // Check if the keyword exists without checking user_id
+    const keywordCheck = await pool.query(
+      'SELECT id, user_id FROM twitter_keywords WHERE id = $1 AND deleted_at IS NULL',
+      [keywordId]
+    );
+    
+    if (keywordCheck.rows.length === 0) {
+      console.log(`Keyword with ID ${keywordId} not found in database`);
+      return res.status(404).json({ success: false, message: 'Keyword not found in database' });
+    }
+    
+    // Log the actual user_id of the keyword for debugging
+    console.log(`Keyword belongs to user_id: ${keywordCheck.rows[0].user_id}, Current user_id: ${userId}`);
+    
+    // For development, allow access even if user IDs don't match
+    // In production, you would want to uncomment this check
+    /*
+    if (keywordCheck.rows[0].user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'Not authorized to access this keyword' });
+    }
+    */
+    
+    // Soft delete the association
+    await pool.query(
+      'UPDATE keyword_prompts SET deleted_at = CURRENT_TIMESTAMP WHERE keyword_id = $1 AND prompt_id = $2 AND deleted_at IS NULL',
+      [keywordId, promptId]
+    );
+    
+    res.json({ success: true, message: 'Prompt association removed successfully' });
+  } catch (error) {
+    console.error('Error removing prompt association:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

@@ -16,8 +16,43 @@ const router = express.Router();
 
 const CHROME_PATH = `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"`;
 const USER_DATA_DIR = "C:\\chrome-profile";
-async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instruct", promptTemplate = null) {
+async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instruct", promptTemplate = null, keywordId = null) {
   const apiKey = process.env.OPENROUTER_API_KEY;
+  
+  // If keywordId is provided, check for associated prompts
+  let associatedPrompt = null;
+  if (keywordId) {
+    try {
+      // Query to get the most recently associated prompt for this keyword
+      const promptResult = await pool.query(`
+        SELECT p.id, p.name, p.model, p.content
+        FROM prompts p
+        JOIN keyword_prompts kp ON p.id = kp.prompt_id
+        WHERE kp.keyword_id = $1 AND p.deleted_at IS NULL AND kp.deleted_at IS NULL
+        ORDER BY kp.created_at DESC
+        LIMIT 1
+      `, [keywordId]);
+      
+      if (promptResult.rows.length > 0) {
+        associatedPrompt = promptResult.rows[0];
+        console.log(`Found associated prompt for keyword ${keywordId}: ${associatedPrompt.name}`);
+        
+        // Use the associated prompt's model and content if available
+        if (associatedPrompt.model) {
+          model = associatedPrompt.model;
+        }
+        
+        if (associatedPrompt.content) {
+          promptTemplate = associatedPrompt.content;
+        }
+      } else {
+        console.log(`No associated prompt found for keyword ${keywordId}, using provided values`);
+      }
+    } catch (error) {
+      console.error(`Error fetching associated prompt for keyword ${keywordId}:`, error.message);
+      // Continue with the provided values if there's an error
+    }
+  }
   
   // Use the provided prompt template or fall back to the default
   const promptContent = promptTemplate
@@ -182,9 +217,10 @@ router.get("/search", async (req, res) => {
         console.log(`Force refresh requested for keyword "${keyword}", bypassing cache`);
       }
 
-      // 3. Scrape if not in cache
+      
+     // 3. Scrape if not in cache
       const result = await pool.query(
-      "SELECT account_name, twitter_password FROM social_media_accounts WHERE platform = 'twitter' AND is_default = true LIMIT 1",
+      "SELECT account_name, password FROM social_media_accounts WHERE platform = 'twitter' AND is_default = true LIMIT 1",
       []
     );
 
@@ -197,11 +233,11 @@ router.get("/search", async (req, res) => {
         });
     }
 
-    const { account_name, twitter_password  } = result.rows[0];
+    const { account_name, password  } = result.rows[0];
 
 
   console.log("1");
- const browser = await puppeteer.launch({
+const browser = await puppeteer.launch({
     headless: true,
     args: [
       "--no-sandbox",
@@ -223,14 +259,15 @@ await page.type('input[name="text"]', account_name);
 await page.keyboard.press('Enter');
 
 await new Promise(resolve => setTimeout(resolve, 2000));
- // wait for password field to appear
+// wait for password field to appear
   console.log("5");
 await page.waitForSelector('input[name="password"]', { visible: true });
-await page.type('input[name="password"]',twitter_password);
+await page.type('input[name="password"]',password);
 await page.keyboard.press('Enter');
   console.log("6");
 await page.waitForNavigation({ waitUntil: 'networkidle2' });
       const searchQuery = encodeURIComponent(keyword);
+ 
       await page.goto(
         `https://twitter.com/search?q=${searchQuery}&src=typed_query`,
         { waitUntil: "domcontentloaded" }
@@ -1949,12 +1986,30 @@ router.delete("/history/:id", async (req, res) => {
 // New endpoint to generate replies using OpenRouter API
 router.post("/generate-reply", async (req, res) => {
   try {
-    const { model, messages } = req.body;
+    const { model, messages, tweetContent, promptTemplate, keywordId } = req.body;
     
+    // If tweetContent is provided, use the generateReply function
+    if (tweetContent) {
+      const reply = await generateReply(tweetContent, model, promptTemplate, keywordId);
+      
+      if (!reply) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to generate reply"
+        });
+      }
+      
+      return res.json({
+        success: true,
+        reply: reply
+      });
+    }
+    
+    // Otherwise, use the raw messages approach
     if (!model || !messages || !messages.length) {
       return res.status(400).json({
         success: false,
-        message: "Missing required parameters: model and messages"
+        message: "Missing required parameters: model and messages or tweetContent"
       });
     }
     

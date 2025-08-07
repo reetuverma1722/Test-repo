@@ -206,6 +206,28 @@ async function checkAndCreateTables() {
       console.log('Prompts table already exists.');
     }
     
+    // Check if keyword_prompts table exists
+    const keywordPromptsTableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'keyword_prompts'
+      );
+    `);
+    
+    if (!keywordPromptsTableCheck.rows[0].exists) {
+      console.log('Creating keyword_prompts table...');
+      
+      // Read the SQL file
+      const keywordPromptsSqlPath = path.join(__dirname, '../sql/create_keyword_prompts_table.sql');
+      const keywordPromptsSql = fs.readFileSync(keywordPromptsSqlPath, 'utf8');
+      // Execute the SQL query
+      await client.query(keywordPromptsSql);
+      console.log('Keyword prompts table created successfully.');
+    } else {
+      console.log('Keyword prompts table already exists.');
+    }
+    
     // Check if twitter_password column exists in social_media_accounts table
     try {
       const passwordColumnCheck = await client.query(`
