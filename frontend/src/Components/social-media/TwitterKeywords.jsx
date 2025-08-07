@@ -70,7 +70,6 @@ const TwitterKeywords = () => {
     { id: "meta-llama/llama-3-8b-instruct", name: "Llama 3 8B Instruct" },
     { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3 70B Instruct" },
     { id: "anthropic/claude-3-opus-20240229", name: "Claude 3 Opus" },
-    { id: "anthropic/claude-3-sonnet-20240229", name: "Claude 3 Sonnet" },
     { id: "anthropic/claude-3-haiku-20240307", name: "Claude 3 Haiku" },
     { id: "openai/gpt-4o", name: "GPT-4o" }
   ]);

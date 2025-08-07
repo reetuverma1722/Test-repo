@@ -276,14 +276,114 @@ await page.type('input[name="text"]', account_name);
   console.log("3");
 await page.keyboard.press('Enter');
 
-await new Promise(resolve => setTimeout(resolve, 2000));
+// Wait longer after entering username
+await new Promise(resolve => setTimeout(resolve, 5000));
 // wait for password field to appear
   console.log("5");
-await page.waitForSelector('input[name="password"]', { visible: true });
-await page.type('input[name="password"]',twitter_password);
+
+// Try multiple selectors for password field with increased timeout
+let passwordFieldFound = false;
+    
+// First attempt - original selector with increased timeout
+try {
+  console.log("Trying original password selector...");
+  await page.waitForSelector('input[name="password"]', { visible: true, timeout: 20000 });
+  console.log("Password field found with original selector");
+  await page.type('input[name="password"]', twitter_password);
+  passwordFieldFound = true;
+} catch (error) {
+  console.log("Original password selector failed:", error.message);
+}
+
+// Second attempt - alternative selectors
+if (!passwordFieldFound) {
+  try {
+    console.log("Trying alternative password selectors...");
+    await page.waitForSelector('input[type="password"], input.password-field', { visible: true, timeout: 10000 });
+    console.log("Password field found with alternative selector");
+    
+    // Use the appropriate selector based on which one exists
+    const passwordSelector = await page.$('input[type="password"]') ? 'input[type="password"]' : 'input.password-field';
+    await page.type(passwordSelector, twitter_password);
+    passwordFieldFound = true;
+  } catch (error) {
+    console.log("Alternative password selectors failed:", error.message);
+  }
+}
+
+// Third attempt - look for any password input
+if (!passwordFieldFound) {
+  try {
+    console.log("Looking for any password input...");
+    
+    // Check if there's any password field on the page
+    const passwordField = await page.evaluate(() => {
+      const inputs = Array.from(document.querySelectorAll('input'));
+      const passwordInput = inputs.find(input =>
+        input.type === 'password' ||
+        input.name === 'password' ||
+        input.id?.includes('password') ||
+        input.placeholder?.toLowerCase().includes('password')
+      );
+      
+      if (passwordInput) {
+        return {
+          found: true,
+          selector: passwordInput.id ? `#${passwordInput.id}` :
+                    passwordInput.name ? `input[name="${passwordInput.name}"]` :
+                    'input[type="password"]'
+        };
+      }
+      return { found: false };
+    });
+    
+    if (passwordField.found) {
+      console.log(`Password field found with dynamic selector: ${passwordField.selector}`);
+      await page.waitForSelector(passwordField.selector, { timeout: 5000 });
+      await page.type(passwordField.selector, twitter_password);
+      passwordFieldFound = true;
+    }
+  } catch (error) {
+    console.log("Dynamic password field search failed:", error.message);
+  }
+}
+
+// If all attempts failed, take a screenshot and throw an error
+if (!passwordFieldFound) {
+  console.error("Failed to find password field with any method");
+  
+  // Take a screenshot to debug
+  try {
+    await page.screenshot({ path: 'search-password-field-error.png' });
+    console.log("Screenshot saved as search-password-field-error.png");
+  } catch (screenshotError) {
+    console.error("Failed to take screenshot:", screenshotError.message);
+  }
+  
+  throw new Error("Could not find password input field");
+}
+
 await page.keyboard.press('Enter');
   console.log("6");
-await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+// Wait for navigation with increased timeout and better error handling
+try {
+  await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
+} catch (navError) {
+  console.log("Navigation timeout, but continuing anyway:", navError.message);
+  // Check if we're actually logged in despite the navigation timeout
+  const isLoggedIn = await page.evaluate(() => {
+    return !document.querySelector('input[name="password"]') &&
+           (document.querySelector('[data-testid="AppTabBar_Home_Link"]') ||
+            document.querySelector('[aria-label*="Home"]'));
+  });
+  
+  if (isLoggedIn) {
+    console.log("✅ Appears to be logged in despite navigation timeout");
+  } else {
+    console.log("⚠️ May not be properly logged in");
+  }
+}
       const searchQuery = encodeURIComponent(keyword);
  
       await page.goto(
@@ -1778,31 +1878,271 @@ async function postReplyWithPuppeteerAndGetId(
     console.log("🔐 Logging in...");
  await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
-//     // Fill username
-    console.log("1");
-    await page.waitForSelector('input[name="text"]');
-    console.log("2");
-    await page.type('input[name="text"]', username);
-    console.log("3");
-    await page.keyboard.press("Enter");
-    console.log("4");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    console.log("5");
-    // Fill password
-    await page.waitForSelector('input[name="password"]', { timeout: 10000 });
-    console.log("6");
-    console.log("🔑 Username:", username);
-    console.log("🔑 Password:", twitter_password);
-    console.log("🧪 typeof Password:", typeof twitter_password);
-
-    await page.type('input[name="password"]', twitter_password);
+    // Take a screenshot of the initial login page for debugging
+    try {
+      await page.screenshot({ path: 'twitter-login-initial.png' });
+      console.log("Screenshot saved as twitter-login-initial.png");
+    } catch (screenshotError) {
+      console.error("Failed to take initial screenshot:", screenshotError.message);
+    }
+    
+    // Analyze the login page structure to determine the best approach
+    console.log("🔍 Analyzing Twitter login page structure...");
+    const loginPageFormat = await page.evaluate(() => {
+      // Check for username field
+      const usernameField = document.querySelector('input[name="text"], input[autocomplete="username"]');
+      
+      // Check for password field on the same page
+      const passwordField = document.querySelector('input[type="password"], input[name="password"]');
+      
+      // Check for single-page login form
+      const singlePageLogin = document.querySelector('form') &&
+                             document.querySelector('form').querySelectorAll('input').length >= 2;
+      
+      // Check for verification or CAPTCHA
+      const hasVerification = document.body.innerText.toLowerCase().includes('verify') ||
+                             document.body.innerText.toLowerCase().includes('captcha') ||
+                             document.body.innerText.toLowerCase().includes('unusual activity');
+      
+      return {
+        hasUsernameField: !!usernameField,
+        hasPasswordField: !!passwordField,
+        isSinglePageLogin: !!singlePageLogin,
+        hasVerification: hasVerification,
+        pageTitle: document.title,
+        bodyText: document.body.innerText.substring(0, 200) // First 200 chars for analysis
+      };
+    });
+    
+    console.log("Login page analysis:", loginPageFormat);
+    
+    // Handle different login page formats
+    if (loginPageFormat.isSinglePageLogin && loginPageFormat.hasPasswordField) {
+      console.log("Detected single-page login format with both username and password fields");
+      
+      // Try to find username field
+      await page.waitForSelector('input[name="text"], input[autocomplete="username"]', { timeout: 10000 });
+      await page.type('input[name="text"], input[autocomplete="username"]', username);
+      console.log("Username entered in single-page format");
+      
+      // Try to find password field
+      await page.waitForSelector('input[type="password"], input[name="password"]', { timeout: 10000 });
+      await page.type('input[type="password"], input[name="password"]', twitter_password);
+      console.log("Password entered in single-page format");
+      
+      // Find and click login button
+      const loginButton = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'));
+        const loginBtn = buttons.find(btn =>
+          btn.innerText.toLowerCase().includes('log in') ||
+          btn.innerText.toLowerCase().includes('sign in')
+        );
+        
+        if (loginBtn) {
+          const rect = loginBtn.getBoundingClientRect();
+          return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        }
+        return null;
+      });
+      
+      if (loginButton) {
+        await page.mouse.click(loginButton.x, loginButton.y);
+        console.log("Clicked login button in single-page format");
+      } else {
+        // Try to submit the form with Enter key
+        await page.keyboard.press("Enter");
+        console.log("Pressed Enter to submit login form");
+      }
+    } else if (loginPageFormat.hasVerification) {
+      // Handle verification challenge
+      console.log("⚠️ Verification or CAPTCHA detected on login page");
+      console.log("Login page text:", loginPageFormat.bodyText);
+      
+      // Take a screenshot of the verification page
+      try {
+        await page.screenshot({ path: 'twitter-verification-challenge.png' });
+        console.log("Screenshot saved as twitter-verification-challenge.png");
+      } catch (screenshotError) {
+        console.error("Failed to take verification screenshot:", screenshotError.message);
+      }
+      
+      throw new Error("Twitter login requires verification or CAPTCHA. Manual login required.");
+    } else {
+      // Traditional two-step login flow
+      console.log("Using traditional two-step login flow");
+      
+      //     // Fill username
+      console.log("1");
+      await page.waitForSelector('input[name="text"]');
+      console.log("2");
+      await page.type('input[name="text"]', username);
+      console.log("3");
+      await page.keyboard.press("Enter");
+      console.log("4");
+      // Wait longer after entering username
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      
+      // Take a screenshot after username entry
+      try {
+        await page.screenshot({ path: 'twitter-login-after-username.png' });
+        console.log("Screenshot saved as twitter-login-after-username.png");
+      } catch (screenshotError) {
+        console.error("Failed to take after-username screenshot:", screenshotError.message);
+      }
+      
+      console.log("5");
+      // Fill password - try multiple selectors with increased timeout
+      let passwordFieldFound = false;
+      
+      // First attempt - original selector with increased timeout
+      try {
+        console.log("Trying original password selector...");
+        await page.waitForSelector('input[name="password"]', { timeout: 20000 });
+        console.log("6 - Password field found with original selector");
+        passwordFieldFound = true;
+      } catch (error) {
+        console.log("Original password selector failed:", error.message);
+      }
+      
+      // Second attempt - alternative selectors
+      if (!passwordFieldFound) {
+        try {
+          console.log("Trying alternative password selectors...");
+          await page.waitForSelector('input[type="password"], input.password-field', { timeout: 10000 });
+          console.log("6 - Password field found with alternative selector");
+          passwordFieldFound = true;
+        } catch (error) {
+          console.log("Alternative password selectors failed:", error.message);
+        }
+      }
+      
+      // Third attempt - look for any password input
+      if (!passwordFieldFound) {
+        try {
+          console.log("Looking for any password input...");
+          
+          // Check if there's any password field on the page
+          const passwordField = await page.evaluate(() => {
+            const inputs = Array.from(document.querySelectorAll('input'));
+            const passwordInput = inputs.find(input =>
+              input.type === 'password' ||
+              input.name === 'password' ||
+              input.id?.includes('password') ||
+              input.placeholder?.toLowerCase().includes('password')
+            );
+            
+            if (passwordInput) {
+              return {
+                found: true,
+                selector: passwordInput.id ? `#${passwordInput.id}` :
+                          passwordInput.name ? `input[name="${passwordInput.name}"]` :
+                          'input[type="password"]'
+              };
+            }
+            return { found: false };
+          });
+          
+          if (passwordField.found) {
+            console.log(`6 - Password field found with dynamic selector: ${passwordField.selector}`);
+            await page.waitForSelector(passwordField.selector, { timeout: 5000 });
+            passwordFieldFound = true;
+          }
+        } catch (error) {
+          console.log("Dynamic password field search failed:", error.message);
+        }
+      }
+      
+      // Check for verification or CAPTCHA after username entry
+      if (!passwordFieldFound) {
+        const verificationCheck = await page.evaluate(() => {
+          const bodyText = document.body.innerText.toLowerCase();
+          return {
+            hasVerification: bodyText.includes('verify') ||
+                            bodyText.includes('captcha') ||
+                            bodyText.includes('unusual activity') ||
+                            bodyText.includes('confirm your identity'),
+            pageText: document.body.innerText.substring(0, 200) // First 200 chars for analysis
+          };
+        });
+        
+        if (verificationCheck.hasVerification) {
+          console.log("⚠️ Verification or CAPTCHA detected after username entry:", verificationCheck.pageText);
+          
+          // Take a screenshot of the verification page
+          try {
+            await page.screenshot({ path: 'twitter-verification-after-username.png' });
+            console.log("Screenshot saved as twitter-verification-after-username.png");
+          } catch (screenshotError) {
+            console.error("Failed to take verification screenshot:", screenshotError.message);
+          }
+          
+          throw new Error("Twitter login requires verification or CAPTCHA after username entry. Manual login required.");
+        }
+      }
+      
+      // If all attempts failed, take a screenshot and throw an error
+      if (!passwordFieldFound) {
+        console.error("Failed to find password field with any method");
+        
+        // Take a screenshot to debug
+        try {
+          await page.screenshot({ path: 'password-field-error.png' });
+          console.log("Screenshot saved as password-field-error.png");
+        } catch (screenshotError) {
+          console.error("Failed to take screenshot:", screenshotError.message);
+        }
+        
+        throw new Error("Could not find password input field. Twitter may have changed their login page structure.");
+      }
+      
+      console.log("🔑 Username:", username);
+      console.log("🔑 Password:", twitter_password);
+      console.log("🧪 typeof Password:", typeof twitter_password);
+  
+      // Type password in the found field
+      if (passwordFieldFound) {
+        // Use the appropriate selector based on which attempt succeeded
+        const passwordSelector = await page.$('input[name="password"]') ? 'input[name="password"]' :
+                                await page.$('input[type="password"]') ? 'input[type="password"]' :
+                                'input.password-field';
+        
+        await page.type(passwordSelector, twitter_password);
+      }
+    }
     console.log("7");
     await page.keyboard.press("Enter");
     console.log("8");
-    await page.waitForNavigation({ waitUntil: "networkidle2" });
-    console.log("9");
-    console.log("✅ Logged in");
+    
+    // Wait for navigation with increased timeout and better error handling
+    try {
+      await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 });
+      console.log("9");
+      console.log("✅ Logged in");
+    } catch (navError) {
+      console.log("Navigation timeout, but continuing anyway:", navError.message);
+      // Take a screenshot to see what happened
+      try {
+        await page.screenshot({ path: 'post-login-state.png' });
+        console.log("Screenshot saved as post-login-state.png");
+      } catch (screenshotError) {
+        console.error("Failed to take screenshot:", screenshotError.message);
+      }
+      
+      // Check if we're actually logged in despite the navigation timeout
+      const isLoggedIn = await page.evaluate(() => {
+        // Look for elements that indicate we're logged in
+        return !document.querySelector('input[name="password"]') &&
+               (document.querySelector('[data-testid="AppTabBar_Home_Link"]') ||
+                document.querySelector('[aria-label*="Home"]') ||
+                document.querySelector('[data-testid="SideNav_NewTweet_Button"]'));
+      });
+      
+      if (isLoggedIn) {
+        console.log("✅ Appears to be logged in despite navigation timeout");
+      } else {
+        console.log("⚠️ May not be properly logged in");
+      }
+    }
 
     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
     console.log(`📨 Opening tweet: ${tweetUrl}`);
