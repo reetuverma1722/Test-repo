@@ -820,6 +820,7 @@ const SocialMediaAccounts = () => {
                   <TableCell>{account.accountId}</TableCell>
                   <TableCell>
                     <Checkbox
+                    size="small"
                       checked={Boolean(account.isPremium)}
                       onChange={(e) => {
                         // Update the account's premium status
@@ -841,7 +842,8 @@ const SocialMediaAccounts = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <Checkbox
+                    <Checkbox 
+                    size="small"
                       checked={Boolean(account.isDefault)}
                       onChange={(e) => {
                         if (e.target.checked) {

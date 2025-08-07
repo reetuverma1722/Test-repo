@@ -168,19 +168,19 @@ const TwitterKeywords = () => {
         {
           id: "professional",
           name: "Professional",
-          content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.`,
+          content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         },
         {
           id: "engaging",
           name: "Engaging",
-          content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`,
+          content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         },
         {
           id: "supportive",
           name: "Supportive",
-          content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`,
+          content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         }
       ];
@@ -243,25 +243,25 @@ const TwitterKeywords = () => {
         {
           id: "default",
           name: "Default",
-          content: `Reply smartly to this tweet:\n"${'{tweetContent}'}".\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents`,
+          content: `Reply smartly to this tweet:\n"${'{tweetContent}'}".\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents. also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         },
         {
           id: "professional",
           name: "Professional",
-          content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.`,
+          content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         },
         {
           id: "engaging",
           name: "Engaging",
-          content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`,
+          content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         },
         {
           id: "supportive",
           name: "Supportive",
-          content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`,
+          content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.also do not add any other explanation other then reply just give reply content and limit should be 220 characters`,
           model: "meta-llama/llama-3-8b-instruct"
         }
       ]);
@@ -792,7 +792,7 @@ const TwitterKeywords = () => {
                             setPromptManagementOpen(true);
                           });
                         }}
-                        sx={{ color: "#4896A0" }}
+                      
                       >
                         <SmartToyIcon fontSize="small" />
                       </IconButton>
@@ -1161,7 +1161,9 @@ const TwitterKeywords = () => {
               </Grid>
             )}
             
-            <Grid item xs={12}>
+         
+          </Grid>
+             <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
                 Preview
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
@@ -1185,7 +1187,6 @@ const TwitterKeywords = () => {
                 </Typography>
               </Paper>
             </Grid>
-          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPromptManagementOpen(false)}>
