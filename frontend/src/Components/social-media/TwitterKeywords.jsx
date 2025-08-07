@@ -70,7 +70,7 @@ const TwitterKeywords = () => {
     { id: "meta-llama/llama-3-8b-instruct", name: "Llama 3 8B Instruct", selected: true },
     { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3 70B Instruct", selected: false },
     { id: "claude-3-opus", name: "Claude 3 Opus", selected: false },
-    { id: "claude-3-haiku", name: "Claude 3 Haiku", selected: false },
+    { id: "anthropic/claude-3-haiku", name: "Claude 3 Haiku", selected: false },
     { id: "gpt-4o", name: "GPT-4o", selected: false }
   ]);
   const [selectedModel, setSelectedModel] = useState("meta-llama/llama-3-8b-instruct");
