@@ -2268,7 +2268,7 @@ const fetchPostHistory = async () => {
                                   sx={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 3,
+                                    gap: { xs: 1.5, sm: 2 }, // Reduced gap for smaller screens
                                   }}
                                 >
                                   <Box
@@ -2412,45 +2412,47 @@ const fetchPostHistory = async () => {
                                       {formatNumber(tweet?.view_count || 0)}
                                     </Typography>
                                   </Box>
+                                </Box>
 
-                                  {/* Posted Time */}
-                                  {tweet?.posted_time && (
-                                    <Box
+                                {/* Posted Time - moved to the right side with reduced spacing */}
+                                {tweet?.posted_time && (
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.3, // Reduced gap between icon and text
+                                      ml: { xs: 0.5, sm: 1 }, // Small margin to separate from left content
+                                    }}
+                                  >
+                                    <Typography
                                       sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
                                       }}
                                     >
-                                      <Typography
+                                      <CalendarIcon
                                         sx={{
-                                          fontSize: "10px",
-                                          color: "white",
-                                          fontWeight: 600,
+                                          fontSize: { xs: "16px", sm: "18px" }, // Smaller icon on mobile
+                                          color: "#21808D",
+                                          mt: "0.8rem",
                                         }}
-                                      >
-                                        <CalendarIcon
-                                          sx={{
-                                            fontSize: "18px",
-                                            color: "#21808D",
-                                            mt: "0.8rem",
-                                          }}
-                                        />
-                                      </Typography>
+                                      />
+                                    </Typography>
 
-                                      <Typography
-                                        variant="caption"
-                                        sx={{
-                                          fontSize: "0.75rem",
-                                          fontWeight: 600,
-                                          color: "#1a1a1a",
-                                        }}
-                                      >
-                                        {formatPostedTime(tweet.posted_time)}
-                                      </Typography>
-                                    </Box>
-                                  )}
-                                </Box>
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: { xs: "0.7rem", sm: "0.75rem" }, // Smaller text on mobile
+                                        fontWeight: 600,
+                                        color: "#1a1a1a",
+                                        whiteSpace: "nowrap", // Prevent text wrapping
+                                      }}
+                                    >
+                                      {formatPostedTime(tweet.posted_time)}
+                                    </Typography>
+                                  </Box>
+                                )}
                               </Box>
                             </a>
 
