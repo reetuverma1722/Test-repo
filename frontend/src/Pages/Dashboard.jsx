@@ -555,6 +555,15 @@ const fetchPostHistory = async () => {
       // Replace {tweetContent} with the actual tweet text
       const formattedPrompt = selectedPrompt.content.replace(/{tweetContent}/g, selectedTweet.text);
       
+      // First check if the API endpoint is accessible
+      try {
+        await axios.get("http://localhost:5000/api/generate-reply-check");
+      } catch (checkError) {
+        console.error("API endpoint check failed:", checkError);
+        alert("Cannot connect to AI service. Please check if the server is running.");
+        return;
+      }
+      
       // Call the backend to generate a reply
       const response = await axios.post("http://localhost:5000/api/generate-reply", {
         model: selectedPrompt.model || "meta-llama/llama-3-8b-instruct", // Use default model if not specified
@@ -569,11 +578,33 @@ const fetchPostHistory = async () => {
       if (response.data && response.data.reply) {
         setEditedReply(response.data.reply);
       } else {
-        alert("Failed to generate reply");
+        alert("Failed to generate reply: No content returned from AI service");
       }
     } catch (error) {
       console.error("Error generating reply:", error);
-      alert("Error generating reply: " + (error.message || "Unknown error"));
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Unknown error occurred";
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 404) {
+          errorMessage = "AI service endpoint not found. Please check if the server is running.";
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = `Server error: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = "No response from server. Please check your network connection.";
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = error.message;
+      }
+      
+      alert("Error generating reply: " + errorMessage);
     } finally {
       setIsGeneratingReply(false);
     }

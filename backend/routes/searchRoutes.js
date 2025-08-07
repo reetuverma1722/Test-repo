@@ -1732,7 +1732,7 @@ router.post("/reply-to-tweet", async (req, res) => {
  
 async function postReplyWithPuppeteerAndGetId(
   username,
-  password,
+  twitter_password,
   tweetId,
   replyText
 ) {
@@ -1757,20 +1757,32 @@ async function postReplyWithPuppeteerAndGetId(
 
   try {
     console.log("🔐 Logging in...");
+await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
-    await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
-
-    // Fill username
+//     // Fill username
+    console.log("1");
     await page.waitForSelector('input[name="text"]');
+    console.log("2");
     await page.type('input[name="text"]', username);
+    console.log("3");
     await page.keyboard.press("Enter");
+    console.log("4");
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
+    console.log("5");
     // Fill password
     await page.waitForSelector('input[name="password"]', { timeout: 10000 });
-    await page.type('input[name="password"]', password);
+    console.log("6");
+    console.log("🔑 Username:", username);
+    console.log("🔑 Password:", twitter_password);
+    console.log("🧪 typeof Password:", typeof twitter_password);
+
+    await page.type('input[name="password"]', twitter_password);
+    console.log("7");
     await page.keyboard.press("Enter");
+    console.log("8");
     await page.waitForNavigation({ waitUntil: "networkidle2" });
+    console.log("9");
     console.log("✅ Logged in");
 
     const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
@@ -1778,54 +1790,291 @@ async function postReplyWithPuppeteerAndGetId(
     await page.goto(tweetUrl, { waitUntil: "networkidle2", timeout: 90000 });
 
     // Wait for reply button and click it
-    await page.waitForSelector('button[data-testid="reply"]', {
-      timeout: 10000,
-    });
-    console.log("✅ Reply button found");
-    await page.click('button[data-testid="reply"]');
-    console.log("📨 Reply button clicked");
+    console.log("Looking for reply button...");
+    
+    let replyButtonFound = false;
+    
+    // Try different selectors for the reply button
+    try {
+      // First attempt - original selector
+      await page.waitForSelector('button[data-testid="reply"]', {
+        timeout: 15000,
+      });
+      console.log("✅ Reply button found with original selector");
+      await page.click('button[data-testid="reply"]');
+      replyButtonFound = true;
+      console.log("📨 Reply button clicked");
+    } catch (error) {
+      console.log("Original reply button selector failed:", error.message);
+    }
+    
+    // Second attempt - alternative selector
+    if (!replyButtonFound) {
+      try {
+        console.log("Trying alternative reply button selector...");
+        await page.waitForSelector('div[aria-label*="Reply"], button[aria-label*="Reply"]', {
+          timeout: 10000,
+        });
+        console.log("✅ Reply button found with alternative selector");
+        await page.click('div[aria-label*="Reply"], button[aria-label*="Reply"]');
+        replyButtonFound = true;
+        console.log("📨 Reply button clicked");
+      } catch (error) {
+        console.log("Alternative reply button selector failed:", error.message);
+      }
+    }
+    
+    // Third attempt - look for any button with reply text
+    if (!replyButtonFound) {
+      try {
+        console.log("Trying to find any button with reply text...");
+        
+        // Look for any element that might be a reply button
+        const replyButton = await page.evaluate(() => {
+          // Look for elements containing "reply" text
+          const elements = Array.from(document.querySelectorAll('button, div[role="button"]'));
+          const replyElement = elements.find(el =>
+            el.innerText.toLowerCase().includes('reply') ||
+            el.getAttribute('aria-label')?.toLowerCase().includes('reply')
+          );
+          
+          if (replyElement) {
+            // Get element coordinates for clicking
+            const rect = replyElement.getBoundingClientRect();
+            return {
+              found: true,
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2
+            };
+          }
+          
+          return { found: false };
+        });
+        
+        if (replyButton.found) {
+          console.log("✅ Reply button found with text search");
+          await page.mouse.click(replyButton.x, replyButton.y);
+          replyButtonFound = true;
+          console.log("📨 Reply button clicked");
+        }
+      } catch (error) {
+        console.log("Text-based reply button search failed:", error.message);
+      }
+    }
+    
+    // If all attempts failed, take a screenshot and throw an error
+    if (!replyButtonFound) {
+      console.error("Failed to find reply button with any method");
+      
+      // Take a screenshot to debug
+      try {
+        await page.screenshot({ path: 'reply-button-error.png' });
+        console.log("Screenshot saved as reply-button-error.png");
+      } catch (screenshotError) {
+        console.error("Failed to take screenshot:", screenshotError.message);
+      }
+      
+      throw new Error("Could not find reply button");
+    }
 
     // Wait for reply modal textarea and type reply
-    await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
-      timeout: 15000,
-    });
-    await page.waitForSelector(
-      'div[role="textbox"][data-testid="tweetTextarea_0"]'
-    );
-    await page.type(
-      'div[role="textbox"][data-testid="tweetTextarea_0"]',
-      replyText
-    );
+    // Try multiple selectors as Twitter's UI might change
+    console.log("Waiting for tweet textarea...");
+    
+    let textareaFound = false;
+    
+    // Try different selectors with increased timeout
+    try {
+      // First attempt - original selector
+      await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
+        timeout: 20000,
+      });
+      await page.waitForSelector(
+        'div[role="textbox"][data-testid="tweetTextarea_0"]'
+      );
+      await page.type(
+        'div[role="textbox"][data-testid="tweetTextarea_0"]',
+        replyText
+      );
+      textareaFound = true;
+      console.log("Found textarea using original selector");
+    } catch (error) {
+      console.log("Original textarea selector failed:", error.message);
+    }
+    
+    // Second attempt - alternative selector
+    if (!textareaFound) {
+      try {
+        console.log("Trying alternative selector...");
+        await page.waitForSelector('div[role="textbox"]', {
+          timeout: 10000,
+        });
+        await page.type('div[role="textbox"]', replyText);
+        textareaFound = true;
+        console.log("Found textarea using alternative selector");
+      } catch (error) {
+        console.log("Alternative textarea selector failed:", error.message);
+      }
+    }
+    
+    // Third attempt - look for any editable div
+    if (!textareaFound) {
+      try {
+        console.log("Trying to find any editable div...");
+        await page.waitForSelector('div[contenteditable="true"]', {
+          timeout: 10000,
+        });
+        await page.type('div[contenteditable="true"]', replyText);
+        textareaFound = true;
+        console.log("Found textarea using contenteditable selector");
+      } catch (error) {
+        console.log("Contenteditable selector failed:", error.message);
+      }
+    }
+    
+    // If all attempts failed, take a screenshot and throw an error
+    if (!textareaFound) {
+      console.error("Failed to find tweet textarea with any selector");
+      
+      // Take a screenshot to debug
+      try {
+        await page.screenshot({ path: 'tweet-reply-error.png' });
+        console.log("Screenshot saved as tweet-reply-error.png");
+      } catch (screenshotError) {
+        console.error("Failed to take screenshot:", screenshotError.message);
+      }
+      
+      throw new Error("Could not find tweet textarea element");
+    }
     console.log("📝 Typed reply");
 
-    // Wait for the "Reply" button to become enabled
-    await page.waitForFunction(
-      () => {
-        const btn = document.querySelector(
-          'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
-        );
-        return (
-          btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
-        );
-      },
-      { timeout: 10000 }
-    );
-
-    console.log("✅ Reply button is now enabled");
-
-    // Click the reply button
-    const replyBtn = await page.$(
-      'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
-    );
-    await replyBtn.click();
-    console.log("Clicked reply button, waiting for confirmation...");
+    // Wait for the "Reply" button to become enabled with multiple selector attempts
+    console.log("Waiting for tweet button to be enabled...");
     
+    let tweetButtonFound = false;
+    
+    // First attempt - original selector
+    try {
+      await page.waitForFunction(
+        () => {
+          const btn = document.querySelector(
+            'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+          );
+          return (
+            btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
+          );
+        },
+        { timeout: 10000 }
+      );
+      
+      console.log("✅ Tweet button found with original selector");
+      const replyBtn = await page.$(
+        'div[data-testid="tweetButton"] > button, button[data-testid="tweetButton"]'
+      );
+      await replyBtn.click();
+      tweetButtonFound = true;
+      console.log("📨 Tweet button clicked");
+    } catch (error) {
+      console.log("Original tweet button selector failed:", error.message);
+    }
+    
+    // Second attempt - alternative selector
+    if (!tweetButtonFound) {
+      try {
+        console.log("Trying alternative tweet button selector...");
+        await page.waitForFunction(
+          () => {
+            const btn = document.querySelector(
+              'button[data-testid*="tweet"], div[role="button"][data-testid*="tweet"]'
+            );
+            return (
+              btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true"
+            );
+          },
+          { timeout: 10000 }
+        );
+        
+        console.log("✅ Tweet button found with alternative selector");
+        const replyBtn = await page.$(
+          'button[data-testid*="tweet"], div[role="button"][data-testid*="tweet"]'
+        );
+        await replyBtn.click();
+        tweetButtonFound = true;
+        console.log("📨 Tweet button clicked");
+      } catch (error) {
+        console.log("Alternative tweet button selector failed:", error.message);
+      }
+    }
+    
+    // Third attempt - look for any enabled button in the reply dialog
+    if (!tweetButtonFound) {
+      try {
+        console.log("Trying to find any enabled button in reply dialog...");
+        
+        // Look for any button that might be a tweet button
+        const tweetButton = await page.evaluate(() => {
+          // First look for dialog
+          const dialog = document.querySelector('div[role="dialog"]');
+          if (!dialog) return { found: false };
+          
+          // Look for enabled buttons in the dialog
+          const buttons = Array.from(dialog.querySelectorAll('button:not([disabled]), div[role="button"]'));
+          const tweetBtn = buttons.find(btn =>
+            !btn.disabled &&
+            btn.getAttribute("aria-disabled") !== "true" &&
+            (btn.innerText.toLowerCase().includes('tweet') ||
+             btn.innerText.toLowerCase().includes('reply') ||
+             btn.getAttribute('aria-label')?.toLowerCase().includes('tweet') ||
+             btn.getAttribute('aria-label')?.toLowerCase().includes('reply'))
+          );
+          
+          if (tweetBtn) {
+            // Get element coordinates for clicking
+            const rect = tweetBtn.getBoundingClientRect();
+            return {
+              found: true,
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2
+            };
+          }
+          
+          return { found: false };
+        });
+        
+        if (tweetButton.found) {
+          console.log("✅ Tweet button found with dialog search");
+          await page.mouse.click(tweetButton.x, tweetButton.y);
+          tweetButtonFound = true;
+          console.log("📨 Tweet button clicked");
+        }
+      } catch (error) {
+        console.log("Dialog-based tweet button search failed:", error.message);
+      }
+    }
+    
+    // If all attempts failed, take a screenshot and throw an error
+    if (!tweetButtonFound) {
+      console.error("Failed to find tweet button with any method");
+      
+      // Take a screenshot to debug
+      try {
+        await page.screenshot({ path: 'tweet-button-error.png' });
+        console.log("Screenshot saved as tweet-button-error.png");
+      } catch (screenshotError) {
+        console.error("Failed to take screenshot:", screenshotError.message);
+      }
+      
+      throw new Error("Could not find tweet button");
+    }
+    
+    console.log("Waiting for confirmation after clicking tweet button...");
+
     // Wait for the reply to be posted
     await new Promise((resolve) => setTimeout(resolve, 10000));
 
     // Now try to get the reply ID by going to the user's profile and finding the reply
     console.log("🔍 Searching for reply ID...");
-    
+
     // Go to user profile's replies tab
     const userProfileUrl = `https://twitter.com/${username}`;
     await page.goto(userProfileUrl, { waitUntil: "networkidle2" });
@@ -1837,35 +2086,35 @@ async function postReplyWithPuppeteerAndGetId(
   await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log("🔍 Scanning replies for the posted reply...");
-    
+
     // Scroll down a bit to make sure we see the latest replies
     await page.evaluate(() => window.scrollBy(0, 500));
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Improved reply ID extraction with multiple attempts
     let replyId = null;
-    
+
     // First attempt: Look for the reply we just posted
     try {
       replyId = await page.evaluate((originalTweetId, replyContent) => {
         const articles = document.querySelectorAll('article');
         console.log(`Found ${articles.length} articles to check`);
-        
+
         for (const article of articles) {
           // Check if this article contains our reply text
           const tweetText = article.querySelector('div[lang]')?.innerText || '';
-          
+
           if (tweetText.includes(replyContent)) {
             console.log(`Found article with matching text: ${tweetText.substring(0, 50)}...`);
-            
+
             // Check if this is a reply to our target tweet
             const links = article.querySelectorAll('a[href*="/status/"]');
-            
+
             for (const link of links) {
               const href = link.getAttribute('href');
               if (href && href.includes('/status/')) {
                 console.log(`Found link with href: ${href}`);
-                
+
                 // If this is our reply, extract the reply ID
                 const replyLinks = article.querySelectorAll('a[href*="/status/"]');
                 for (const replyLink of replyLinks) {
@@ -1887,21 +2136,21 @@ async function postReplyWithPuppeteerAndGetId(
     } catch (error) {
       console.error("Error in first attempt to find reply ID:", error.message);
     }
-    
+
     // Second attempt: If we couldn't find the reply ID, try a different approach
     if (!replyId) {
       console.log("First attempt failed, trying second approach...");
       try {
         // Wait a bit more and try again
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Try to find any recent tweet from this user that contains our reply text
         replyId = await page.evaluate((replyContent) => {
           const articles = document.querySelectorAll('article');
-          
+
           for (const article of articles) {
             const tweetText = article.querySelector('div[lang]')?.innerText || '';
-            
+
             // If this article contains our reply text, it's likely our reply
             if (tweetText.includes(replyContent)) {
               // Get the tweet ID from any status link in this article
@@ -1950,6 +2199,8 @@ async function postReplyWithPuppeteerAndGetId(
   }
 }
 
+ 
+
 
 
 // DELETE /api/history/:id - Delete a post from post history
@@ -1983,9 +2234,18 @@ router.delete("/history/:id", async (req, res) => {
   }
 });
 
+// Simple GET endpoint to check if the generate-reply route is accessible
+router.get("/generate-reply-check", (req, res) => {
+  res.json({
+    success: true,
+    message: "Generate reply endpoint is accessible"
+  });
+});
+
 // New endpoint to generate replies using OpenRouter API
 router.post("/generate-reply", async (req, res) => {
   try {
+    console.log("Received generate-reply request:", req.body);
     const { model, messages, tweetContent, promptTemplate, keywordId } = req.body;
     
     // If tweetContent is provided, use the generateReply function
@@ -2015,6 +2275,7 @@ router.post("/generate-reply", async (req, res) => {
     
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
+      console.error("OpenRouter API key not configured");
       return res.status(500).json({
         success: false,
         message: "OpenRouter API key not configured"
@@ -2024,33 +2285,41 @@ router.post("/generate-reply", async (req, res) => {
     console.log(`Generating reply using model: ${model}`);
     console.log(`Prompt: ${messages[0].content}`);
     
-    const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        model: model,
-        messages: messages,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+    try {
+      const response = await axios.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          model: model,
+          messages: messages,
         },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      const reply = response.data.choices[0]?.message?.content;
+      
+      if (!reply) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to generate reply - no content in response"
+        });
       }
-    );
-    
-    const reply = response.data.choices[0]?.message?.content;
-    
-    if (!reply) {
+      
+      res.json({
+        success: true,
+        reply: reply
+      });
+    } catch (apiError) {
+      console.error("OpenRouter API error:", apiError.response?.data || apiError.message);
       return res.status(500).json({
         success: false,
-        message: "Failed to generate reply"
+        message: `OpenRouter API error: ${apiError.response?.data?.error?.message || apiError.message}`
       });
     }
-    
-    res.json({
-      success: true,
-      reply: reply
-    });
     
   } catch (error) {
     console.error("Error generating reply:", error.message);
