@@ -57,6 +57,7 @@ import {
   Favorite as FavoriteIcon,
   Replay as ReplyIcon,
   People as PeopleIcon,
+  CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -126,6 +127,58 @@ const Dashboard = () => {
     if (diffHours < 24)
       return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
     return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  };
+
+  // Function to format posted time for display
+  const formatPostedTime = (postedTime) => {
+    if (!postedTime) return "Unknown time";
+    
+    // Handle relative time formats like "2h", "1d", "3m"
+    if (/^\d+[smhd]$/.test(postedTime)) {
+      const unit = postedTime.slice(-1);
+      const value = postedTime.slice(0, -1);
+      
+      switch (unit) {
+        case 's': return `${value} second${value !== '1' ? 's' : ''} ago`;
+        case 'm': return `${value} minute${value !== '1' ? 's' : ''} ago`;
+        case 'h': return `${value} hour${value !== '1' ? 's' : ''} ago`;
+        case 'd': return `${value} day${value !== '1' ? 's' : ''} ago`;
+        default: return postedTime;
+      }
+    }
+    
+    // Handle date formats like "Dec 25" or "Jan 1, 2023"
+    if (/^[A-Za-z]{3}\s+\d{1,2}(,\s+\d{4})?$/.test(postedTime)) {
+      return `Posted on ${postedTime}`;
+    }
+    
+    // Handle ISO timestamp format
+    try {
+      const date = new Date(postedTime);
+      if (!isNaN(date.getTime())) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffMins < 1) return "Just posted";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        // For older posts, show the date
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+      }
+    } catch (e) {
+      // If parsing fails, return the original string
+    }
+    
+    return postedTime;
   };
 
   // Password change state
@@ -2359,6 +2412,44 @@ const fetchPostHistory = async () => {
                                       {formatNumber(tweet?.view_count || 0)}
                                     </Typography>
                                   </Box>
+
+                                  {/* Posted Time */}
+                                  {tweet?.posted_time && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                      }}
+                                    >
+                                      <Typography
+                                        sx={{
+                                          fontSize: "10px",
+                                          color: "white",
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        <CalendarIcon
+                                          sx={{
+                                            fontSize: "18px",
+                                            color: "#21808D",
+                                            mt: "0.8rem",
+                                          }}
+                                        />
+                                      </Typography>
+
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          fontSize: "0.75rem",
+                                          fontWeight: 600,
+                                          color: "#1a1a1a",
+                                        }}
+                                      >
+                                        {formatPostedTime(tweet.posted_time)}
+                                      </Typography>
+                                    </Box>
+                                  )}
                                 </Box>
                               </Box>
                             </a>
