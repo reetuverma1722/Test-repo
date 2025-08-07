@@ -30,8 +30,8 @@ async function checkSocialMediaAccounts() {
     
     console.log('\nChecking social_media_accounts data...');
     const accountsResult = await client.query(`
-      SELECT id, user_id, platform, account_id, account_name, 
-             CASE WHEN password IS NULL THEN 'NULL' ELSE 'SET' END as password_status,
+      SELECT id, user_id, platform, account_id, account_name,
+             CASE WHEN twitter_password IS NULL THEN 'NULL' ELSE 'SET' END as password_status,
              CASE WHEN access_token IS NULL THEN 'NULL' ELSE 'SET' END as access_token_status,
              created_at
       FROM social_media_accounts 
@@ -54,10 +54,10 @@ async function checkSocialMediaAccounts() {
     // Count accounts by platform and password status
     console.log('\nAccounts by platform and password status:');
     const statsByPlatform = await client.query(`
-      SELECT platform, 
+      SELECT platform,
              COUNT(*) as total_accounts,
-             SUM(CASE WHEN password IS NULL THEN 0 ELSE 1 END) as with_password,
-             SUM(CASE WHEN password IS NULL THEN 1 ELSE 0 END) as without_password
+             SUM(CASE WHEN twitter_password IS NULL THEN 0 ELSE 1 END) as with_password,
+             SUM(CASE WHEN twitter_password IS NULL THEN 1 ELSE 0 END) as without_password
       FROM social_media_accounts
       GROUP BY platform
     `);
