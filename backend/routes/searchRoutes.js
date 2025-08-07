@@ -220,7 +220,7 @@ router.get("/search", async (req, res) => {
       
      // 3. Scrape if not in cache
       const result = await pool.query(
-      "SELECT account_name, password FROM social_media_accounts WHERE platform = 'twitter' AND is_default = true LIMIT 1",
+      "SELECT account_name, twitter_password FROM social_media_accounts WHERE platform = 'twitter' AND is_default = true LIMIT 1",
       []
     );
 
@@ -233,7 +233,7 @@ router.get("/search", async (req, res) => {
         });
     }
 
-    const { account_name, password  } = result.rows[0];
+    const { account_name, twitter_password  } = result.rows[0];
 
 
   console.log("1");
@@ -262,7 +262,7 @@ await new Promise(resolve => setTimeout(resolve, 2000));
 // wait for password field to appear
   console.log("5");
 await page.waitForSelector('input[name="password"]', { visible: true });
-await page.type('input[name="password"]',password);
+await page.type('input[name="password"]',twitter_password);
 await page.keyboard.press('Enter');
   console.log("6");
 await page.waitForNavigation({ waitUntil: 'networkidle2' });
