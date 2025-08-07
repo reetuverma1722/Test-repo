@@ -470,7 +470,7 @@ router.post('/accounts', checkAuth, async (req, res) => {
     try {
       const result = await pool.query(
         `INSERT INTO social_media_accounts
-         (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, twitter_password, is_premium, is_default)
+         (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, password, is_premium, is_default)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id, platform, account_id AS "accountId", account_name AS "accountName",
          created_at AS "createdAt", updated_at AS "updatedAt", is_premium AS "isPremium", is_default AS "isDefault"`,
@@ -487,7 +487,7 @@ router.post('/accounts', checkAuth, async (req, res) => {
         // First, insert the account without the missing columns
         const result = await pool.query(
           `INSERT INTO social_media_accounts
-           (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, twitter_password)
+           (user_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at,password)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            RETURNING id, platform, account_id AS "accountId", account_name AS "accountName",
            created_at AS "createdAt", updated_at AS "updatedAt"`,

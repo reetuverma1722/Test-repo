@@ -37,6 +37,7 @@ import {
   FilterList as FilterIcon,
   Clear as ClearIcon,
   AccountCircle as AccountCircleIcon,
+  SmartToy as SmartToyIcon,
 } from "@mui/icons-material";
 import {
   getKeywords,
@@ -58,9 +59,13 @@ const TwitterKeywords = () => {
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  
+ 
+  const [selectedKeywordPrompt, setSelectedKeywordPrompt] = useState(null);
 
   // State for prompt management
   const [promptManagementOpen, setPromptManagementOpen] = useState(false);
+  const [keywordForPrompt, setKeywordForPrompt] = useState(null);
   const [availableModels, setAvailableModels] = useState([
     { id: "meta-llama/llama-3-8b-instruct", name: "Llama 3 8B Instruct" },
     { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3 70B Instruct" },
@@ -71,32 +76,11 @@ const TwitterKeywords = () => {
   ]);
   const [selectedModel, setSelectedModel] = useState("meta-llama/llama-3-8b-instruct");
   
-  const [availablePrompts, setAvailablePrompts] = useState([
-    {
-      id: "default",
-      name: "Default",
-      content: `Reply smartly to this tweet:\n"${'{tweetContent}'}".\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents`
-    },
-    {
-      id: "professional",
-      name: "Professional",
-      content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.`
-    },
-    {
-      id: "engaging",
-      name: "Engaging",
-      content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`
-    },
-    {
-      id: "supportive",
-      name: "Supportive",
-      content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`
-    }
-  ]);
+  const [availablePrompts, setAvailablePrompts] = useState([]);
   const [selectedPrompt, setSelectedPrompt] = useState("default");
   const [customPrompt, setCustomPrompt] = useState("");
   const [isCustomPrompt, setIsCustomPrompt] = useState(false);
-
+// Remove debug console log
   // State for form
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -107,6 +91,7 @@ const TwitterKeywords = () => {
     minRetweets: 0,
     minFollowers: 0,
     accountId: null,
+    promptId: null,
   });
 
   // State for delete confirmation
@@ -138,9 +123,69 @@ const TwitterKeywords = () => {
     fetchPrompts();
   }, []);
   
+  // Fetch associated prompts for a keyword
+  const fetchKeywordPrompts = async (keywordId) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/keywords/${keywordId}/prompts`);
+      if (response.data.success && response.data.data.length > 0) {
+        // Get all prompts associated with this keyword
+        const prompts = response.data.data;
+        console.log(`Found ${prompts.length} prompts for keyword ID ${keywordId}:`, prompts);
+        
+        // Get the first associated prompt as the default selection
+        const promptId = prompts[0].id;
+        setSelectedKeywordPrompt(promptId);
+        
+        // Update the current keyword with the prompt ID
+        setCurrentKeyword(prev => ({
+          ...prev,
+          promptId: promptId,
+          prompts: prompts // Store all prompts
+        }));
+        
+        return promptId;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching prompts for keyword ID ${keywordId}:`, error);
+      if (error.response && error.response.status === 404) {
+        console.log(`Keyword with ID ${keywordId} not found or has been deleted`);
+      }
+      return null;
+    }
+  };
+  
   // Fetch prompts from the database
   const fetchPrompts = async () => {
     try {
+      // Define standard templates that should always be available
+      const standardTemplates = [
+        {
+          id: "default",
+          name: "Default",
+          content: `Reply smartly to this tweet:\n"${'{tweetContent}'}".\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents`,
+          model: "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          id: "professional",
+          name: "Professional",
+          content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          id: "engaging",
+          name: "Engaging",
+          content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          id: "supportive",
+          name: "Supportive",
+          content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        }
+      ];
+      
       const response = await axios.get("http://localhost:5000/api/prompts");
       if (response.data.success && response.data.data) {
         // Map the prompts from the database to the format we need
@@ -148,13 +193,25 @@ const TwitterKeywords = () => {
           id: prompt.id.toString(),
           name: prompt.name,
           content: prompt.content,
-          model: prompt.model
+          model: prompt.model || "meta-llama/llama-3-8b-instruct"
         }));
         
-        setAvailablePrompts(dbPrompts);
+        // Merge database prompts with standard templates
+        // For each standard template, check if it exists in dbPrompts
+        // If it exists, use the database version, otherwise use the standard version
+        const mergedPrompts = [...dbPrompts];
+        
+        standardTemplates.forEach(standardTemplate => {
+          const existingPrompt = dbPrompts.find(p => p.name === standardTemplate.name);
+          if (!existingPrompt) {
+            mergedPrompts.push(standardTemplate);
+          }
+        });
+        
+        setAvailablePrompts(mergedPrompts);
         
         // Find the default prompt
-        const defaultPrompt = dbPrompts.find(p => p.name === "Default");
+        const defaultPrompt = mergedPrompts.find(p => p.name === "Default");
         if (defaultPrompt) {
           setSelectedPrompt(defaultPrompt.id);
           setSelectedModel(defaultPrompt.model);
@@ -182,7 +239,33 @@ const TwitterKeywords = () => {
       }
     } catch (error) {
       console.error("Error fetching prompts:", error);
-      // If we can't fetch prompts from the database, use the default ones
+      // If we can't fetch prompts from the database, use the standard templates
+      setAvailablePrompts([
+        {
+          id: "default",
+          name: "Default",
+          content: `Reply smartly to this tweet:\n"${'{tweetContent}'}".\nMake it personal, friendly, and relevant. Be professional and do not use emojis and crisp and small contents`,
+          model: "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          id: "professional",
+          name: "Professional",
+          content: `Craft a professional response to this tweet:\n"${'{tweetContent}'}".\nUse formal language, be concise, and maintain a business-appropriate tone.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          id: "engaging",
+          name: "Engaging",
+          content: `Create an engaging reply to this tweet:\n"${'{tweetContent}'}".\nAsk a thoughtful question to encourage further conversation while being relevant to the original content.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          id: "supportive",
+          name: "Supportive",
+          content: `Write a supportive response to this tweet:\n"${'{tweetContent}'}".\nShow empathy, offer encouragement, and be positive while keeping it brief and genuine.`,
+          model: "meta-llama/llama-3-8b-instruct"
+        }
+      ]);
     }
   };
   
@@ -296,7 +379,7 @@ const TwitterKeywords = () => {
   };
 
   // Open form for editing keyword
-  const handleEditKeyword = (keyword) => {
+  const handleEditKeyword = async (keyword) => {
     setCurrentKeyword({
       id: keyword.id,
       text: keyword.text,
@@ -304,9 +387,18 @@ const TwitterKeywords = () => {
       minRetweets: keyword.minRetweets,
       minFollowers: keyword.minFollowers,
       accountId: keyword.accountId,
+      promptId: null, // Will be populated by fetchKeywordPrompts
     });
     setIsEditing(true);
     setFormOpen(true);
+    
+    // Fetch associated prompts for this keyword
+    const promptId = await fetchKeywordPrompts(keyword.id);
+    if (promptId) {
+      setSelectedKeywordPrompt(promptId);
+    } else {
+      setSelectedKeywordPrompt(null);
+    }
   };
 
   // Open delete confirmation dialog
@@ -339,10 +431,42 @@ const TwitterKeywords = () => {
 
       console.log('Submitting keyword with data:', keywordData);
 
+      let keywordId;
       if (isEditing) {
         await updateKeyword(currentKeyword.id, keywordData, token);
+        keywordId = currentKeyword.id;
       } else {
-        await addKeyword(keywordData, token);
+        const response = await addKeyword(keywordData, token);
+        keywordId = response.data.id;
+      }
+
+      // If a prompt is selected, associate it with the keyword
+      if (selectedKeywordPrompt && keywordId) {
+        try {
+          // First, check if there's already an association
+          const existingPrompts = await axios.get(`http://localhost:5000/api/keywords/${keywordId}/prompts`);
+          
+          if (existingPrompts.data.success && existingPrompts.data.data.length > 0) {
+            // If there's an existing association and it's different, update it
+            const existingPromptId = existingPrompts.data.data[0].id;
+            if (existingPromptId !== selectedKeywordPrompt) {
+              // Remove the existing association
+              await axios.delete(`http://localhost:5000/api/keywords/${keywordId}/prompts/${existingPromptId}`);
+              // Create the new association
+              await axios.post(`http://localhost:5000/api/keywords/${keywordId}/prompts`, {
+                promptId: selectedKeywordPrompt
+              });
+            }
+          } else {
+            // If there's no existing association, create a new one
+            await axios.post(`http://localhost:5000/api/keywords/${keywordId}/prompts`, {
+              promptId: selectedKeywordPrompt
+            });
+          }
+        } catch (promptErr) {
+          console.error("Error associating prompt with keyword:", promptErr);
+          // Don't fail the whole operation if prompt association fails
+        }
       }
 
       // Refresh the keywords list
@@ -425,20 +549,7 @@ const TwitterKeywords = () => {
           >
             Add Keyword
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => setPromptManagementOpen(true)}
-            sx={{
-              borderColor: "#4896A0",
-              color: "#4896A0",
-              "&:hover": {
-                borderColor: "#3d7e85",
-                backgroundColor: "rgba(72, 150, 160, 0.04)"
-              }
-            }}
-          >
-            Manage Prompt
-          </Button>
+         
         </Box>
       </Box>
 
@@ -664,6 +775,29 @@ const TwitterKeywords = () => {
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Manage Prompt">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setKeywordForPrompt(keyword);
+                          fetchKeywordPrompts(keyword.id).then(promptId => {
+                            if (promptId) {
+                              setSelectedPrompt(promptId);
+                              
+                              // Get the model for this prompt
+                              const prompt = availablePrompts.find(p => p.id === promptId);
+                              if (prompt && prompt.model) {
+                                setSelectedModel(prompt.model);
+                              }
+                            }
+                            setPromptManagementOpen(true);
+                          });
+                        }}
+                        sx={{ color: "#4896A0" }}
+                      >
+                        <SmartToyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))
@@ -752,6 +886,8 @@ const TwitterKeywords = () => {
                 </Select>
               
             </Grid>
+            
+          
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -798,7 +934,9 @@ const TwitterKeywords = () => {
         fullWidth
       >
         <DialogTitle sx={{ fontWeight: 600 }}>
-          Manage AI Reply Prompts
+          {keywordForPrompt
+            ? `Manage AI Reply Prompt for Keyword: "${keywordForPrompt.text}"`
+            : "Manage AI Reply Prompts"}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -810,10 +948,49 @@ const TwitterKeywords = () => {
                 <Select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                    },
+                    "& .MuiSelect-select": {
+                      padding: "10px 14px",
+                    },
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 300,
+                        "& .MuiMenuItem-root": {
+                          fontSize: "0.9rem",
+                          padding: "8px 16px",
+                        },
+                        "& .MuiMenuItem-root.Mui-selected": {
+                          backgroundColor: "rgba(77, 153, 163, 0.1)",
+                        },
+                        "& .MuiMenuItem-root.Mui-selected:hover": {
+                          backgroundColor: "rgba(77, 153, 163, 0.2)",
+                        },
+                      },
+                    },
+                  }}
                 >
                   {availableModels.map((model) => (
                     <MenuItem key={model.id} value={model.id}>
-                      {model.name}
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span>{model.name}</span>
+                        {selectedModel === model.id && (
+                          <Chip
+                            label="Selected"
+                            size="small"
+                            sx={{
+                              backgroundColor: 'rgba(72, 150, 160, 0.1)',
+                              color: '#4D99A3',
+                              height: '20px',
+                              fontSize: '0.7rem'
+                            }}
+                          />
+                        )}
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>
@@ -824,6 +1001,11 @@ const TwitterKeywords = () => {
               <Typography variant="subtitle1" gutterBottom>
                 Select Prompt Template
               </Typography>
+              {keywordForPrompt && keywordForPrompt.prompts && keywordForPrompt.prompts.length > 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  This keyword has {keywordForPrompt.prompts.length} associated prompt{keywordForPrompt.prompts.length > 1 ? 's' : ''}
+                </Typography>
+              )}
               <FormControl fullWidth>
                 <Select
                   value={isCustomPrompt ? "custom" : selectedPrompt}
@@ -833,15 +1015,115 @@ const TwitterKeywords = () => {
                     } else {
                       setIsCustomPrompt(false);
                       setSelectedPrompt(e.target.value);
+                      
+                      // Update the model based on the selected prompt
+                      const selectedPromptObj = availablePrompts.find(p => p.id === e.target.value);
+                      if (selectedPromptObj && selectedPromptObj.model) {
+                        setSelectedModel(selectedPromptObj.model);
+                      }
                     }
                   }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                    },
+                    "& .MuiSelect-select": {
+                      padding: "10px 14px",
+                    },
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 300,
+                        "& .MuiMenuItem-root": {
+                          fontSize: "0.9rem",
+                          padding: "8px 16px",
+                        },
+                        "& .MuiMenuItem-root.Mui-selected": {
+                          backgroundColor: "rgba(77, 153, 163, 0.1)",
+                        },
+                        "& .MuiMenuItem-root.Mui-selected:hover": {
+                          backgroundColor: "rgba(77, 153, 163, 0.2)",
+                        },
+                      },
+                    },
+                  }}
                 >
-                  {availablePrompts.map((prompt) => (
-                    <MenuItem key={prompt.id} value={prompt.id}>
-                      {prompt.name}
-                    </MenuItem>
-                  ))}
-                  <MenuItem value="custom">Custom Prompt</MenuItem>
+                  {/* Standard Templates Section */}
+                  <MenuItem disabled sx={{ opacity: 1, fontWeight: 600, color: '#4D99A3', fontSize: '0.85rem', py: 0.5 }}>
+                    Standard Templates
+                  </MenuItem>
+                  {availablePrompts
+                    .filter(prompt => ["Default", "Professional", "Supportive", "Engaging"].includes(prompt.name))
+                    .map((prompt) => (
+                      <MenuItem key={prompt.id} value={prompt.id} sx={{ pl: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <span>{prompt.name}</span>
+                          {selectedPrompt === prompt.id && (
+                            <Chip
+                              label="Selected"
+                              size="small"
+                              sx={{
+                                backgroundColor: 'rgba(72, 150, 160, 0.1)',
+                                color: '#4D99A3',
+                                height: '20px',
+                                fontSize: '0.7rem'
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))
+                  }
+                  
+                  {/* Other Templates Section */}
+                  <MenuItem disabled sx={{ opacity: 1, fontWeight: 600, color: '#4D99A3', fontSize: '0.85rem', py: 0.5, mt: 1, borderTop: '1px solid #eee' }}>
+                    Other Templates
+                  </MenuItem>
+                  {availablePrompts
+                    .filter(prompt => !["Default", "Professional", "Supportive", "Engaging"].includes(prompt.name))
+                    .map((prompt) => (
+                      <MenuItem key={prompt.id} value={prompt.id} sx={{ pl: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <span>{prompt.name}</span>
+                          {selectedPrompt === prompt.id && (
+                            <Chip
+                              label="Selected"
+                              size="small"
+                              sx={{
+                                backgroundColor: 'rgba(72, 150, 160, 0.1)',
+                                color: '#4D99A3',
+                                height: '20px',
+                                fontSize: '0.7rem'
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))
+                  }
+                  
+                  {/* Custom Prompt Option */}
+                  <MenuItem disabled sx={{ opacity: 1, fontWeight: 600, color: '#4D99A3', fontSize: '0.85rem', py: 0.5, mt: 1, borderTop: '1px solid #eee' }}>
+                    Create New
+                  </MenuItem>
+                  <MenuItem value="custom" sx={{ pl: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <span>Custom Prompt</span>
+                      {isCustomPrompt && (
+                        <Chip
+                          label="Selected"
+                          size="small"
+                          sx={{
+                            backgroundColor: 'rgba(72, 150, 160, 0.1)',
+                            color: '#4D99A3',
+                            height: '20px',
+                            fontSize: '0.7rem'
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -859,6 +1141,23 @@ const TwitterKeywords = () => {
                   onChange={(e) => setCustomPrompt(e.target.value)}
                   placeholder="Enter your custom prompt here. Use {tweetContent} as a placeholder for the tweet text."
                   helperText="Use {tweetContent} as a placeholder for the tweet text."
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                      transition: "all 0.3s",
+                      fontSize: "0.95rem",
+                    },
+                    "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "rgba(77, 153, 163, 0.5)",
+                    },
+                    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#4D99A3",
+                    },
+                    "& .MuiFormHelperText-root": {
+                      fontSize: "0.8rem",
+                      marginTop: "8px",
+                    },
+                  }}
                 />
               </Grid>
             )}
@@ -866,13 +1165,18 @@ const TwitterKeywords = () => {
             <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
                 Preview
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  This is how your prompt will appear to the AI model
+                </Typography>
               </Typography>
               <Paper
                 variant="outlined"
                 sx={{
                   p: 2,
                   backgroundColor: "rgba(72, 150, 160, 0.04)",
-                  borderColor: "rgba(72, 150, 160, 0.2)"
+                  borderColor: "rgba(72, 150, 160, 0.2)",
+                  maxHeight: "300px",
+                  overflow: "auto"
                 }}
               >
                 <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
@@ -895,43 +1199,124 @@ const TwitterKeywords = () => {
                 localStorage.setItem("selectedModel", selectedModel);
                 localStorage.setItem("selectedPrompt", isCustomPrompt ? "custom" : selectedPrompt);
                 
+                let promptId;
+                
                 // Save to database if it's a custom prompt
                 if (isCustomPrompt) {
                   localStorage.setItem("customPrompt", customPrompt);
                   
                   // Create a new prompt in the database
-                  const promptName = "Custom " + new Date().toLocaleString();
-                  await axios.post("http://localhost:5000/api/prompts", {
+                  const promptName = keywordForPrompt
+                    ? `Prompt for ${keywordForPrompt.text} (${new Date().toLocaleString()})`
+                    : "Custom " + new Date().toLocaleString();
+                    
+                  const response = await axios.post("http://localhost:5000/api/prompts", {
                     name: promptName,
                     model: selectedModel,
                     content: customPrompt,
                     is_default: false
                   });
                   
+                  promptId = response.data.data.id;
+                  
                   // Refresh prompts
                   fetchPrompts();
                 } else {
                   // Update the selected prompt in the database with the selected model
-                  const promptId = selectedPrompt;
+                  promptId = selectedPrompt;
                   const selectedPromptObj = availablePrompts.find(p => p.id === promptId);
                   
                   if (selectedPromptObj) {
-                    await axios.put(`http://localhost:5000/api/prompts/${promptId}`, {
-                      name: selectedPromptObj.name,
-                      model: selectedModel,
-                      content: selectedPromptObj.content,
-                      is_default: selectedPromptObj.name === "Default"
-                    });
+                    // Check if the promptId is a number or can be converted to a number
+                    // Standard templates have string IDs like "professional", "supportive", etc.
+                    // Database prompts have numeric IDs that can be converted to integers
+                    const isNumericId = !isNaN(parseInt(promptId));
+                    
+                    if (isNumericId) {
+                      try {
+                        await axios.put(`http://localhost:5000/api/prompts/${promptId}`, {
+                          name: selectedPromptObj.name,
+                          model: selectedModel,
+                          content: selectedPromptObj.content,
+                          is_default: selectedPromptObj.name === "Default"
+                        });
+                      } catch (error) {
+                        console.error("Error updating prompt:", error);
+                        // Create a new prompt instead if update fails
+                        const response = await axios.post("http://localhost:5000/api/prompts", {
+                          name: selectedPromptObj.name,
+                          model: selectedModel,
+                          content: selectedPromptObj.content,
+                          is_default: selectedPromptObj.name === "Default"
+                        });
+                        promptId = response.data.data.id;
+                      }
+                    } else {
+                      // For standard templates with string IDs, create a new prompt in the database
+                      console.log(`Creating new prompt based on standard template: ${selectedPromptObj.name}`);
+                      const response = await axios.post("http://localhost:5000/api/prompts", {
+                        name: selectedPromptObj.name,
+                        model: selectedModel,
+                        content: selectedPromptObj.content,
+                        is_default: selectedPromptObj.name === "Default"
+                      });
+                      promptId = response.data.data.id;
+                    }
                     
                     // Refresh prompts
                     fetchPrompts();
                   }
                 }
                 
+                // If this is for a specific keyword, associate the prompt with the keyword
+                if (keywordForPrompt && promptId) {
+                  try {
+                    // First, check if there's already an association
+                    try {
+                      const existingPrompts = await axios.get(`http://localhost:5000/api/keywords/${keywordForPrompt.id}/prompts`);
+                      
+                      if (existingPrompts.data.success && existingPrompts.data.data.length > 0) {
+                        // Check if the prompt we want to add is already associated
+                        const alreadyAssociated = existingPrompts.data.data.some(p => p.id === promptId);
+                        
+                        if (!alreadyAssociated) {
+                          // Add the new prompt association without removing existing ones
+                          await axios.post(`http://localhost:5000/api/keywords/${keywordForPrompt.id}/prompts`, {
+                            promptId: promptId
+                          });
+                        }
+                      } else {
+                        // If there's no existing association, create a new one
+                        await axios.post(`http://localhost:5000/api/keywords/${keywordForPrompt.id}/prompts`, {
+                          promptId: promptId
+                        });
+                      }
+                    } catch (error) {
+                      if (error.response && error.response.status === 404) {
+                        console.log(`Keyword with ID ${keywordForPrompt.id} not found or has been deleted`);
+                      } else {
+                        // Create the new association anyway
+                        await axios.post(`http://localhost:5000/api/keywords/${keywordForPrompt.id}/prompts`, {
+                          promptId: promptId
+                        });
+                      }
+                    }
+                    
+                    // Refresh keywords to show the updated associations
+                    fetchKeywords();
+                  } catch (promptErr) {
+                    console.error("Error associating prompt with keyword:", promptErr);
+                    // Don't fail the whole operation if prompt association fails
+                  }
+                }
+                
                 setPromptManagementOpen(false);
+                setKeywordForPrompt(null);
                 setNotification({
                   open: true,
-                  message: "Prompt settings saved successfully",
+                  message: keywordForPrompt
+                    ? `Prompt for keyword "${keywordForPrompt.text}" saved successfully`
+                    : "Prompt settings saved successfully",
                   severity: "success",
                 });
               } catch (error) {

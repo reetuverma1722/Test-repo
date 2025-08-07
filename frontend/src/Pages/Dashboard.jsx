@@ -81,6 +81,8 @@ const Dashboard = () => {
   const [keywords, setKeywords] = useState([]);
   const [selectedKeywords, setSelectedKeywords] = useState([]);
   const [filteredTweets, setFilteredTweets] = useState([]);
+  const [selectedKeywordForPrompts, setSelectedKeywordForPrompts] = useState(null);
+  const [keywordPromptsDialogOpen, setKeywordPromptsDialogOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("user@example.com");
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
@@ -91,6 +93,9 @@ const Dashboard = () => {
   // Prompt management state
   const [availablePrompts, setAvailablePrompts] = useState([]);
   const [selectedPromptId, setSelectedPromptId] = useState("");
+  const [keywordPromptMap, setKeywordPromptMap] = useState({});
+  const [keywordPromptsMap, setKeywordPromptsMap] = useState({}); // Map of keyword text to array of prompts
+  const [keywordPrompts, setKeywordPrompts] = useState([]); // Prompts for the currently selected keyword
   const [isGeneratingReply, setIsGeneratingReply] = useState(false);
   // Twitter accounts state
   const [twitterAccounts, setTwitterAccounts] = useState([]);
@@ -268,7 +273,41 @@ const fetchPostHistory = async () => {
     fetchTwitterAccounts();
     fetchPostHistory();
     fetchPrompts();
+    fetchKeywordPromptAssociations();
   }, []);
+  
+  // Fetch keyword-prompt associations
+  const fetchKeywordPromptAssociations = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/keywords");
+      if (response.data.success && response.data.data) {
+        const keywordData = response.data.data;
+        const promptMap = {};
+        const keywordPromptsMap = {};
+        
+        // Create maps for keyword text to prompt IDs and full prompt objects
+        keywordData.forEach(keyword => {
+          // For backward compatibility, keep the single promptId mapping
+          if (keyword.promptId) {
+            promptMap[keyword.text] = keyword.promptId.toString();
+          }
+          
+          // Store all prompts for each keyword
+          if (keyword.prompts && keyword.prompts.length > 0) {
+            keywordPromptsMap[keyword.text] = keyword.prompts;
+          }
+        });
+        
+        setKeywordPromptMap(promptMap);
+        // Add a new state variable to store all prompts for each keyword
+        setKeywordPromptsMap(keywordPromptsMap);
+        console.log("Keyword-prompt associations loaded:", promptMap);
+        console.log("All keyword prompts loaded:", keywordPromptsMap);
+      }
+    } catch (error) {
+      console.error("Error fetching keyword-prompt associations:", error);
+    }
+  };
   
   // Fetch prompts from the database
   const fetchPrompts = async () => {
@@ -448,6 +487,45 @@ const fetchPostHistory = async () => {
     setEditedReply(tweet.reply || "");
     localStorage.setItem("selected_tweet_id", tweet.id);
     localStorage.setItem("selected_tweet_reply", tweet.reply || "");
+    
+    // Check if the tweet's keyword has associated prompts
+    if (tweet.keyword && keywordPromptsMap[tweet.keyword]) {
+      const keywordPromptsList = keywordPromptsMap[tweet.keyword];
+      console.log(`Found ${keywordPromptsList.length} prompts for keyword "${tweet.keyword}"`);
+      
+      // Set the list of prompts for this keyword
+      setKeywordPrompts(keywordPromptsList);
+      
+      // Look for preferred prompt templates in order: Professional, Supportive, Engaging, Default
+      const preferredTemplates = ["Professional", "Supportive", "Engaging", "Default"];
+      
+      // First check if any of the preferred templates exist in available prompts
+      let foundPreferredPrompt = false;
+      for (const templateName of preferredTemplates) {
+        const preferredPrompt = availablePrompts.find(p => p.name === templateName);
+        if (preferredPrompt) {
+          setSelectedPromptId(preferredPrompt.id);
+          foundPreferredPrompt = true;
+          console.log(`Selected preferred prompt template: ${templateName}`);
+          break;
+        }
+      }
+      
+      // If no preferred template found, use the first keyword-specific prompt
+      if (!foundPreferredPrompt && keywordPromptsList.length > 0) {
+        setSelectedPromptId(keywordPromptsList[0].id.toString());
+        console.log(`Selected first keyword-specific prompt: ${keywordPromptsList[0].name}`);
+      }
+    } else {
+      // If no associated prompts, find the default prompt
+      const defaultPrompt = availablePrompts.find(p => p.name === "Default");
+      if (defaultPrompt) {
+        setSelectedPromptId(defaultPrompt.id);
+      }
+      setKeywordPrompts([]); // Clear keyword-specific prompts
+      console.log(`No associated prompts found for keyword "${tweet.keyword}", using default`);
+    }
+    
     setPostDialogOpen(true);
   };
   
@@ -458,19 +536,37 @@ const fetchPostHistory = async () => {
     try {
       setIsGeneratingReply(true);
       
-      // Get the selected prompt
-      const selectedPrompt = availablePrompts.find(p => p.id === selectedPromptId);
+      // Find the selected prompt from either availablePrompts or keywordPrompts
+      let selectedPrompt = availablePrompts.find(p => p.id === selectedPromptId);
+      
+      // If not found in availablePrompts, check keywordPrompts
+      if (!selectedPrompt && keywordPrompts.length > 0) {
+        selectedPrompt = keywordPrompts.find(p => p.id.toString() === selectedPromptId);
+      }
+      
       if (!selectedPrompt) {
-        console.error("No prompt selected");
+        console.error("No prompt selected or prompt not found");
+        alert("Error: Selected prompt not found");
         return;
       }
+      
+      console.log("Using prompt:", selectedPrompt.name);
       
       // Replace {tweetContent} with the actual tweet text
       const formattedPrompt = selectedPrompt.content.replace(/{tweetContent}/g, selectedTweet.text);
       
+      // First check if the API endpoint is accessible
+      try {
+        await axios.get("http://localhost:5000/api/generate-reply-check");
+      } catch (checkError) {
+        console.error("API endpoint check failed:", checkError);
+        alert("Cannot connect to AI service. Please check if the server is running.");
+        return;
+      }
+      
       // Call the backend to generate a reply
       const response = await axios.post("http://localhost:5000/api/generate-reply", {
-        model: selectedPrompt.model,
+        model: selectedPrompt.model || "meta-llama/llama-3-8b-instruct", // Use default model if not specified
         messages: [
           {
             role: "user",
@@ -482,11 +578,33 @@ const fetchPostHistory = async () => {
       if (response.data && response.data.reply) {
         setEditedReply(response.data.reply);
       } else {
-        alert("Failed to generate reply");
+        alert("Failed to generate reply: No content returned from AI service");
       }
     } catch (error) {
       console.error("Error generating reply:", error);
-      alert("Error generating reply: " + (error.message || "Unknown error"));
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Unknown error occurred";
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 404) {
+          errorMessage = "AI service endpoint not found. Please check if the server is running.";
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = `Server error: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = "No response from server. Please check your network connection.";
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = error.message;
+      }
+      
+      alert("Error generating reply: " + errorMessage);
     } finally {
       setIsGeneratingReply(false);
     }
@@ -510,10 +628,21 @@ const fetchPostHistory = async () => {
       console.log('Found keyword object:', keywordObj);
       console.log('Using keyword ID:', keywordId);
       
-      // Get the selected prompt
-      const selectedPrompt = availablePrompts.find(p => p.id === selectedPromptId);
+      // Find the selected prompt from either availablePrompts or keywordPrompts
+      let selectedPrompt = availablePrompts.find(p => p.id === selectedPromptId);
+      
+      // If not found in availablePrompts, check keywordPrompts
+      if (!selectedPrompt && keywordPrompts.length > 0) {
+        selectedPrompt = keywordPrompts.find(p => p.id.toString() === selectedPromptId);
+      }
+      
+      // Default values if no prompt is found
       const model = selectedPrompt ? selectedPrompt.model : "meta-llama/llama-3-8b-instruct";
       const promptContent = selectedPrompt ? selectedPrompt.content : "";
+      const promptName = selectedPrompt ? selectedPrompt.name : "Default";
+      
+      console.log('Using prompt:', promptName);
+      console.log('Using model:', model);
 
       // Call the API to post the reply
       // This endpoint already adds the post to history, so we don't need to do it separately
@@ -528,7 +657,8 @@ const fetchPostHistory = async () => {
           likeCount: selectedTweet.like_count,
           retweetCount: selectedTweet.retweet_count,
           model: model,
-          promptContent: promptContent
+          promptContent: promptContent,
+          promptName: promptName // Add prompt name for better tracking
         }
       );
 
@@ -781,6 +911,126 @@ const fetchPostHistory = async () => {
 
   return (
     <Box sx={{ display: "flex" }}>
+      {/* Keyword Prompts Dialog */}
+      <Dialog
+        open={keywordPromptsDialogOpen}
+        onClose={() => setKeywordPromptsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontFamily: "var(--brand-font)",
+            fontSize: "1.3rem",
+            fontWeight: 600,
+            backgroundColor: "#f8f8f8",
+            borderBottom: "1px solid #eaeaea",
+            padding: "16px 24px",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <ManageSearchIcon sx={{ mr: 1, color: "#4D99A3" }} />
+            Prompts for "{selectedKeywordForPrompts?.text}"
+          </Box>
+          <IconButton
+            aria-label="close"
+            onClick={() => setKeywordPromptsDialogOpen(false)}
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            <CloseOutlined />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ padding: "24px" }}>
+          {selectedKeywordForPrompts && keywordPromptsMap[selectedKeywordForPrompts.text] ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {keywordPromptsMap[selectedKeywordForPrompts.text].map((prompt, index) => (
+                <Paper
+                  key={index}
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: prompt.is_default ? "#f5f9fa" : "#ffffff",
+                    position: "relative",
+                  }}
+                >
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#4D99A3" }}>
+                      {prompt.name} {prompt.is_default && "(Default)"}
+                    </Typography>
+                    <Chip
+                      label={prompt.model}
+                      size="small"
+                      sx={{
+                        backgroundColor: "#e5efee",
+                        color: "#4D99A3",
+                        fontSize: "0.7rem"
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 1 }}>
+                    {prompt.content}
+                  </Typography>
+                </Paper>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body1" sx={{ textAlign: "center", py: 2, color: "text.secondary" }}>
+              No prompts associated with this keyword.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ padding: "16px 24px", backgroundColor: "#f8f8f8" }}>
+          <Button
+            onClick={() => setKeywordPromptsDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: "#4d99a393",
+              color: "#4d99a3ff",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              if (selectedKeywordForPrompts) {
+                navigate("/social-media-settings");
+              }
+              setKeywordPromptsDialogOpen(false);
+            }}
+            variant="contained"
+            sx={{
+              backgroundColor: "#4D99A3",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+              "&:hover": {
+                backgroundColor: "#3d7e85",
+              },
+            }}
+          >
+            Manage Prompts
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
       {/* Post Dialog */}
       <Dialog
         open={postDialogOpen}
@@ -876,6 +1126,11 @@ const fetchPostHistory = async () => {
           >
             Select Prompt Template
           </Typography>
+          {keywordPrompts.length > 0 && (
+            <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
+              Showing all available templates including {keywordPrompts.length} keyword-specific prompts
+            </Typography>
+          )}
           
           <TextField
             select
@@ -889,13 +1144,85 @@ const fetchPostHistory = async () => {
               "& .MuiOutlinedInput-root": {
                 borderRadius: "8px",
               },
+              "& .MuiSelect-select": {
+                padding: "10px 14px",
+              },
+              "& .MuiMenuItem-root": {
+                fontSize: "0.9rem",
+              },
+            }}
+            SelectProps={{
+              MenuProps: {
+                PaperProps: {
+                  sx: {
+                    maxHeight: 300,
+                    "& .MuiMenuItem-root": {
+                      fontSize: "0.9rem",
+                      padding: "8px 16px",
+                    },
+                    "& .MuiMenuItem-root.Mui-selected": {
+                      backgroundColor: "rgba(77, 153, 163, 0.1)",
+                    },
+                    "& .MuiMenuItem-root.Mui-selected:hover": {
+                      backgroundColor: "rgba(77, 153, 163, 0.2)",
+                    },
+                  },
+                },
+              },
             }}
           >
-            {availablePrompts.map((prompt) => (
-              <MenuItem key={prompt.id} value={prompt.id}>
-                {prompt.name}
-              </MenuItem>
-            ))}
+            {/* Standard templates section */}
+            <MenuItem disabled sx={{ opacity: 1, fontWeight: 600, color: '#4D99A3', fontSize: '0.85rem', py: 0.5 }}>
+              Standard Templates
+            </MenuItem>
+            {availablePrompts.map((prompt) => {
+              // Check if this is one of the standard templates
+              const isStandardTemplate = ["Default", "Professional", "Supportive", "Engaging"].includes(prompt.name);
+              return (
+                <MenuItem
+                  key={prompt.id}
+                  value={prompt.id}
+                  sx={{
+                    pl: 3,
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(77, 153, 163, 0.1)',
+                    }
+                  }}
+                >
+                  {prompt.name}
+                </MenuItem>
+              );
+            })}
+            
+            {/* Keyword-specific prompts section */}
+            {keywordPrompts.length > 0 && (
+              <>
+                <MenuItem disabled sx={{ opacity: 1, fontWeight: 600, color: '#4D99A3', fontSize: '0.85rem', py: 0.5, mt: 1, borderTop: '1px solid #eee' }}>
+                  Keyword-Specific Prompts
+                </MenuItem>
+                {keywordPrompts.map((prompt) => {
+                  // Check if this prompt is already in availablePrompts to avoid duplicates
+                  const isDuplicate = availablePrompts.some(p => p.id === prompt.id);
+                  if (!isDuplicate) {
+                    return (
+                      <MenuItem
+                        key={prompt.id}
+                        value={prompt.id.toString()}
+                        sx={{
+                          pl: 3,
+                          '&.Mui-selected': {
+                            backgroundColor: 'rgba(77, 153, 163, 0.1)',
+                          }
+                        }}
+                      >
+                        {prompt.name} {prompt.is_default && "(Default)"}
+                      </MenuItem>
+                    );
+                  }
+                  return null;
+                })}
+              </>
+            )}
           </TextField>
           
           <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
@@ -2057,36 +2384,74 @@ const fetchPostHistory = async () => {
                 </Box>
 
                 {keywords.length > 0 ? (
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {keywords.map((keyword, index) => {
-                      const isSelected = selectedKeywords.includes(
-                        keyword.text
-                      );
-                      return (
-                        <Chip
-                          key={index}
-                          label={keyword.text}
-                          size="medium"
-                          onClick={() => handleKeywordToggle(keyword.text)}
-                          color={isSelected ? "primary" : "default"}
-                          sx={{
-                            borderRadius: "16px",
-                            px: 1,
-                            fontWeight: 500,
-                            backgroundColor: isSelected ? "#4896a1" : "#ffffff",
-                            color: isSelected ? "#ffffff" : "#4896a1",
-                            boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
-                            cursor: "pointer",
-                            "&:hover": {
-                              boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
-                              backgroundColor: isSelected
-                                ? "#4896a1"
-                                : "#f5f5f5",
-                            },
-                          }}
-                        />
-                      );
-                    })}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                      {keywords.map((keyword, index) => {
+                        const isSelected = selectedKeywords.includes(
+                          keyword.text
+                        );
+                        const hasPrompts = keywordPromptsMap[keyword.text] &&
+                                          keywordPromptsMap[keyword.text].length > 0;
+                        
+                        return (
+                          <Chip
+                            key={index}
+                            label={
+                              <Box sx={{ display: "flex", alignItems: "center" }}>
+                                {keyword.text}
+                                {hasPrompts && (
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      ml: 0.5,
+                                      backgroundColor: isSelected ? "rgba(255,255,255,0.3)" : "#4896a1",
+                                      color: isSelected ? "#ffffff" : "#ffffff",
+                                      borderRadius: "50%",
+                                      width: 16,
+                                      height: 16,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: "0.7rem"
+                                    }}
+                                  >
+                                    {keywordPromptsMap[keyword.text].length}
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                            size="medium"
+                            onClick={() => handleKeywordToggle(keyword.text)}
+                            onDelete={hasPrompts ? () => {
+                              setSelectedKeywordForPrompts(keyword);
+                              setKeywordPromptsDialogOpen(true);
+                            } : undefined}
+                            deleteIcon={
+                              hasPrompts ?
+                              <Tooltip title="View prompts">
+                                <ManageSearchIcon fontSize="small" />
+                              </Tooltip> : undefined
+                            }
+                            color={isSelected ? "primary" : "default"}
+                            sx={{
+                              borderRadius: "16px",
+                              px: 1,
+                              fontWeight: 500,
+                              backgroundColor: isSelected ? "#4896a1" : "#ffffff",
+                              color: isSelected ? "#ffffff" : "#4896a1",
+                              boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+                              cursor: "pointer",
+                              "&:hover": {
+                                boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
+                                backgroundColor: isSelected
+                                  ? "#4896a1"
+                                  : "#f5f5f5",
+                              },
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
                   </Box>
                 ) : (
                   <Box
