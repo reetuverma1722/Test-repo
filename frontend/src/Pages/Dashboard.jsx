@@ -1655,220 +1655,7 @@ const fetchPostHistory = async () => {
         <Box
           sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, }}
         >
-          {/* <List component="nav" disablePadding>
-            <ListItem
-              button
-              selected={location.pathname.includes("/dashboard")}
-              onClick={() => {
-                setActive("");
-                navigate("/dashboard");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                // transition: 'all 0.2s ease',
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "#E5EFEE",
-                  // backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
-                  color: "#fef2f2",
-                  borderLeft: "3px",
-                  paddingLeft: "13px",
-
-                  "& .MuiListItemIcon-root": {
-                    color: "#fef2f2",
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/dashboard")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <DashboardIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Dashboard"
-                primaryTypographyProps={{
-                  marginTop: "16px",
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/dashboard")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/history")}
-              onClick={() => {
-                setActive("search-history");
-                navigate("/history");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "#E5EFEE", // Light red
-                  color: "#13343B",
-                  borderLeft: "3px solid #13343B",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#13343B",
-                  },
-                },
-
-                "&:hover": {
-                  backgroundColor: location.pathname.includes("/history")
-                    ? "#E5EFEE"
-                    : "rgba(210, 25, 87, 0.29)",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/history")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <HistoryIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Search History"
-                primaryTypographyProps={{
-                  marginTop: "16px",
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/history")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/social-media-settings")}
-              onClick={() => {
-                setActive("social-media-settings");
-                navigate("/social-media-settings");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "#E5EFEE", // Light red
-                  color: "#13343B",
-                  borderLeft: "3px solid #13343B",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#13343B",
-                  },
-                },
-
-                "&:hover": {
-                  backgroundColor: location.pathname.includes(
-                    "/social-media-settings"
-                  )
-                    ? "#E5EFEE"
-                    : "#E5EFEE",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/social-media-settings")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Social Media Settings"
-                primaryTypographyProps={{
-                  marginTop: "16px",
-                  fontSize: "0.9rem",
-                  marginTop: "16px",
-                  fontWeight: location.pathname.includes(
-                    "/social-media-settings"
-                  )
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/post-history")}
-              onClick={() => {
-                setActive("post-history");
-                navigate("/post-history");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "#E5EFEE", // Light red
-                  color: "#13343B",
-                  borderLeft: "3px solid #13343B",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#13343B",
-                  },
-                },
-
-                "&:hover": {
-                  backgroundColor: location.pathname.includes("/post-history")
-                    ? "#E5EFEE"
-                    : "rgba(119, 76, 76, 0.04)",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/post-history")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <PostAddIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Post History"
-                primaryTypographyProps={{
-                  marginTop: "16px",
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/post-history")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-          </List> */}
+          
           <List component="nav" disablePadding>
             {[
               {
@@ -2141,27 +1928,7 @@ const fetchPostHistory = async () => {
                     Discover and engage with relevant social media content
                   </Typography>
                 </Box>
-                {/* <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={fetchAllPosts}
-                  startIcon={<Search />}
-                  size="large"
-                  disabled={loading}
-                  sx={{
-                    borderRadius: 2,
-                    px: 3,
-                    py: 1,
-                    boxShadow: '0 4px 14px 0 rgba(25, 118, 210, 0.39)',
-                    '&:hover': {
-                      boxShadow: '0 6px 20px 0 rgba(25, 118, 210, 0.5)',
-                      transform: 'translateY(-2px)'
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {loading ? 'Fetching...' : 'Re-fetch Posts'}
-                </Button> */}
+              
               </Box>
 
               {/* Quick Actions Cards */}
@@ -2633,7 +2400,7 @@ const fetchPostHistory = async () => {
                                   sx={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 3,
+                                    gap: { xs: 1.5, sm: 2 }, // Reduced gap for smaller screens
                                   }}
                                 >
                                   <Box
@@ -2777,72 +2544,76 @@ const fetchPostHistory = async () => {
                                       {formatNumber(tweet?.view_count || 0)}
                                     </Typography>
                                   </Box>
-
-                                  {/* Posted Time */}
-                                  {tweet?.posted_time && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
-                                      }}
-                                    >
-                                      <Typography
-                                        sx={{
-                                          fontSize: "10px",
-                                          color: "white",
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        <CalendarIcon
-                                          sx={{
-                                            fontSize: "18px",
-                                            color: "#21808D",
-                                            mt: "0.8rem",
-                                          }}
-                                        />
-                                      </Typography>
-
-                                      <Typography
-                                        variant="caption"
-                                        sx={{
-                                          fontSize: "0.75rem",
-                                          fontWeight: 600,
-                                          color: "#1a1a1a",
-                                        }}
-                                      >
-                                        {formatPostedTime(tweet.posted_time)}
-                                      </Typography>
-                                    </Box>
-                                  )}
                                 </Box>
+
+                                {/* Posted Time - moved to the right side with reduced spacing */}
+                              
                               </Box>
                             </a>
 
                             {/* Stats Row */}
 
                             {/* Timestamp */}
+
                             <Box
                               sx={{
                                 px: 3,
                                 py: 1.5,
                                 backgroundColor: "#f8f9fa",
                                 borderTop: "1px solid #e5e7eb",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                flexWrap: "wrap",
+                                gap: 1,
                               }}
                             >
+                              {/* Fetched Time */}
                               <Typography
                                 variant="caption"
                                 sx={{
                                   fontSize: "0.75rem",
-                                  color: "#999999",
-                                  fontStyle: "italic",
+                                  color: "#66666698",
+                                  fontWeight: 500,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
                                 }}
                               >
+                                {/* <CalendarIcon
+                                  sx={{
+                                    fontSize: "14px",
+                                    color: "#21808D",
+                                  }}
+                                /> */}
                                 {dataSource === "twitter" && !tweet?.created_at
                                   ? "Freshly fetched from Twitter"
-                                  : `Fetched ${getTimeAgo(tweet?.created_at)}`
-                                  }
+                                  : `Fetched ${getTimeAgo(tweet?.created_at)}`}
                               </Typography>
+
+                              {/* Posted Time */}
+                              {tweet?.posted_time && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontSize: "0.75rem",
+                                    color: "#666666",
+                                    fontWeight: 500,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <CalendarIcon
+                                    sx={{
+                                      fontSize: "14px",
+                                      color: "#21808D",
+                                    }}
+                                  />
+                                  Posted {formatPostedTime(tweet.posted_time)}
+                                </Typography>
+                              )}
                             </Box>
 
                             {/* Post Reply Button */}
