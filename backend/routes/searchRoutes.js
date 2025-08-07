@@ -19,6 +19,11 @@ const USER_DATA_DIR = "C:\\chrome-profile";
 async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instruct", promptTemplate = null, keywordId = null) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   
+  console.log(`\n========== REPLY GENERATION STARTED ==========`);
+  console.log(`Tweet Content: "${tweetContent.substring(0, 50)}${tweetContent.length > 50 ? '...' : ''}"`);
+  console.log(`Initial Model: ${model}`);
+  console.log(`Keyword ID: ${keywordId || 'None'}`);
+  
   // If keywordId is provided, check for associated prompts
   let associatedPrompt = null;
   if (keywordId) {
@@ -35,21 +40,28 @@ async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instru
       
       if (promptResult.rows.length > 0) {
         associatedPrompt = promptResult.rows[0];
-        console.log(`Found associated prompt for keyword ${keywordId}: ${associatedPrompt.name}`);
+        console.log(`\n✅ Found associated prompt for keyword ${keywordId}:`);
+        console.log(`   Prompt Name: ${associatedPrompt.name}`);
+        console.log(`   Prompt ID: ${associatedPrompt.id}`);
         
         // Use the associated prompt's model and content if available
         if (associatedPrompt.model) {
+          const originalModel = model;
           model = associatedPrompt.model;
+          console.log(`   Model changed: ${originalModel} → ${model}`);
+        } else {
+          console.log(`   Using default model: ${model}`);
         }
         
         if (associatedPrompt.content) {
           promptTemplate = associatedPrompt.content;
+          console.log(`   Using prompt template from database`);
         }
       } else {
-        console.log(`No associated prompt found for keyword ${keywordId}, using provided values`);
+        console.log(`\n⚠️ No associated prompt found for keyword ${keywordId}, using provided values`);
       }
     } catch (error) {
-      console.error(`Error fetching associated prompt for keyword ${keywordId}:`, error.message);
+      console.error(`\n❌ Error fetching associated prompt for keyword ${keywordId}:`, error.message);
       // Continue with the provided values if there's an error
     }
   }
@@ -59,13 +71,17 @@ async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instru
     ? promptTemplate.replace(/{tweetContent}/g, tweetContent)
     : `Reply smartly to this tweet:\n"${tweetContent}"\nMake it personal, friendly, and relevant.Be professional and do not use emojis and crisp and small contents `;
   
-  console.log(`Generating reply using model: ${model}`);
-  console.log(`Using prompt: ${promptContent}`);
+  console.log(`\n🤖 FINAL GENERATION PARAMETERS:`);
+  console.log(`   Model: ${model}`);
+  if (model === "anthropic/claude-3-sonnet-20240229") {
+    console.log(`   ⚠️ Using corrected model: anthropic/claude-3-sonnet-20240229-v1:0`);
+  }
+  console.log(`   Prompt: ${promptContent.substring(0, 100)}${promptContent.length > 100 ? '...' : ''}`);
   
   const response = await axios.post(
     "https://openrouter.ai/api/v1/chat/completions",
     {
-      model: model,
+      model: model === "anthropic/claude-3-sonnet-20240229" ? "anthropic/claude-3-sonnet-20240229-v1:0" : model,
       messages: [
         {
           role: "user",
@@ -82,6 +98,8 @@ async function generateReply(tweetContent, model = "meta-llama/llama-3-8b-instru
   );
 
   const reply = response.data.choices[0]?.message?.content;
+  console.log(`\n✅ Reply generated successfully (${reply?.length || 0} characters)`);
+  console.log(`========== REPLY GENERATION COMPLETED ==========\n`);
   return reply;
 }
 async function getWebSocketDebuggerUrl() {
@@ -2283,14 +2301,22 @@ router.post("/generate-reply", async (req, res) => {
       });
     }
     
-    console.log(`Generating reply using model: ${model}`);
-    console.log(`Prompt: ${messages[0].content}`);
+    console.log(`\n========== DIRECT API REPLY GENERATION STARTED ==========`);
+    console.log(`Initial Model: ${model}`);
+    console.log(`Message Length: ${messages[0].content.length} characters`);
     
     try {
+      console.log(`\n🤖 FINAL GENERATION PARAMETERS:`);
+      console.log(`   Model: ${model}`);
+      if (model === "anthropic/claude-3-sonnet-20240229") {
+        console.log(`   ⚠️ Using corrected model: anthropic/claude-3-sonnet-20240229-v1:0`);
+      }
+      console.log(`   Prompt: ${messages[0].content.substring(0, 100)}${messages[0].content.length > 100 ? '...' : ''}`);
+      
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
-          model: model,
+          model: model === "anthropic/claude-3-sonnet-20240229" ? "anthropic/claude-3-sonnet-20240229-v1:0" : model,
           messages: messages,
         },
         {
@@ -2302,6 +2328,9 @@ router.post("/generate-reply", async (req, res) => {
       );
       
       const reply = response.data.choices[0]?.message?.content;
+      
+      console.log(`\n✅ Reply generated successfully (${reply?.length || 0} characters)`);
+      console.log(`========== DIRECT API REPLY GENERATION COMPLETED ==========\n`);
       
       if (!reply) {
         return res.status(500).json({
