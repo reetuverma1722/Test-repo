@@ -1772,6 +1772,7 @@ router.post("/reply-to-tweet", async (req, res) => {
         });
     }
 
+    console.log(result.rows[0])
     const { account_name, twitter_password  } = result.rows[0];
 
     // Run Puppeteer login and reply - now returns a result object with reply ID
@@ -1875,7 +1876,7 @@ async function postReplyWithPuppeteerAndGetId(
 
   try {
     console.log("🔐 Logging in...");
-await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
+ await page.goto("https://twitter.com/login", { waitUntil: "networkidle2" });
 
     // Take a screenshot of the initial login page for debugging
     try {
