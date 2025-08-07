@@ -67,11 +67,11 @@ const TwitterKeywords = () => {
   const [promptManagementOpen, setPromptManagementOpen] = useState(false);
   const [keywordForPrompt, setKeywordForPrompt] = useState(null);
   const [availableModels, setAvailableModels] = useState([
-    { id: "meta-llama/llama-3-8b-instruct", name: "Llama 3 8B Instruct" },
-    { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3 70B Instruct" },
-    { id: "anthropic/claude-3-opus-20240229", name: "Claude 3 Opus" },
-    { id: "anthropic/claude-3-haiku-20240307", name: "Claude 3 Haiku" },
-    { id: "openai/gpt-4o", name: "GPT-4o" }
+    { id: "meta-llama/llama-3-8b-instruct", name: "Llama 3 8B Instruct", selected: true },
+    { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3 70B Instruct", selected: false },
+    { id: "claude-3-opus", name: "Claude 3 Opus", selected: false },
+    { id: "claude-3-haiku", name: "Claude 3 Haiku", selected: false },
+    { id: "gpt-4o", name: "GPT-4o", selected: false }
   ]);
   const [selectedModel, setSelectedModel] = useState("meta-llama/llama-3-8b-instruct");
   
@@ -216,24 +216,18 @@ const TwitterKeywords = () => {
           setSelectedModel(defaultPrompt.model);
         }
         
-        // Check if there's a saved prompt in localStorage
-        const savedPrompt = localStorage.getItem("selectedPrompt");
-        const savedModel = localStorage.getItem("selectedModel");
+        // Check if there's a saved custom prompt in localStorage
         const savedCustomPrompt = localStorage.getItem("customPrompt");
         
-        if (savedPrompt) {
-          if (savedPrompt === "custom") {
-            setIsCustomPrompt(true);
-            if (savedCustomPrompt) {
-              setCustomPrompt(savedCustomPrompt);
-            }
-          } else {
-            setSelectedPrompt(savedPrompt);
-          }
+        if (savedCustomPrompt) {
+          setIsCustomPrompt(true);
+          setCustomPrompt(savedCustomPrompt);
         }
         
-        if (savedModel) {
-          setSelectedModel(savedModel);
+        // Find any model marked as selected in the availableModels array
+        const selectedModelObj = availableModels.find(model => model.selected);
+        if (selectedModelObj) {
+          setSelectedModel(selectedModelObj.id);
         }
       }
     } catch (error) {
@@ -783,10 +777,12 @@ const TwitterKeywords = () => {
                             if (promptId) {
                               setSelectedPrompt(promptId);
                               
-                              // Get the model for this prompt
+                              // Get the prompt details but don't automatically change the model
+                              // This keeps the model selection independent from the prompt selection
                               const prompt = availablePrompts.find(p => p.id === promptId);
-                              if (prompt && prompt.model) {
-                                setSelectedModel(prompt.model);
+                              if (prompt) {
+                                console.log(`Loaded prompt: ${prompt.name}, associated model: ${prompt.model}`);
+                                // Note: We're intentionally NOT updating the model here to keep selections independent
                               }
                             }
                             setPromptManagementOpen(true);
@@ -946,7 +942,20 @@ const TwitterKeywords = () => {
               <FormControl fullWidth>
                 <Select
                   value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
+                  onChange={(e) => {
+                    const newSelectedModel = e.target.value;
+                    setSelectedModel(newSelectedModel);
+                    
+                    // Update the availableModels array to track the selected model
+                    const updatedModels = availableModels.map(model => ({
+                      ...model,
+                      selected: model.id === newSelectedModel
+                    }));
+                    setAvailableModels(updatedModels);
+                    
+                    // Don't update the prompt selection when model changes
+                    // This keeps the model and prompt selections independent
+                  }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: "8px",
@@ -1015,11 +1024,15 @@ const TwitterKeywords = () => {
                       setIsCustomPrompt(false);
                       setSelectedPrompt(e.target.value);
                       
-                      // Update the model based on the selected prompt
+                      // Don't automatically update the model when a prompt is selected
+                      // This keeps the model selection independent from the prompt selection
+                      // The user can manually select which model to use with which prompt
+                      
+                      // Get the prompt object for reference only
                       const selectedPromptObj = availablePrompts.find(p => p.id === e.target.value);
-                      if (selectedPromptObj && selectedPromptObj.model) {
-                        setSelectedModel(selectedPromptObj.model);
-                      }
+                      console.log(`Selected prompt: ${selectedPromptObj?.name}, associated model: ${selectedPromptObj?.model}`);
+                      
+                      // Note: We're intentionally NOT updating the model here to keep selections independent
                     }
                   }}
                   sx={{
@@ -1195,10 +1208,18 @@ const TwitterKeywords = () => {
           <Button
             onClick={async () => {
               try {
-                // Save to localStorage
-                localStorage.setItem("selectedModel", selectedModel);
-                localStorage.setItem("selectedPrompt", isCustomPrompt ? "custom" : selectedPrompt);
+                // Store selected model in state
+                // Update the availableModels array to track the currently selected model
+                const updatedModels = availableModels.map(model => ({
+                  ...model,
+                  selected: model.id === selectedModel
+                }));
+                setAvailableModels(updatedModels);
                 
+                // Only store custom prompt in localStorage if needed
+                if (isCustomPrompt) {
+                  localStorage.setItem("customPrompt", customPrompt);
+                }
                 let promptId;
                 
                 // Save to database if it's a custom prompt
