@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -8,12 +8,51 @@ import {
   ListItemIcon,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Tabs,
+  Tab
 } from '@mui/material';
+import { Twitter as TwitterIcon, LinkedIn as LinkedInIcon } from '@mui/icons-material';
 import PostHistory from '../Components/post-history/PostHistory';
+import LinkedInPostHistory from '../Components/post-history/LinkedInPostHistory';
 import { CircleNotifications, CircleNotificationsOutlined } from '@mui/icons-material';
 
+// Custom TabPanel component
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`post-history-tabpanel-${index}`}
+      aria-labelledby={`post-history-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ pt: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+// Accessibility props for tabs
+function a11yProps(index) {
+  return {
+    id: `post-history-tab-${index}`,
+    'aria-controls': `post-history-tabpanel-${index}`,
+  };
+}
+
 const PostHistoryPage = () => {
+  const [tabValue, setTabValue] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
   return (
     <Box>
       {/* Page Header */}
@@ -31,24 +70,78 @@ const PostHistoryPage = () => {
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 700,
-              mb: 0.5,
-              color: '#a71900ff',
+               fontWeight: 600,
+                      mb: 0.5,
+                      color: "#4896a1"
             }}
           >
             Post History
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" sx={{fontSize:'0.9rem'}}  >
             View and manage your social media post history
           </Typography>
         </Box>
       </Box>
 
-      {/* Main Content */}
-      <Grid container spacing={3} sx={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Tabs */}
+      <Paper
+        elevation={0}
+        variant="outlined"
+        sx={{
+          mb: 3,
+          borderRadius: 3,
+          overflow: 'hidden'
+        }}
+      >
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="post history tabs"
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              minHeight: 60,
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 500,
+            },
+          }}
+        >
+          <Tab
+            icon={<TwitterIcon sx={{ color: '#1DA1F2' }} />}
+            label="Twitter"
+            iconPosition="start"
+            sx={{
+              '&.Mui-selected': {
+                color: '#1DA1F2',
+              },
+            }}
+            {...a11yProps(0)}
+          />
+          <Tab
+            icon={<LinkedInIcon sx={{ color: '#0077B5' }} />}
+            label="LinkedIn"
+            iconPosition="start"
+            sx={{
+              '&.Mui-selected': {
+                color: '#0077B5',
+              },
+            }}
+            {...a11yProps(1)}
+          />
+        </Tabs>
+      </Paper>
 
+      {/* Main Content */}
+      <Grid container spacing={3} sx={{ display: 'flex', flexDirection: 'column' }} >
         <Grid item xs={12}>
-          <PostHistory />
+          <TabPanel value={tabValue} index={0}>
+            <PostHistory />
+          </TabPanel>
+          <TabPanel value={tabValue} index={1}>
+            <LinkedInPostHistory />
+          </TabPanel>
         </Grid>
 
        {/* <Grid item xs={12}>

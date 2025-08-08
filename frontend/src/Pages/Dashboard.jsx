@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  AppBar,
   Toolbar,
   Typography,
   IconButton,
@@ -17,46 +16,34 @@ import {
   Avatar,
   CircularProgress,
   Chip,
-  Divider,
   Paper,
-  Menu,
   MenuItem,
   Tooltip,
-  Fade,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  Alert,
-  InputAdornment,
 } from "@mui/material";
 import {
   CloseOutlined,
-  Logout,
-  Search,
   Dashboard as DashboardIcon,
   History as HistoryIcon,
   Settings as SettingsIcon,
-  Twitter as TwitterIcon,
-  Tag as TagIcon,
   FindInPage as FindInPageIcon,
   ManageSearch as ManageSearchIcon,
-  VpnKey as VpnKeyIcon,
-  Person as PersonIcon,
-  Email as EmailIcon,
   Check as CheckIcon,
   RemoveRedEye as ViewIcon,
-  TrendingUp as TrendingUpIcon,
   PostAdd as PostAddIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
   AddTaskOutlined,
   Edit as EditIcon,
+  Favorite as FavoriteIcon,
+  Replay as ReplyIcon,
+  People as PeopleIcon,
+  CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import LogoutDialog from "../Components/logoutDialog/LogoutDialog";
 import authService from "../services/authService";
 import TweetReplyTable from "../Components/tweet-reply-table/SearchHistory";
 import GoalsTable from "./Post_Manager";
@@ -64,28 +51,44 @@ import SocialMediaSettings from "./SocialMediaSettings";
 import { getAccountsByPlatform } from "../services/socialMediaAccountsService";
 import TrendingAnalytics from "./TrendingAnalytics";
 import PostHistoryPage from "./PostHistoryPage";
+import { getPostHistoryall } from "../services/postHistoryService";
+import Header from "../Components/header/Header";
 
 const drawerWidth = 260;
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [tweets, setTweets] = useState([]);
-  const [logoutOpen, setLogoutOpen] = useState(false);
-  const [active, setActive] = useState("");
   const [loading, setLoading] = useState(false);
   const [keywords, setKeywords] = useState([]);
   const [selectedKeywords, setSelectedKeywords] = useState([]);
   const [filteredTweets, setFilteredTweets] = useState([]);
-  const [userEmail, setUserEmail] = useState("user@example.com");
+  const [selectedKeywordForPrompts, setSelectedKeywordForPrompts] =
+    useState(null);
+  const [keywordPromptsDialogOpen, setKeywordPromptsDialogOpen] =
+    useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Twitter accounts state
+  const [dataSource, setDataSource] = useState("cache");
+  const [postedTweets, setPostedTweets] = useState([]);
+  const [availablePrompts, setAvailablePrompts] = useState([]);
+  const [selectedPromptId, setSelectedPromptId] = useState("");
+  const [keywordPromptMap, setKeywordPromptMap] = useState({});
+  const [keywordPromptsMap, setKeywordPromptsMap] = useState({});
+  const [keywordPrompts, setKeywordPrompts] = useState([]);
+  const [isGeneratingReply, setIsGeneratingReply] = useState(false);
   const [twitterAccounts, setTwitterAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
 
-  // Update current time every minute to keep time displays fresh
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
+  const [selectedTweet, setSelectedTweet] = useState(null);
+  const [editedReply, setEditedReply] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
+  const [posts, setPosts] = useState([]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -96,7 +99,11 @@ const Dashboard = () => {
 
   // Function to format time difference as "X hours ago"
   const getTimeAgo = (timestamp) => {
-    if (!timestamp) return "Unknown";
+    if (!timestamp) {
+      // If no timestamp but data is from Twitter, it's freshly fetched
+      if (dataSource === "twitter") return "Just now";
+      return "Unknown";
+    }
 
     const fetchedTime = new Date(timestamp);
     const diffMs = currentTime - fetchedTime;
@@ -112,67 +119,179 @@ const Dashboard = () => {
     return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
   };
 
-  // Password change state
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Function to format posted time for display
+  const formatPostedTime = (postedTime) => {
+    if (!postedTime) return "Unknown time";
 
-  // Post dialog state
-  const [postDialogOpen, setPostDialogOpen] = useState(false);
-  const [selectedTweet, setSelectedTweet] = useState(null);
-  const [editedReply, setEditedReply] = useState("");
-  const [isPosting, setIsPosting] = useState(false);
+    // Handle relative time formats like "2h", "1d", "3m"
+    if (/^\d+[smhd]$/.test(postedTime)) {
+      const unit = postedTime.slice(-1);
+      const value = postedTime.slice(0, -1);
 
-  const navigate = useNavigate();
-  const location = useLocation();
+      switch (unit) {
+        case "s":
+          return `${value} second${value !== "1" ? "s" : ""} ago`;
+        case "m":
+          return `${value} minute${value !== "1" ? "s" : ""} ago`;
+        case "h":
+          return `${value} hour${value !== "1" ? "s" : ""} ago`;
+        case "d":
+          return `${value} day${value !== "1" ? "s" : ""} ago`;
+        default:
+          return postedTime;
+      }
+    }
 
-  // useEffect(() => {
-  //   const token = localStorage.getItem("token");
-  //   if (!token) navigate("/login");
-  // }, [navigate]);
+    if (/^[A-Za-z]{3}\s+\d{1,2}(,\s+\d{4})?$/.test(postedTime)) {
+      return `Posted on ${postedTime}`;
+    }
 
-  // Fetch Twitter accounts
+    try {
+      const date = new Date(postedTime);
+      if (!isNaN(date.getTime())) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 1) return "Just posted";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        // For older posts, show the date
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year:
+            date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+        });
+      }
+    } catch (e) {}
+
+    return postedTime;
+  };
+
   const fetchTwitterAccounts = async () => {
     setLoadingAccounts(true);
     try {
       const response = await getAccountsByPlatform("twitter");
 
-      // Extract the data array from the response
-      // The API returns { success: true, data: [...accounts] }
       const accounts = response.data || [];
 
-      console.log("Fetched Twitter accounts:", accounts);
       setTwitterAccounts(accounts);
 
-      // Don't set any account as selected by default
-      // This will show "All Accounts" as the default selection
-      setSelectedAccount(null);
+      const defaultAccount = accounts.find(
+        (account) => account.isDefault === true
+      );
+      if (defaultAccount) {
+        setSelectedAccount(defaultAccount.id);
+      } else {
+        setSelectedAccount(null);
+      }
     } catch (err) {
       console.error("Failed to fetch Twitter accounts", err);
-      setTwitterAccounts([]); // Reset to empty array on error
+      setTwitterAccounts([]);
     } finally {
       setLoadingAccounts(false);
     }
   };
 
+  const fetchPostHistory = async () => {
+    try {
+      const result = await getPostHistoryall();
+
+      if (result.success && result.data) {
+        setPosts(result.data); // still okay if you need it
+
+        // Extract only the tweet IDs into a list
+        const tweetIds = result.data.map((post) => post.tweetid);
+
+        // Set posted tweet IDs
+        setPostedTweets(tweetIds);
+      }
+
+      //console.log("Tweets already posted:", posts);
+    } catch (err) {
+      console.error("Failed to fetch post history:", err);
+    }
+  };
   // Fetch keywords and Twitter accounts on component mount
   useEffect(() => {
     fetchTwitterAccounts();
-    fetchAllPosts(); // Automatically fetch posts when component mounts
+    fetchPostHistory();
+    fetchPrompts();
+    fetchKeywordPromptAssociations();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setLogoutOpen(false);
-    navigate("/login");
+  const fetchKeywordPromptAssociations = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/keywords");
+      if (response.data.success && response.data.data) {
+        const keywordData = response.data.data;
+        const promptMap = {};
+        const keywordPromptsMap = {};
+
+        keywordData.forEach((keyword) => {
+          if (keyword.promptId) {
+            promptMap[keyword.text] = keyword.promptId.toString();
+          }
+
+          if (keyword.prompts && keyword.prompts.length > 0) {
+            keywordPromptsMap[keyword.text] = keyword.prompts;
+          }
+        });
+
+        setKeywordPromptMap(promptMap);
+
+        setKeywordPromptsMap(keywordPromptsMap);
+        console.log("Keyword-prompt associations loaded:", promptMap);
+        console.log("All keyword prompts loaded:", keywordPromptsMap);
+      }
+    } catch (error) {
+      console.error("Error fetching keyword-prompt associations:", error);
+    }
   };
+
+  const fetchPrompts = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/prompts");
+      if (response.data.success && response.data.data) {
+        // Map the prompts from the database to the format we need
+        const dbPrompts = response.data.data.map((prompt) => ({
+          id: prompt.id.toString(),
+          name: prompt.name,
+          content: prompt.content,
+          model: prompt.model,
+        }));
+
+        setAvailablePrompts(dbPrompts);
+
+        const defaultPrompt = dbPrompts.find((p) => p.name === "Default");
+        if (defaultPrompt) {
+          setSelectedPromptId(defaultPrompt.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching prompts:", error);
+      // If we can't fetch prompts from the database, use default ones
+      setAvailablePrompts([
+        {
+          id: "default",
+          name: "Default",
+          content: `Reply smartly to this tweet:\n"{tweetContent}"\nMake it personal, friendly, and relevant.`,
+          model: "meta-llama/llama-3-8b-instruct",
+        },
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    if (twitterAccounts.length > 0) {
+      fetchAllPosts(selectedAccount);
+    }
+  }, [selectedAccount, twitterAccounts]);
 
   // Fetch all keywords
   const fetchAllKeywords = async () => {
@@ -190,15 +309,17 @@ const Dashboard = () => {
     }
   };
 
-  const fetchAllPosts = async (accountId = selectedAccount) => {
+  const fetchAllPosts = async (
+    accountId = selectedAccount,
+    forceRefresh = false
+  ) => {
     setLoading(true);
     setTweets([]);
+    setDataSource("cache");
 
     try {
-      // First fetch all keywords
       const allKeywords = await fetchAllKeywords();
 
-      // Filter keywords by selected account if one is selected
       const filteredKeywords = accountId
         ? allKeywords.filter((k) => {
             console.log(
@@ -207,14 +328,10 @@ const Dashboard = () => {
               "with selected account:",
               accountId
             );
-            // Convert both to strings for comparison to handle potential type mismatches
+
             return String(k.accountId) === String(accountId);
           })
         : allKeywords;
-
-      console.log("All keywords:", allKeywords);
-      console.log("Filtered keywords:", filteredKeywords);
-      console.log("Selected account:", accountId);
 
       setKeywords(filteredKeywords);
 
@@ -223,21 +340,12 @@ const Dashboard = () => {
         return;
       }
 
-      // Instead of using max values across all keywords, fetch posts for each keyword individually
       let allFetchedTweets = [];
 
-      // Process each keyword individually
       for (const keyword of filteredKeywords) {
-        // Ensure we're using numeric values by explicitly converting to numbers
         const minLikes = Number(keyword.minLikes) || 0;
         const minRetweets = Number(keyword.minRetweets) || 0;
         const minFollowers = Number(keyword.minFollowers) || 0;
-
-        console.log(`Fetching for keyword "${keyword.text}" with criteria:`, {
-          minLikes,
-          minRetweets,
-          minFollowers,
-        });
 
         // Build search URL for this specific keyword
         let searchUrl = `http://localhost:5000/api/search?keyword=${keyword.text}&minLikes=${minLikes}&minRetweets=${minRetweets}&minFollowers=${minFollowers}`;
@@ -246,10 +354,18 @@ const Dashboard = () => {
           searchUrl += `&accountId=${accountId}`;
         }
 
-        console.log("Search URL for keyword:", searchUrl);
+        // Add forceRefresh parameter if true
+        if (forceRefresh) {
+          searchUrl += `&forceRefresh=true`;
+        }
 
         try {
           const res = await axios.get(searchUrl);
+
+          // Set data source from the response
+          if (res.data.from) {
+            setDataSource(res.data.from);
+          }
 
           // Add keyword information to each tweet
           const keywordTweets = (res.data.tweets || []).map((tweet) => ({
@@ -271,9 +387,6 @@ const Dashboard = () => {
         new Map(allFetchedTweets.map((tweet) => [tweet.id, tweet])).values()
       );
 
-      console.log(
-        `Fetched ${uniqueTweets.length} unique tweets across all keywords`
-      );
       setTweets(uniqueTweets);
       // filteredTweets will be updated by the useEffect
     } catch (err) {
@@ -287,9 +400,141 @@ const Dashboard = () => {
   const handlePost = (tweet) => {
     setSelectedTweet(tweet);
     setEditedReply(tweet.reply || "");
-    localStorage.setItem("selected_tweet_id", tweet.id);
-    localStorage.setItem("selected_tweet_reply", tweet.reply || "");
+
+    if (tweet.keyword && keywordPromptsMap[tweet.keyword]) {
+      const keywordPromptsList = keywordPromptsMap[tweet.keyword];
+
+      setKeywordPrompts(keywordPromptsList);
+
+      const preferredTemplates = [
+        "Professional",
+        "Supportive",
+        "Engaging",
+        "Default",
+      ];
+
+      // First check if any of the preferred templates exist in available prompts
+      let foundPreferredPrompt = false;
+      for (const templateName of preferredTemplates) {
+        const preferredPrompt = availablePrompts.find(
+          (p) => p.name === templateName
+        );
+        if (preferredPrompt) {
+          setSelectedPromptId(preferredPrompt.id);
+          foundPreferredPrompt = true;
+          console.log(`Selected preferred prompt template: ${templateName}`);
+          break;
+        }
+      }
+
+      // If no preferred template found, use the first keyword-specific prompt
+      if (!foundPreferredPrompt && keywordPromptsList.length > 0) {
+        setSelectedPromptId(keywordPromptsList[0].id.toString());
+        console.log(
+          `Selected first keyword-specific prompt: ${keywordPromptsList[0].name}`
+        );
+      }
+    } else {
+      const defaultPrompt = availablePrompts.find((p) => p.name === "Default");
+      if (defaultPrompt) {
+        setSelectedPromptId(defaultPrompt.id);
+      }
+      setKeywordPrompts([]);
+    }
+
     setPostDialogOpen(true);
+  };
+
+  const generateReply = async () => {
+    if (!selectedTweet) return;
+
+    try {
+      setIsGeneratingReply(true);
+
+      // Find the selected prompt from either availablePrompts or keywordPrompts
+      let selectedPrompt = availablePrompts.find(
+        (p) => p.id === selectedPromptId
+      );
+
+      // If not found in availablePrompts, check keywordPrompts
+      if (!selectedPrompt && keywordPrompts.length > 0) {
+        selectedPrompt = keywordPrompts.find(
+          (p) => p.id.toString() === selectedPromptId
+        );
+      }
+
+      if (!selectedPrompt) {
+        console.error("No prompt selected or prompt not found");
+        alert("Error: Selected prompt not found");
+        return;
+      }
+
+      // Replace {tweetContent} with the actual tweet text
+      const formattedPrompt = selectedPrompt.content.replace(
+        /{tweetContent}/g,
+        selectedTweet.text
+      );
+
+      // First check if the API endpoint is accessible
+      try {
+        await axios.get("http://localhost:5000/api/generate-reply-check");
+      } catch (checkError) {
+        console.error("API endpoint check failed:", checkError);
+        alert(
+          "Cannot connect to AI service. Please check if the server is running."
+        );
+        return;
+      }
+
+      // Call the backend to generate a reply
+      const response = await axios.post(
+        "http://localhost:5000/api/generate-reply",
+        {
+          model: selectedPrompt.model || "meta-llama/llama-3-8b-instruct",
+          messages: [
+            {
+              role: "user",
+              content: formattedPrompt,
+            },
+          ],
+        }
+      );
+
+      if (response.data && response.data.reply) {
+        setEditedReply(response.data.reply);
+      } else {
+        alert("Failed to generate reply: No content returned from AI service");
+      }
+    } catch (error) {
+      console.error("Error generating reply:", error);
+
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Unknown error occurred";
+
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 404) {
+          errorMessage =
+            "AI service endpoint not found. Please check if the server is running.";
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = `Server error: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage =
+          "No response from server. Please check your network connection.";
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = error.message;
+      }
+
+      alert("Error generating reply: " + errorMessage);
+    } finally {
+      setIsGeneratingReply(false);
+    }
   };
 
   // Handle post submission
@@ -301,21 +546,48 @@ const Dashboard = () => {
     setIsPosting(true);
 
     try {
-      // Call the API to post the reply
+      const tweetKeyword = selectedTweet.keyword;
+      const keywordObj = keywords.find((k) => k.text === tweetKeyword);
+      const keywordId = keywordObj ? keywordObj.id : null;
+
+      let selectedPrompt = availablePrompts.find(
+        (p) => p.id === selectedPromptId
+      );
+
+      if (!selectedPrompt && keywordPrompts.length > 0) {
+        selectedPrompt = keywordPrompts.find(
+          (p) => p.id.toString() === selectedPromptId
+        );
+      }
+
+      const model = selectedPrompt
+        ? selectedPrompt.model
+        : "meta-llama/llama-3-8b-instruct";
+      const promptContent = selectedPrompt ? selectedPrompt.content : "";
+      const promptName = selectedPrompt ? selectedPrompt.name : "Default";
+
+      console.log("Using prompt:", promptName);
+      console.log("Using model:", model);
+
       const response = await axios.post(
         "http://localhost:5000/api/reply-to-tweet",
         {
           tweetId: selectedTweet.id,
           replyText: editedReply,
           selectedAccountId: selectedAccount,
+          keywordId: keywordId,
+          tweetText: selectedTweet.text,
+          likeCount: selectedTweet.like_count,
+          retweetCount: selectedTweet.retweet_count,
+          model: model,
+          promptContent: promptContent,
+          promptName: promptName,
         }
       );
 
       if (response.data.success) {
-        // Show success message
         alert("Reply posted successfully!");
-
-        // Close the dialog
+        setPostedTweets((prev) => [...prev, selectedTweet.id]);
         setPostDialogOpen(false);
       } else {
         alert(
@@ -330,149 +602,21 @@ const Dashboard = () => {
     }
   };
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  // Handle password change dialog
-  const handlePasswordChange = () => {
-    setPasswordDialogOpen(true);
-    handleMenuClose();
-    // Reset form fields and states
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setPasswordError("");
-    setPasswordSuccess(false);
-  };
-
-  const handlePasswordDialogClose = () => {
-    setPasswordDialogOpen(false);
-  };
-
-  // Validate password
-  const validatePassword = () => {
-    // Reset error
-    setPasswordError("");
-
-    // Check if all fields are filled
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError("All fields are required");
-      return false;
-    }
-
-    // Check if new password is at least 8 characters
-    if (newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters long");
-      return false;
-    }
-
-    // Check if new password contains at least one number and one letter
-    const hasNumber = /\d/.test(newPassword);
-    const hasLetter = /[a-zA-Z]/.test(newPassword);
-    if (!hasNumber || !hasLetter) {
-      setPasswordError(
-        "New password must contain at least one letter and one number"
-      );
-      return false;
-    }
-
-    // Check if passwords match
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
-      return false;
-    }
-
-    return true;
-  };
-
-  // Submit password change
-  const handlePasswordSubmit = async () => {
-    // Validate form
-    if (!validatePassword()) {
-      return;
-    }
-
-    setPasswordLoading(true);
-
-    try {
-      // Get token from localStorage
-      const token = localStorage.getItem("token");
-
-      // Make API call to change password
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/change-password",
-        {
-          currentPassword,
-          newPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Handle success
-      setPasswordSuccess(true);
-      setPasswordError("");
-
-      // Close dialog after 2 seconds
-      setTimeout(() => {
-        setPasswordDialogOpen(false);
-      }, 2000);
-    } catch (error) {
-      // Handle error
-      if (
-        error.response &&
-        error.response.data &&
-        error.response.data.message
-      ) {
-        setPasswordError(error.response.data.message);
-      } else {
-        setPasswordError("Failed to change password. Please try again.");
-      }
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
-  // Get user email from localStorage
-  useEffect(() => {
-    try {
-      const userData = localStorage.getItem("user");
-      if (userData) {
-        const user = JSON.parse(userData);
-        if (user.email) {
-          setUserEmail(user.email);
-        }
-      }
-    } catch (error) {
-      console.error("Error retrieving user data:", error);
-    }
-  }, []);
-
   useEffect(() => {
     const twitterToken = new URLSearchParams(window.location.search).get(
       "accessToken"
     );
 
     if (twitterToken) {
-      // Store the Twitter access token
       localStorage.setItem("twitter_access_token", twitterToken);
 
-      // Convert Twitter token to JWT token
       const convertToken = async () => {
         try {
           const response = await authService.convertTwitterToken(twitterToken);
 
-          if (response.success && response.token) {
-            // Store the JWT token
+          if (response.success) {
             localStorage.setItem("token", response.token);
+            const response2 = await authService.getReplyIdForTweet();
 
             if (response.user) {
               localStorage.setItem("user", JSON.stringify(response.user));
@@ -492,14 +636,15 @@ const Dashboard = () => {
 
       convertToken();
     }
-
-    // Ensure there's always a token for protected routes
-    if (!localStorage.getItem("token")) {
-      localStorage.setItem("token", "dummy-token");
-    }
   }, [navigate]);
 
-  // Handle keyword toggle for filtering
+  const formatNumber = (num) => {
+    if (num >= 1_000_000)
+      return (num / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (num >= 1_000) return (num / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+    return num;
+  };
+
   const handleKeywordToggle = (keywordText) => {
     setSelectedKeywords((prev) => {
       const isSelected = prev.includes(keywordText);
@@ -511,15 +656,11 @@ const Dashboard = () => {
     });
   };
 
-  // Update filtered tweets whenever tweets or selected keywords change
   useEffect(() => {
     if (selectedKeywords.length === 0) {
-      // If no keywords selected, show all tweets
       setFilteredTweets(tweets);
     } else {
-      // Filter tweets that match any of the selected keywords
       const filtered = tweets.filter((tweet) => {
-        // Check if the tweet's keyword is in the selected keywords list
         return selectedKeywords.some(
           (keyword) =>
             tweet.keyword &&
@@ -530,27 +671,150 @@ const Dashboard = () => {
     }
   }, [tweets, selectedKeywords]);
 
-  // Set active state based on current path
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.includes("/dashboard")) {
-      setActive("");
-    } else if (path.includes("/history")) {
-      setActive("search-history");
-    } else if (path.includes("/postmanager")) {
-      setActive("post-manager");
-    } else if (path.includes("/social-media-settings")) {
-      setActive("social-media-settings");
-    } else if (path.includes("/trending-analytics")) {
-      setActive("trending-analytics");
-    } else if (path.includes("/post-history")) {
-      setActive("post-history");
-    }
-  }, [location.pathname]);
-
   return (
     <Box sx={{ display: "flex" }}>
-      {/* Post Dialog */}
+      <Dialog
+        open={keywordPromptsDialogOpen}
+        onClose={() => setKeywordPromptsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontFamily: "var(--brand-font)",
+            fontSize: "1.3rem",
+            fontWeight: 600,
+            backgroundColor: "#f8f8f8",
+            borderBottom: "1px solid #eaeaea",
+            padding: "16px 24px",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <ManageSearchIcon sx={{ mr: 1, color: "#4D99A3" }} />
+            Prompts for "{selectedKeywordForPrompts?.text}"
+          </Box>
+          <IconButton
+            aria-label="close"
+            onClick={() => setKeywordPromptsDialogOpen(false)}
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            <CloseOutlined />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ padding: "24px" }}>
+          {selectedKeywordForPrompts &&
+          keywordPromptsMap[selectedKeywordForPrompts.text] ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {keywordPromptsMap[selectedKeywordForPrompts.text].map(
+                (prompt, index) => (
+                  <Paper
+                    key={index}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      border: "1px solid #e0e0e0",
+                      backgroundColor: prompt.is_default
+                        ? "#f5f9fa"
+                        : "#ffffff",
+                      position: "relative",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: 600, color: "#4D99A3" }}
+                      >
+                        {prompt.name} {prompt.is_default && "(Default)"}
+                      </Typography>
+                      <Chip
+                        label={prompt.model}
+                        size="small"
+                        sx={{
+                          backgroundColor: "#e5efee",
+                          color: "#4D99A3",
+                          fontSize: "0.7rem",
+                        }}
+                      />
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ whiteSpace: "pre-wrap", mb: 1 }}
+                    >
+                      {prompt.content}
+                    </Typography>
+                  </Paper>
+                )
+              )}
+            </Box>
+          ) : (
+            <Typography
+              variant="body1"
+              sx={{ textAlign: "center", py: 2, color: "text.secondary" }}
+            >
+              No prompts associated with this keyword.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{ padding: "16px 24px", backgroundColor: "#f8f8f8" }}
+        >
+          <Button
+            onClick={() => setKeywordPromptsDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: "#4d99a393",
+              color: "#4d99a3ff",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              if (selectedKeywordForPrompts) {
+                navigate("/social-media-settings");
+              }
+              setKeywordPromptsDialogOpen(false);
+            }}
+            variant="contained"
+            sx={{
+              backgroundColor: "#4D99A3",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+              "&:hover": {
+                backgroundColor: "#3d7e85",
+              },
+            }}
+          >
+            Manage Prompts
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={postDialogOpen}
         onClose={() => setPostDialogOpen(false)}
@@ -578,7 +842,6 @@ const Dashboard = () => {
           Post Reply
         </DialogTitle>
         <DialogContent dividers sx={{ padding: "24px" }}>
-          {/* Original Tweet Content */}
           <Typography
             variant="subtitle1"
             gutterBottom
@@ -594,7 +857,7 @@ const Dashboard = () => {
                 display: "inline-block",
                 width: "4px",
                 height: "16px",
-                backgroundColor: "#FF0000",
+                backgroundColor: "#4D99A3",
                 marginRight: "8px",
                 borderRadius: "2px",
               },
@@ -619,7 +882,6 @@ const Dashboard = () => {
             {selectedTweet?.text || "No tweet content available."}
           </Typography>
 
-          {/* Reply Input */}
           <Typography
             variant="subtitle1"
             gutterBottom
@@ -636,14 +898,185 @@ const Dashboard = () => {
                 display: "inline-block",
                 width: "4px",
                 height: "16px",
-                backgroundColor: "#4caf50",
+                backgroundColor: "#4D99A3",
+                marginRight: "8px",
+                borderRadius: "2px",
+              },
+            }}
+          >
+            Select Prompt Template
+          </Typography>
+          {keywordPrompts.length > 0 && (
+            <Typography
+              variant="caption"
+              sx={{ display: "block", mb: 1, color: "text.secondary" }}
+            >
+              Showing all available templates including {keywordPrompts.length}{" "}
+              keyword-specific prompts
+            </Typography>
+          )}
+
+          <TextField
+            select
+            fullWidth
+            size="small"
+            value={selectedPromptId}
+            onChange={(e) => setSelectedPromptId(e.target.value)}
+            variant="outlined"
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "8px",
+              },
+              "& .MuiSelect-select": {
+                padding: "10px 14px",
+              },
+              "& .MuiMenuItem-root": {
+                fontSize: "0.9rem",
+              },
+            }}
+            SelectProps={{
+              MenuProps: {
+                PaperProps: {
+                  sx: {
+                    maxHeight: 300,
+                    "& .MuiMenuItem-root": {
+                      fontSize: "0.9rem",
+                      padding: "8px 16px",
+                    },
+                    "& .MuiMenuItem-root.Mui-selected": {
+                      backgroundColor: "rgba(77, 153, 163, 0.1)",
+                    },
+                    "& .MuiMenuItem-root.Mui-selected:hover": {
+                      backgroundColor: "rgba(77, 153, 163, 0.2)",
+                    },
+                  },
+                },
+              },
+            }}
+          >
+            <MenuItem
+              disabled
+              sx={{
+                opacity: 1,
+                fontWeight: 600,
+                color: "#4D99A3",
+                fontSize: "0.85rem",
+                py: 0.5,
+              }}
+            >
+              Standard Templates
+            </MenuItem>
+            {availablePrompts.map((prompt) => {
+              const isStandardTemplate = [
+                "Default",
+                "Professional",
+                "Supportive",
+                "Engaging",
+              ].includes(prompt.name);
+              return (
+                <MenuItem
+                  key={prompt.id}
+                  value={prompt.id}
+                  sx={{
+                    pl: 3,
+                    "&.Mui-selected": {
+                      backgroundColor: "rgba(77, 153, 163, 0.1)",
+                    },
+                  }}
+                >
+                  {prompt.name}
+                </MenuItem>
+              );
+            })}
+
+            {keywordPrompts.length > 0 && (
+              <>
+                <MenuItem
+                  disabled
+                  sx={{
+                    opacity: 1,
+                    fontWeight: 600,
+                    color: "#4D99A3",
+                    fontSize: "0.85rem",
+                    py: 0.5,
+                    mt: 1,
+                    borderTop: "1px solid #eee",
+                  }}
+                >
+                  Keyword-Specific Prompts
+                </MenuItem>
+                {keywordPrompts.map((prompt) => {
+                  const isDuplicate = availablePrompts.some(
+                    (p) => p.id === prompt.id
+                  );
+                  if (!isDuplicate) {
+                    return (
+                      <MenuItem
+                        key={prompt.id}
+                        value={prompt.id.toString()}
+                        sx={{
+                          pl: 3,
+                          "&.Mui-selected": {
+                            backgroundColor: "rgba(77, 153, 163, 0.1)",
+                          },
+                        }}
+                      >
+                        {prompt.name} {prompt.is_default && "(Default)"}
+                      </MenuItem>
+                    );
+                  }
+                  return null;
+                })}
+              </>
+            )}
+          </TextField>
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={generateReply}
+              disabled={isGeneratingReply || !selectedPromptId}
+              startIcon={
+                isGeneratingReply ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : null
+              }
+              sx={{
+                backgroundColor: "#4D99A3",
+                borderRadius: "8px",
+                "&:hover": {
+                  backgroundColor: "#3d7e85",
+                },
+              }}
+            >
+              {isGeneratingReply ? "Generating..." : "Generate Reply"}
+            </Button>
+          </Box>
+
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{
+              fontFamily: "var(--brand-font)",
+              fontSize: "1.05rem",
+              fontWeight: 600,
+              color: "#333",
+              display: "flex",
+              alignItems: "center",
+              mt: 2,
+              "&::before": {
+                content: '""',
+                display: "inline-block",
+                width: "4px",
+                height: "16px",
+                backgroundColor: "#4D99A3",
                 marginRight: "8px",
                 borderRadius: "2px",
               },
             }}
           >
             Compose Professional Response
-           
           </Typography>
 
           <TextField
@@ -663,7 +1096,17 @@ const Dashboard = () => {
               "& .MuiOutlinedInput-root": {
                 borderRadius: "8px",
                 transition: "all 0.3s",
+                border: "none",
                 fontSize: "0.95rem",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: "transparent",
+              },
+              "&:hover fieldset": {
+                borderColor: "gray",
+              },
+              "&.Mui-focused fieldset": {
+                borderColor: "transparent",
               },
               "& .MuiFormHelperText-root": {
                 color: editedReply.length > 220 ? "#f44336" : "text.secondary",
@@ -671,25 +1114,24 @@ const Dashboard = () => {
               },
             }}
           />
-          
-          {/* Premium member notice */}
+
           <Typography
             variant="caption"
             sx={{
-              display: 'block',
+              display: "block",
               mb: 2,
-              color: 'text.secondary',
-              bgcolor: 'rgba(244, 67, 54, 0.08)',
+              color: "text.secondary",
+              bgcolor: "rgba(244, 67, 54, 0.08)",
               p: 1,
               borderRadius: 1,
-              borderLeft: '3px solid #f44336'
+              borderLeft: "3px solid #4D99A3",
             }}
           >
-            <strong>Note:</strong> Only premium members can post replies longer than 200 characters.
-            Non-premium users must keep replies within the 200 character limit.
+            <strong>Note:</strong> Only premium members can post replies longer
+            than 200 characters. Non-premium users must keep replies within the
+            200 character limit.
           </Typography>
 
-          {/* Account Selection */}
           <Typography
             variant="subtitle1"
             gutterBottom
@@ -704,7 +1146,7 @@ const Dashboard = () => {
                 display: "inline-block",
                 width: "4px",
                 height: "16px",
-                backgroundColor: "#4caf50",
+                backgroundColor: "#4D99A3",
                 marginRight: "8px",
                 borderRadius: "2px",
               },
@@ -747,8 +1189,8 @@ const Dashboard = () => {
             onClick={() => setPostDialogOpen(false)}
             variant="outlined"
             sx={{
-              borderColor: "#9e9e9e",
-              color: "#757575",
+              borderColor: "#4d99a393",
+              color: "#4d99a3ff",
               borderRadius: "8px",
               fontWeight: 600,
               padding: "6px 16px",
@@ -764,9 +1206,10 @@ const Dashboard = () => {
               isPosting || editedReply.length > 220 || !editedReply.trim()
             }
             sx={{
-              backgroundColor: "#4caf50",
+              backgroundColor: "#4D99A3",
               padding: "6px 20px",
               borderRadius: "8px",
+              border: "none",
               fontWeight: 600,
               boxShadow: "0 4px 12px rgba(76, 175, 80, 0.2)",
               transition: "all 0.3s ease",
@@ -795,212 +1238,6 @@ const Dashboard = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Password Change Dialog */}
-      <Dialog
-        open={passwordDialogOpen}
-        onClose={handlePasswordDialogClose}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            maxWidth: 400,
-            width: "100%",
-            p: 1,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            fontWeight: 600,
-            pb: 1,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <VpnKeyIcon sx={{ color: "#f44336" }} />
-          Change Password
-        </DialogTitle>
-        <IconButton
-          aria-label="close"
-          onClick={handlePasswordDialogClose}
-          sx={{
-            position: "absolute",
-            right: 12,
-            top: 12,
-            color: "text.secondary",
-          }}
-        >
-          <CloseOutlined />
-        </IconButton>
-        <DialogContent sx={{ pt: 1 }}>
-          {passwordSuccess ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                py: 2,
-              }}
-            >
-              <Avatar
-                sx={{
-                  bgcolor: "#4caf50",
-                  mb: 2,
-                  width: 60,
-                  height: 60,
-                }}
-              >
-                <CheckIcon sx={{ fontSize: 36 }} />
-              </Avatar>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Password Changed!
-              </Typography>
-              <Typography variant="body2" color="text.secondary" align="center">
-                Your password has been successfully updated.
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              {passwordError && (
-                <Alert
-                  severity="error"
-                  sx={{
-                    mb: 2,
-                    borderRadius: 2,
-                    "& .MuiAlert-icon": {
-                      color: "#f44336",
-                    },
-                  }}
-                >
-                  {passwordError}
-                </Alert>
-              )}
-              <TextField
-                margin="dense"
-                label="Current Password"
-                type={showCurrentPassword ? "text" : "password"}
-                fullWidth
-                variant="outlined"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle current password visibility"
-                        onClick={() =>
-                          setShowCurrentPassword(!showCurrentPassword)
-                        }
-                        edge="end"
-                      >
-                        {showCurrentPassword ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <TextField
-                margin="dense"
-                label="New Password"
-                type={showNewPassword ? "text" : "password"}
-                fullWidth
-                variant="outlined"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                sx={{ mb: 2 }}
-                helperText="Password must be at least 8 characters with letters and numbers"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle new password visibility"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        edge="end"
-                      >
-                        {showNewPassword ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <TextField
-                margin="dense"
-                label="Confirm New Password"
-                type={showConfirmPassword ? "text" : "password"}
-                fullWidth
-                variant="outlined"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle confirm password visibility"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        edge="end"
-                      >
-                        {showConfirmPassword ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </>
-          )}
-        </DialogContent>
-        {!passwordSuccess && (
-          <DialogActions sx={{ px: 3, pb: 3 }}>
-            <Button
-              onClick={handlePasswordDialogClose}
-              sx={{
-                borderRadius: 2,
-                color: "text.secondary",
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePasswordSubmit}
-              variant="contained"
-              color="error"
-              disabled={passwordLoading}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                position: "relative",
-              }}
-            >
-              {passwordLoading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                "Change Password"
-              )}
-            </Button>
-          </DialogActions>
-        )}
-      </Dialog>
-
-      <LogoutDialog
-        open={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
-        onConfirm={handleLogout}
-      />
-
       {/* Sidebar */}
       <Drawer
         variant="permanent"
@@ -1010,350 +1247,96 @@ const Dashboard = () => {
           [`& .MuiDrawer-paper`]: {
             width: drawerWidth,
             boxSizing: "border-box",
-            backgroundColor: "#ffffff",
+            backgroundColor: "#F3F3EE",
+            color: "#4F6669",
             boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.05)",
             borderRight: "1px solid rgba(0, 0, 0, 0.08)",
           },
         }}
       >
         <Toolbar sx={{ minHeight: "48px !important" }} />
-        <Box
-          sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4, py: 2 }}
-        >
+        <Box sx={{ overflow: "auto", overflowX: "hidden", marginTop: 4 }}>
           <List component="nav" disablePadding>
-            <ListItem
-              button
-              selected={location.pathname.includes("/dashboard")}
-              onClick={() => {
-                setActive("");
-                navigate("/dashboard");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                // transition: 'all 0.2s ease',
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "#fef2f2",
-                  // backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red
-                  color: "#fef2f2",
-                  borderLeft: "3px",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#fef2f2",
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/dashboard")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <DashboardIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Dashboard"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/dashboard")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/history")}
-              onClick={() => {
-                setActive("search-history");
-                navigate("/history");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "rgba(244, 67, 54, 0.7)", // Light red
-                  color: "#f44336",
-                  borderLeft: "3px solid #f44336",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#f44336",
-                  },
-                },
+            {[
+              {
+                label: "Dashboard",
+                path: "/dashboard",
+                icon: <DashboardIcon fontSize="small" />,
+                key: "dashboard",
+              },
+              {
+                label: "Search History",
+                path: "/history",
+                icon: <HistoryIcon fontSize="small" />,
+                key: "search-history",
+              },
 
-                "&:hover": {
-                  backgroundColor: location.pathname.includes("/history")
-                    ? "rgba(210, 25, 87, 0.29)"
-                    : "rgba(210, 25, 87, 0.29)",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/history")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <HistoryIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Search History"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/history")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/social-media-settings")}
-              onClick={() => {
-                setActive("social-media-settings");
-                navigate("/social-media-settings");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
-                  color: "#f44336",
-                  borderLeft: "3px solid #f44336",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#f44336",
-                  },
-                },
-
-                "&:hover": {
-                  backgroundColor: location.pathname.includes(
-                    "/social-media-settings"
-                  )
-                    ? "rgba(210, 25, 87, 0.29)"
-                    : "rgba(119, 76, 76, 0.04)",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/social-media-settings")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Social Media Settings"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes(
-                    "/social-media-settings"
-                  )
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              selected={location.pathname.includes("/post-history")}
-              onClick={() => {
-                setActive("post-history");
-                navigate("/post-history");
-              }}
-              sx={{
-                mb: 1,
-                mx: 1.5,
-                borderRadius: 1,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                height: "44px",
-                "&.Mui-selected": {
-                  backgroundColor: "rgba(244, 67, 54, 0.1)", // Light red
-                  color: "#f44336",
-                  borderLeft: "3px solid #f44336",
-                  paddingLeft: "13px",
-                  "& .MuiListItemIcon-root": {
-                    color: "#f44336",
-                  },
-                },
-
-                "&:hover": {
-                  backgroundColor: location.pathname.includes("/post-history")
-                    ? "rgba(210, 25, 87, 0.29)"
-                    : "rgba(119, 76, 76, 0.04)",
-                  transform: "translateX(3px)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 36,
-                  color: location.pathname.includes("/post-history")
-                    ? "inherit"
-                    : "text.secondary",
-                }}
-              >
-                <PostAddIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="Post History"
-                primaryTypographyProps={{
-                  fontSize: "0.9rem",
-                  fontWeight: location.pathname.includes("/post-history")
-                    ? 600
-                    : 500,
-                }}
-              />
-            </ListItem>
+              {
+                label: "Post History",
+                path: "/post-history",
+                icon: <PostAddIcon fontSize="small" />,
+                key: "post-history",
+              },
+              {
+                label: "Social Media Settings",
+                path: "/social-media-settings",
+                icon: <SettingsIcon fontSize="small" />,
+                key: "social-media-settings",
+              },
+            ].map((item, index) => {
+              const isSelected = location.pathname.includes(item.path);
+              return (
+                <ListItem
+                  key={item.key}
+                  button
+                  selected={isSelected}
+                  onClick={() => {
+                    navigate(item.path);
+                  }}
+                  sx={{
+                    mb: 1,
+                    mx: 1.5,
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    height: "44px",
+                    transition: "all 0.2s ease",
+                    backgroundColor: isSelected ? "#4D99A3" : "transparent",
+                    "&:hover": {
+                      backgroundColor: isSelected ? "#4D99A3" : "#f0f0f0",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      color: isSelected ? "#fff" : "#4D99A3",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      sx: {
+                        color: isSelected ? "#fff !important" : "#4D99A3",
+                        fontSize: "2rem",
+                        fontWeight: isSelected ? 900 : 500,
+                        marginTop: "16px",
+                      },
+                    }}
+                  />
+                </ListItem>
+              );
+            })}
           </List>
         </Box>
       </Drawer>
 
-      {/* Main content */}
       <Box
         component="main"
         sx={{ flexGrow: 1, bgcolor: "#f9f9f9", minHeight: "100vh" }}
       >
-        {/* Top App Bar */}
-        <AppBar
-          position="fixed"
-          elevation={2}
-          sx={{
-            zIndex: (theme) => theme.zIndex.drawer + 1,
-            backgroundColor: "white",
-            color: "text.primary",
-          }}
-        >
-          <Toolbar sx={{ justifyContent: "space-between", height: 48 }}>
-            <Typography
-              variant="h6"
-              noWrap
-              sx={{
-                fontWeight: 600,
-                letterSpacing: "0.5px",
-                fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                color: "text.primary",
-              }}
-            >
-              Buzzly
-            </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: { xs: 1, sm: 2 },
-              }}
-            >
-              <Tooltip
-                title="Account settings"
-                arrow
-                TransitionComponent={Fade}
-                TransitionProps={{ timeout: 600 }}
-              >
-                <Avatar
-                  onClick={handleMenuOpen}
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    bgcolor: "#ff5858a1",
-                    color: "white",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    border: "2px solid rgba(255,255,255,0.8)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      transform: "scale(1.05)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-                    },
-                  }}
-                >
-                  {userEmail.charAt(0).toUpperCase()}
-                </Avatar>
-              </Tooltip>
-
-              {/* User Profile Menu */}
-              <Menu
-                anchorEl={anchorEl}
-                open={menuOpen}
-                onClose={handleMenuClose}
-                TransitionComponent={Fade}
-                PaperProps={{
-                  elevation: 3,
-                  sx: {
-                    borderRadius: 2,
-                    minWidth: 250,
-                    overflow: "visible",
-                    mt: 1.5,
-                    "&:before": {
-                      content: '""',
-                      display: "block",
-                      position: "absolute",
-                      top: 0,
-                      right: 14,
-                      width: 10,
-                      height: 10,
-                      bgcolor: "background.paper",
-                      transform: "translateY(-50%) rotate(45deg)",
-                      zIndex: 0,
-                    },
-                  },
-                }}
-                transformOrigin={{ horizontal: "right", vertical: "top" }}
-                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-              >
-                <Box sx={{ px: 2, py: 1.5, bgcolor: "#f5f5f5" }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    User Profile
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "text.secondary",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.5,
-                    }}
-                  >
-                    <EmailIcon fontSize="small" sx={{ color: "#FF0000" }} />
-                    {userEmail}
-                  </Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={handlePasswordChange} sx={{ py: 1.5 }}>
-                  <VpnKeyIcon sx={{ mr: 2, color: "#FF0000" }} />
-                  <Typography variant="body2">Change Password</Typography>
-                </MenuItem>
-                <MenuItem onClick={() => setLogoutOpen(true)} sx={{ py: 1.5 }}>
-                  <Logout sx={{ mr: 2, color: "#FF0000" }} />
-                  <Typography variant="body2">Logout</Typography>
-                </MenuItem>
-              </Menu>
-            </Box>
-          </Toolbar>
-        </AppBar>
+        <Header />
 
         <Toolbar />
         <Box sx={{ p: 3 }}>
@@ -1385,38 +1368,21 @@ const Dashboard = () => {
                   <Typography
                     variant="h4"
                     sx={{
-                      fontWeight: 700,
+                      fontWeight: 600,
                       mb: 0.5,
-                      color: "#a71900ff",
+                      color: "#4896a1",
                     }}
                   >
                     Social Media Dashboard
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.9rem" }}
+                  >
                     Discover and engage with relevant social media content
                   </Typography>
                 </Box>
-                {/* <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={fetchAllPosts}
-                  startIcon={<Search />}
-                  size="large"
-                  disabled={loading}
-                  sx={{
-                    borderRadius: 2,
-                    px: 3,
-                    py: 1,
-                    boxShadow: '0 4px 14px 0 rgba(25, 118, 210, 0.39)',
-                    '&:hover': {
-                      boxShadow: '0 6px 20px 0 rgba(25, 118, 210, 0.5)',
-                      transform: 'translateY(-2px)'
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {loading ? 'Fetching...' : 'Re-fetch Posts'}
-                </Button> */}
               </Box>
 
               {/* Quick Actions Cards */}
@@ -1428,7 +1394,8 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background: "#fef2f2",
+                      background: "#e5efee",
+                      width: "40vw",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1440,7 +1407,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#f44336",
+                          bgcolor: "#4896A0",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -1473,19 +1440,22 @@ const Dashboard = () => {
                         </Typography>
                         <Button
                           variant="contained"
-                          color="error"
+                          color="black"
                           size="small"
-                          onClick={fetchAllPosts}
+                          onClick={() => fetchAllPosts(selectedAccount, true)}
                           disabled={loading}
                           sx={{
                             borderRadius: 2,
+                            color: "white",
+                            backgroundColor: "#4D99A3",
+                            border: "none",
                             transition: "all 0.3s ease",
                             "&:hover": {
                               transform: "scale(1.05)",
                             },
                           }}
                         >
-                          Fetch Now
+                          {loading ? "Fetching..." : "Fetch New"}
                         </Button>
                       </Box>
                     </Box>
@@ -1498,7 +1468,8 @@ const Dashboard = () => {
                       p: 3,
                       borderRadius: 3,
                       height: "100%",
-                      background: "#fef2f2",
+                      width: "40vw",
+                      background: "#e5efee",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
@@ -1510,7 +1481,7 @@ const Dashboard = () => {
                     >
                       <Box
                         sx={{
-                          bgcolor: "#f44336",
+                          bgcolor: "#4896A0",
                           color: "white",
                           width: 40,
                           height: 40,
@@ -1548,6 +1519,9 @@ const Dashboard = () => {
                           onClick={() => navigate("/social-media-settings")}
                           sx={{
                             borderRadius: 2,
+                            color: "white",
+                            backgroundColor: "#4D99A3",
+                            border: "none",
                             transition: "all 0.3s ease",
                             "&:hover": {
                               transform: "scale(1.05)",
@@ -1562,7 +1536,6 @@ const Dashboard = () => {
                 </Grid>
               </Grid>
 
-              {/* Keywords Section */}
               <Paper
                 elevation={0}
                 variant="outlined"
@@ -1570,6 +1543,7 @@ const Dashboard = () => {
                   p: 3,
                   mb: 4,
                   borderRadius: 3,
+                  width: "82vw",
                   background: "rgba(255, 255, 255, 0.8)",
                   backdropFilter: "blur(10px)",
                 }}
@@ -1582,11 +1556,12 @@ const Dashboard = () => {
                     mb: 2,
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Your Keywords & Posts
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Your Keywords & Posts
+                    </Typography>
+                  </Box>
 
-                  {/* Twitter Account Selection */}
                   <Box sx={{ minWidth: 200 }}>
                     <TextField
                       select
@@ -1600,9 +1575,9 @@ const Dashboard = () => {
                           "Selected account changed to:",
                           newAccountId
                         );
-                        // When "All Accounts" is selected, set selectedAccount to null
+
                         setSelectedAccount(newAccountId);
-                        // Refetch posts when account changes - call directly without setTimeout
+
                         fetchAllPosts(newAccountId);
                       }}
                       disabled={loadingAccounts}
@@ -1626,36 +1601,88 @@ const Dashboard = () => {
                 </Box>
 
                 {keywords.length > 0 ? (
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {keywords.map((keyword, index) => {
-                      const isSelected = selectedKeywords.includes(
-                        keyword.text
-                      );
-                      return (
-                        <Chip
-                          key={index}
-                          label={keyword.text}
-                          size="medium"
-                          onClick={() => handleKeywordToggle(keyword.text)}
-                          color={isSelected ? "primary" : "default"}
-                          sx={{
-                            borderRadius: "16px",
-                            px: 1,
-                            fontWeight: 500,
-                            backgroundColor: isSelected ? "#f44336" : "#ffffff",
-                            color: isSelected ? "#ffffff" : "#333333",
-                            boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
-                            cursor: "pointer",
-                            "&:hover": {
-                              boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                      {keywords.map((keyword, index) => {
+                        const isSelected = selectedKeywords.includes(
+                          keyword.text
+                        );
+                        const hasPrompts =
+                          keywordPromptsMap[keyword.text] &&
+                          keywordPromptsMap[keyword.text].length > 0;
+
+                        return (
+                          <Chip
+                            key={index}
+                            label={
+                              <Box
+                                sx={{ display: "flex", alignItems: "center" }}
+                              >
+                                {keyword.text}
+                                {hasPrompts && (
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      ml: 0.5,
+                                      backgroundColor: isSelected
+                                        ? "rgba(255,255,255,0.3)"
+                                        : "#4896a1",
+                                      color: isSelected ? "#ffffff" : "#ffffff",
+                                      borderRadius: "50%",
+                                      width: 16,
+                                      height: 16,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: "0.7rem",
+                                    }}
+                                  >
+                                    {keywordPromptsMap[keyword.text].length}
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                            size="medium"
+                            onClick={() => handleKeywordToggle(keyword.text)}
+                            onDelete={
+                              hasPrompts
+                                ? () => {
+                                    setSelectedKeywordForPrompts(keyword);
+                                    setKeywordPromptsDialogOpen(true);
+                                  }
+                                : undefined
+                            }
+                            deleteIcon={
+                              hasPrompts ? (
+                                <Tooltip title="View prompts">
+                                  <ManageSearchIcon fontSize="small" />
+                                </Tooltip>
+                              ) : undefined
+                            }
+                            color={isSelected ? "primary" : "default"}
+                            sx={{
+                              borderRadius: "16px",
+                              px: 1,
+                              fontWeight: 500,
                               backgroundColor: isSelected
-                                ? "#e53935"
-                                : "#f5f5f5",
-                            },
-                          }}
-                        />
-                      );
-                    })}
+                                ? "#4896a1"
+                                : "#ffffff",
+                              color: isSelected ? "#ffffff" : "#4896a1",
+                              boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+                              cursor: "pointer",
+                              "&:hover": {
+                                boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
+                                backgroundColor: isSelected
+                                  ? "#4896a1"
+                                  : "#f5f5f5",
+                              },
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
                   </Box>
                 ) : (
                   <Box
@@ -1675,7 +1702,6 @@ const Dashboard = () => {
                 )}
               </Paper>
 
-              {/* Tweets List */}
               {loading ? (
                 <Box
                   sx={{
@@ -1703,199 +1729,387 @@ const Dashboard = () => {
                   </Typography>
                   <Grid container spacing={3}>
                     {filteredTweets.map((tweet, i) => (
-                      <Grid
-                        item
-                        xs={12}
-                        sm={6}
-                        key={i}
-                        sx={{ maxWidth: "400px" }}
-                      >
+                      <Grid item xs={12} sm={6} lg={4} key={i}>
                         <Card
                           elevation={0}
                           sx={{
-                            borderRadius: 3,
+                            borderRadius: 4,
                             overflow: "hidden",
-                            border: "1px solid rgba(0,0,0,0.08)",
+                            border: postedTweets.includes(tweet.id)
+                              ? "1px solid #e5e7eb"
+                              : "1px solid #e5e7eb",
                             transition: "all 0.3s ease",
                             height: "100%",
-                            width: "100%",
+                            width: "18.98vw",
+                            backgroundColor: postedTweets.includes(tweet.id)
+                              ? "#fafafa"
+                              : "#fafafa",
+                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                            cursor: "pointer",
                             "&:hover": {
-                              transform: "translateY(-5px)",
-                              boxShadow: "0 12px 20px -8px rgba(0,0,0,0.15)",
+                              transform: "translateY(-4px)",
+                              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+                              borderColor: postedTweets.includes(tweet.id)
+                                ? "#d1d5db"
+                                : "#d1d5db",
                             },
                           }}
                         >
-                          <Box
-                            sx={{
-                              height: 6,
-                              width: "100%",
-                              background:
-                                "linear-gradient(90deg, #f3dddc, #eb8270)",
-                            }}
-                          />
-                          <CardContent sx={{ p: 3 }}>
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                mb: 2,
-                                display: "-webkit-box",
-                                WebkitLineClamp: 4,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                minHeight: "5.5rem",
-                              }}
-                            >
-                              {tweet.text}
-                            </Typography>
-                            <Divider sx={{ my: 2 }} />
-                            <Box
-                              sx={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 1,
-                              }}
+                          <CardContent sx={{ p: 0, height: "100%" }}>
+                            <a
+                              href={`https://x.com/i/web/status/${tweet.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ textDecoration: "none" }}
                             >
                               <Box
                                 sx={{
                                   display: "flex",
                                   alignItems: "center",
+                                  gap: 2,
+                                  p: 3,
+                                  pb: 2,
+                                }}
+                              >
+                                <Avatar
+                                  src={tweet?.profile_image_url || ""}
+                                  sx={{
+                                    width: 48,
+
+                                    height: 48,
+
+                                    backgroundColor: "#E5EFEE",
+
+                                    fontSize: "1.2rem",
+
+                                    fontWeight: 600,
+
+                                    border: "2px solid #ffffff",
+
+                                    boxShadow:
+                                      "0 2px 8px rgba(37, 99, 235, 0.2)",
+                                  }}
+                                >
+                                  {tweet?.author_name
+                                    ?.charAt(0)
+                                    ?.toUpperCase() || "U"}
+                                </Avatar>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography
+                                    variant="subtitle1"
+                                    sx={{
+                                      fontWeight: 600,
+                                      fontSize: "1rem",
+                                      color: "#1a1a1a",
+                                      lineHeight: 1.3,
+                                      mb: 0.5,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {tweet?.author_name || "Unknown User"}
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: "#666666",
+                                      fontSize: "0.875rem",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    @{tweet?.author_username || "username"}
+                                  </Typography>
+                                </Box>
+                              </Box>
+
+                              <Box sx={{ px: 3, pb: 2 }}>
+                                <Typography
+                                  variant="body1"
+                                  sx={{
+                                    fontSize: "0.96rem",
+                                    lineHeight: 1.6,
+                                    color: "#363535ff",
+                                    fontWeight: 400,
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 4,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    minHeight: "6.4rem",
+                                    mb: 3,
+                                  }}
+                                >
+                                  {tweet.text}
+                                </Typography>
+                              </Box>
+
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
                                   justifyContent: "space-between",
+                                  px: 3,
+                                  py: 2,
+                                  backgroundColor: "#f8f9fa",
+                                  borderTop: "1px solid #e5e7eb",
                                 }}
                               >
                                 <Box
                                   sx={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 2,
+                                    gap: { xs: 1.5, sm: 2 },
                                   }}
                                 >
-                                  <Typography
-                                    variant="body2"
+                                  <Box
                                     sx={{
-                                      fontWeight: 500,
-                                      color: "text.primary",
                                       display: "flex",
                                       alignItems: "center",
                                       gap: 0.5,
                                     }}
                                   >
-                                    <span
-                                      style={{
-                                        fontWeight: "bold",
-                                        color: "#f44336",
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
                                       }}
                                     >
-                                      {tweet?.like_count}
-                                    </span>{" "}
-                                    Likes
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      fontWeight: 500,
-                                      color: "text.primary",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        fontWeight: "bold",
-                                        color: "#f44336",
-                                      }}
-                                    >
-                                      {tweet?.retweet_count}
-                                    </span>{" "}
-                                    Retweets
-                                  </Typography>
-                                </Box>
-                                <Tooltip title="View Post Details">
-                                  <IconButton
-                                    href={`https://x.com/i/web/status/${tweet.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    size="small"
-                                    sx={{
-                                      backgroundColor:
-                                        "rgba(244, 67, 54, 0.08)",
-                                      transition: "all 0.2s",
-                                      "&:hover": {
-                                        backgroundColor:
-                                          "rgba(244, 67, 54, 0.15)",
-                                        transform: "scale(1.1)",
-                                      },
-                                    }}
-                                  >
-                                    <ViewIcon
-                                      fontSize="small"
-                                      sx={{ color: "#f44336" }}
-                                    />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
+                                      <FavoriteIcon
+                                        sx={{
+                                          fontSize: "18px",
+                                          color: "#21808D",
+                                          mt: "0.8rem",
+                                        }}
+                                      />
+                                    </Typography>
 
-                              <Box
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.75rem",
+                                        fontWeight: 600,
+                                        color: "#1a1a1a",
+                                      }}
+                                    >
+                                      {formatNumber(tweet?.like_count || 0)}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      <ReplyIcon
+                                        sx={{
+                                          fontSize: "18px",
+                                          color: "#21808D",
+                                          mt: "0.8rem",
+                                        }}
+                                      />
+                                    </Typography>
+
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.75rem",
+                                        fontWeight: 600,
+                                        color: "#1a1a1a",
+                                      }}
+                                    >
+                                      {formatNumber(tweet?.retweet_count || 0)}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      <PeopleIcon
+                                        sx={{
+                                          fontSize: "18px",
+                                          color: "#21808D",
+                                          mt: "0.8rem",
+                                        }}
+                                      />
+                                    </Typography>
+
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.75rem",
+                                        fontWeight: 600,
+                                        color: "#1a1a1a",
+                                      }}
+                                    >
+                                      {formatNumber(
+                                        tweet?.followers_count || 0
+                                      )}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    <Typography
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: "white",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      <ViewIcon
+                                        sx={{
+                                          fontSize: "18px",
+                                          color: "#21808D",
+                                          mt: "0.8rem",
+                                        }}
+                                      />
+                                    </Typography>
+
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.75rem",
+                                        fontWeight: 600,
+                                        color: "#1a1a1a",
+                                      }}
+                                    >
+                                      {formatNumber(tweet?.view_count || 0)}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Box>
+                            </a>
+
+                            <Box
+                              sx={{
+                                px: 3,
+                                py: 1.5,
+                                backgroundColor: "#f8f9fa",
+                                borderTop: "1px solid #e5e7eb",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                flexWrap: "wrap",
+                                gap: 1,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
                                 sx={{
+                                  fontSize: "0.75rem",
+                                  color: "#66666698",
+                                  fontWeight: 500,
                                   display: "flex",
-                                  justifyContent: "space-between",
                                   alignItems: "center",
-                                  mt: 1,
+                                  gap: 0.5,
                                 }}
                               >
+                                {dataSource === "twitter" && !tweet?.created_at
+                                  ? "Freshly fetched from Twitter"
+                                  : `Fetched ${getTimeAgo(tweet?.created_at)}`}
+                              </Typography>
+
+                              {tweet?.posted_time && (
                                 <Typography
-                                  variant="body2"
+                                  variant="caption"
                                   sx={{
+                                    fontSize: "0.75rem",
+                                    color: "#666666",
                                     fontWeight: 500,
-                                    color: "text.secondary",
-                                    fontSize: "0.8rem",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                    whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span style={{ fontWeight: "bold" }}>
-                                    {tweet?.followers_count || 0}
-                                  </span>{" "}
-                                  Followers
+                                  <CalendarIcon
+                                    sx={{
+                                      fontSize: "14px",
+                                      color: "#21808D",
+                                    }}
+                                  />
+                                  Posted {formatPostedTime(tweet.posted_time)}
                                 </Typography>
+                              )}
+                            </Box>
 
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    color: "text.secondary",
-                                    fontSize: "0.8rem",
-                                    fontStyle: "italic",
-                                  }}
-                                >
-                                  Fetched {getTimeAgo(tweet?.created_at)}
-                                </Typography>
-                              </Box>
-
-                              {/* Post Button */}
+                            <Box sx={{ p: 3, pt: 2 }}>
                               <Button
                                 variant="contained"
-                                size="small"
-                                startIcon={<EditIcon />}
+                                size="medium"
+                                startIcon={
+                                  postedTweets.includes(tweet.id) ? (
+                                    <CheckIcon sx={{ fontSize: "18px" }} />
+                                  ) : (
+                                    <EditIcon sx={{ fontSize: "18px" }} />
+                                  )
+                                }
                                 onClick={() => handlePost(tweet)}
+                                disabled={postedTweets.includes(tweet.id)}
                                 sx={{
-                                  mt: 2,
                                   width: "100%",
-                                  borderRadius: 2,
-                                  backgroundColor: "#f44336",
-                                  color: "white",
+                                  borderRadius: 3,
+                                  backgroundColor: postedTweets.includes(
+                                    tweet.id
+                                  )
+                                    ? "#4caf50"
+                                    : "#21808db0",
+                                  color: "#E8E8E3",
+                                  border: "none",
                                   fontWeight: 600,
+                                  fontSize: "0.875rem",
                                   textTransform: "none",
-                                  boxShadow:
-                                    "0 2px 8px rgba(244, 67, 54, 0.25)",
+                                  py: 1.5,
+                                  boxShadow: "0 2px 8px rgba(26, 26, 26, 0.15)",
                                   "&:hover": {
-                                    backgroundColor: "#d32f2f",
+                                    backgroundColor: postedTweets.includes(
+                                      tweet.id
+                                    )
+                                      ? "#43a047"
+                                      : "#E8E8E3",
+                                    color: postedTweets.includes(tweet.id)
+                                      ? "#E8E8E3"
+                                      : "#21808db0",
+                                    border: "none",
                                     boxShadow:
-                                      "0 4px 12px rgba(244, 67, 54, 0.35)",
-                                    transform: "translateY(-2px)",
+                                      "0 4px 16px rgba(26, 26, 26, 0.25)",
+                                    transform: "translateY(-1px)",
                                   },
                                   transition: "all 0.2s ease",
                                 }}
                               >
-                                Post Reply
+                                {postedTweets.includes(tweet.id)
+                                  ? "Posted"
+                                  : "Post Reply"}
                               </Button>
                             </Box>
                           </CardContent>

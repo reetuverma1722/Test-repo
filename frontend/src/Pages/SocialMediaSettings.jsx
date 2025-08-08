@@ -139,11 +139,11 @@ const SocialMediaSettings = () => {
     >
       <Typography
         variant="h5"
-        sx={{
-          mb: 3,
-          fontWeight: 600,
-          color: theme.palette.primary.main,
-        }}
+       sx={{
+                      fontWeight: 600,
+                      mb: 0.5,
+                      color: "#4896a1",
+                    }}
       >
         Social Media Settings
       </Typography>

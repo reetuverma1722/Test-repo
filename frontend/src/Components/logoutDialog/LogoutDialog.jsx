@@ -21,7 +21,7 @@ const LogoutDialog = ({ open, onClose, onConfirm }) => {
         <Button onClick={onClose} color="primary">
           Cancel
         </Button>
-        <Button onClick={onConfirm} color="primary" variant="contained">
+        <Button onClick={onConfirm} color="#4D99A3" variant="contained">
           Logout
         </Button>
       </DialogActions>

@@ -18,13 +18,39 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/direct-login" element={<DirectLogin />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/postmanager" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/history" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/keyword-management" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/social-media-settings" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/trending-analytics" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/post-history" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+     <Route path="/history" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route
+          path="/social-media-settings"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/trending-analytics"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/post-history"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

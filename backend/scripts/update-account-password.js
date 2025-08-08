@@ -48,7 +48,7 @@ async function updateAccountPassword() {
     
     // Update the account with the new password
     await client.query(
-      'UPDATE social_media_accounts SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE account_id = $2',
+      'UPDATE social_media_accounts SET twitter_password = $1, updated_at = CURRENT_TIMESTAMP WHERE account_id = $2',
       [hashedPassword, accountId]
     );
     
@@ -56,7 +56,7 @@ async function updateAccountPassword() {
     
     // Verify the update
     const updatedAccount = await client.query(
-      'SELECT id, user_id, platform, account_name, CASE WHEN password IS NULL THEN \'NULL\' ELSE \'SET\' END as password_status FROM social_media_accounts WHERE account_id = $1',
+      'SELECT id, user_id, platform, account_name, CASE WHEN twitter_password IS NULL THEN \'NULL\' ELSE \'SET\' END as password_status FROM social_media_accounts WHERE account_id = $1',
       [accountId]
     );
     

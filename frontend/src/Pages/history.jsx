@@ -7,7 +7,7 @@ import {
 import { Delete, Edit, AccessTime, Warning } from '@mui/icons-material';
 import { format } from 'date-fns';
 import Sidebar from '../Components/sideBar/sideBar';
-import Appbar from '../Components/appBar/appBar';
+// import Appbar from '../Components/appBar/appBar';
 
 const goals = [
   {
@@ -43,7 +43,7 @@ export default function HistoryTable() {
   return (
     <Box>
         <Sidebar/>
-        <Appbar/>
+        {/* <Appbar/> */}
          <Box sx={{ p: 3, width: '80vw', ml: '200px', mt:'80px'}}>
     
       <Typography variant="h5" fontWeight="bold">Your History</Typography>

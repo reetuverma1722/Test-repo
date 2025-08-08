@@ -12,9 +12,16 @@ const LandingPage = () => {
   return (
     <div className="oask-container">
       <header className="header">
-        <div className="logo-container">
-          <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo" />
-          <h1>Buzzly AI - Optimize, Achieve, Scale, Keep Growing</h1>
+        <div className="header-logo-container">
+          <div className="brand-logo">
+            <img
+              src="/images/Buzly.png"
+              alt="Buzly Logo"
+              className="buzly-logo"
+            />
+            <span className="brand-name">uzzly</span>
+          </div>
+          <h1 className="header-title">Optimize, Achieve, Scale, Keep Growing</h1>
         </div>
         <p>
           Buzzly AI is your intelligent social media automation system that helps teams track, analyze, and automatically repost high-performing content.
@@ -81,9 +88,9 @@ const LandingPage = () => {
             },
           ].map(({ icon, title, text, number }) => (
             <div className="methodology-step" key={title}>
-              <div className="step-number">{number}</div>
+              {/* <div className="step-number">{number}</div> */}
               <div className="step-content">
-                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#BE1212' /></div>
+                <div className="step-icon"><FontAwesomeIcon icon={icon} color='#3A7A82' /></div>
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>
@@ -121,7 +128,7 @@ const LandingPage = () => {
             },
           ].map(({ icon, title, text }, index) => (
             <div className="feature-card" key={title}>
-              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#BE1212' /></div>
+              <div className="feature-icon"><FontAwesomeIcon icon={icon} color='#3A7A82' /></div>
               <h3>{title}</h3>
               <p>{text}</p>
             </div>
@@ -180,7 +187,7 @@ const LandingPage = () => {
         <div className="footer-content">
           <div className="footer-logo">
             <div className="footer-logo-container">
-              <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo-footer" />
+              {/* <img src="/images/qss_logo.png" alt="QSS Logo" className="qss-logo-footer" /> */}
               <h3>Buzzly AI</h3>
             </div>
             <p>Optimize, Achieve, Scale, Keep Growing</p>

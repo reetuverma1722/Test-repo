@@ -11,6 +11,7 @@ const keywordRoutes = require('./routes/keywordRoutes');
 const socialMediaAccountsRoutes = require('./routes/socialMediaAccountsRoutes');
 const trendingRoutes = require('./routes/trendingRoutes');
 const postHistoryRoutes = require('./routes/postHistoryRoutes');
+const promptRoutes = require('./routes/promptRoutes');
 dotenv.config();
 
 // Run the script to check and create tables if they don't exist
@@ -24,7 +25,8 @@ app.use('/api', searchRoutes);
 app.use('/api', keywordRoutes);
 app.use('/api', socialMediaAccountsRoutes);
 app.use('/api', trendingRoutes);
-app.use('/api', postHistoryRoutes);
+app.use('/api', postHistoryRoutes); // This registers all routes in postHistoryRoutes.js under /api
+app.use('/api', promptRoutes); // Register prompt routes
 const PORT = process.env.PORT || 5000;
 app.get('/', async (req, res) => {
   const accessToken = req.query.twitterId;
