@@ -415,26 +415,49 @@ const TwitterKeywords = () => {
     try {
       const token = localStorage.getItem("token");
       
-      // Create a copy of the keyword data with accountId converted to number if it exists
-      const keywordData = {
-        ...currentKeyword,
-        // Make sure accountId is properly converted to a number or set to null if empty string
-        accountId: currentKeyword.accountId ? Number(currentKeyword.accountId) : null
-      };
-
-      console.log('Submitting keyword with data:', keywordData);
-
-      let keywordId;
+      // Split the keyword text by commas and trim whitespace
+      const keywordTexts = currentKeyword.text.split(',').map(keyword => keyword.trim()).filter(keyword => keyword !== '');
+      
+      // If editing, just update the single keyword
       if (isEditing) {
+        // Create a copy of the keyword data with accountId converted to number if it exists
+        const keywordData = {
+          ...currentKeyword,
+          // Make sure accountId is properly converted to a number or set to null if empty string
+          accountId: currentKeyword.accountId ? Number(currentKeyword.accountId) : null
+        };
+
+        console.log('Updating keyword with data:', keywordData);
         await updateKeyword(currentKeyword.id, keywordData, token);
-        keywordId = currentKeyword.id;
+        
+        // If a prompt is selected, associate it with the keyword
+        if (selectedKeywordPrompt && currentKeyword.id) {
+          await handlePromptAssociation(currentKeyword.id, selectedKeywordPrompt);
+        }
       } else {
-        const response = await addKeyword(keywordData, token);
-        keywordId = response.data.id;
+        // For new keywords, add each comma-separated keyword individually
+        for (const keywordText of keywordTexts) {
+          // Create a copy of the keyword data with the current text from the array
+          const keywordData = {
+            ...currentKeyword,
+            text: keywordText,
+            // Make sure accountId is properly converted to a number or set to null if empty string
+            accountId: currentKeyword.accountId ? Number(currentKeyword.accountId) : null
+          };
+
+          console.log('Submitting keyword with data:', keywordData);
+          const response = await addKeyword(keywordData, token);
+          const keywordId = response.data.id;
+          
+          // If a prompt is selected, associate it with the keyword
+          if (selectedKeywordPrompt && keywordId) {
+            await handlePromptAssociation(keywordId, selectedKeywordPrompt);
+          }
+        }
       }
 
-      // If a prompt is selected, associate it with the keyword
-      if (selectedKeywordPrompt && keywordId) {
+      // Helper function to handle prompt association
+      async function handlePromptAssociation(keywordId, promptId) {
         try {
           // First, check if there's already an association
           const existingPrompts = await axios.get(`http://localhost:5000/api/keywords/${keywordId}/prompts`);
@@ -442,18 +465,18 @@ const TwitterKeywords = () => {
           if (existingPrompts.data.success && existingPrompts.data.data.length > 0) {
             // If there's an existing association and it's different, update it
             const existingPromptId = existingPrompts.data.data[0].id;
-            if (existingPromptId !== selectedKeywordPrompt) {
+            if (existingPromptId !== promptId) {
               // Remove the existing association
               await axios.delete(`http://localhost:5000/api/keywords/${keywordId}/prompts/${existingPromptId}`);
               // Create the new association
               await axios.post(`http://localhost:5000/api/keywords/${keywordId}/prompts`, {
-                promptId: selectedKeywordPrompt
+                promptId: promptId
               });
             }
           } else {
             // If there's no existing association, create a new one
             await axios.post(`http://localhost:5000/api/keywords/${keywordId}/prompts`, {
-              promptId: selectedKeywordPrompt
+              promptId: promptId
             });
           }
         } catch (promptErr) {
@@ -465,9 +488,17 @@ const TwitterKeywords = () => {
       // Refresh the keywords list
       await fetchKeywords();
 
+      // If we're adding multiple keywords, adjust the success message
+      const keywordCount = !isEditing ? currentKeyword.text.split(',').filter(k => k.trim() !== '').length : 1;
+      const successMessage = isEditing
+        ? "Keyword updated successfully"
+        : keywordCount > 1
+          ? `${keywordCount} keywords added successfully`
+          : "Keyword added successfully";
+
       setNotification({
         open: true,
-        message: `Keyword ${isEditing ? "updated" : "added"} successfully`,
+        message: successMessage,
         severity: "success",
       });
       setFormOpen(false);
@@ -822,6 +853,7 @@ const TwitterKeywords = () => {
                 onChange={handleInputChange}
                 fullWidth
                 required
+                helperText={!isEditing ? "You can enter multiple keywords separated by commas (e.g., tcs, ibm)" : ""}
               />
             </Grid>
             <Grid >
