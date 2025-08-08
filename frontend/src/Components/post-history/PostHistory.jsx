@@ -26,7 +26,6 @@ import {
   Divider,
 } from "@mui/material";
 import {
-  Refresh as RefreshIcon,
   Twitter as TwitterIcon,
   LinkedIn as LinkedInIcon,
   AccessTime as AccessTimeIcon,
@@ -36,12 +35,10 @@ import {
   Repeat as RepeatIcon,
   BarChart as BarChartIcon,
   Delete as DeleteIcon,
-  Update as UpdateIcon,
 } from "@mui/icons-material";
 import {
   getAccounts,
   getPostHistory,
-  repostPost,
   formatTimeSince,
   isRepostAllowed,
   deletePost,
@@ -57,7 +54,6 @@ const PostHistory = () => {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [reposting, setReposting] = useState(null);
   const [repostSuccess, setRepostSuccess] = useState(null);
   const [repostError, setRepostError] = useState(null);
   const [popoverAnchorEl, setPopoverAnchorEl] = useState(null);
@@ -70,7 +66,7 @@ const PostHistory = () => {
   const [updateError, setUpdateError] = useState(null);
   const [loadingEngagement, setLoadingEngagement] = useState(false);
 
-  // Fetch accounts on component mount
+
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
@@ -78,7 +74,7 @@ const PostHistory = () => {
         const result = await getAccounts();
         if (result.success && result.data) {
           setAccounts(result.data);
-          // Auto-select the first account if available
+         
           if (result.data.length > 0) {
             setSelectedAccount(result.data[0].id);
           }
@@ -94,7 +90,7 @@ const PostHistory = () => {
     fetchAccounts();
   }, []);
 
-  // Fetch post history when selected account changes
+
   useEffect(() => {
     const fetchPosts = async () => {
       if (!selectedAccount) return;
@@ -116,13 +112,13 @@ const PostHistory = () => {
     fetchPosts();
   }, [selectedAccount]);
 
-  // Handle account change
+ 
   const handleAccountChange = (event) => {
     setSelectedAccount(event.target.value);
-    setPage(0); // Reset to first page when changing accounts
+    setPage(0); 
   };
 
-  // Handle pagination
+ 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -132,39 +128,9 @@ const PostHistory = () => {
     setPage(0);
   };
 
-  // Handle repost
-  const handleRepost = async (postId) => {
-    try {
-      setReposting(postId);
-      setRepostError(null);
-      setRepostSuccess(null);
+  
 
-      const result = await repostPost(postId);
 
-      if (result.success) {
-        setRepostSuccess(`Post successfully reposted!`);
-
-        // Refresh the post history
-        const updatedResult = await getPostHistory(selectedAccount);
-        if (updatedResult.success && updatedResult.data) {
-          setPosts(updatedResult.data);
-        }
-      }
-    } catch (err) {
-      console.error("Error reposting:", err);
-      setRepostError(`Failed to repost: ${err.message}`);
-    } finally {
-      setReposting(null);
-
-      // Clear success/error messages after 3 seconds
-      setTimeout(() => {
-        setRepostSuccess(null);
-        setRepostError(null);
-      }, 3000);
-    }
-  };
-
-  // Handle delete
   const handleDelete = async (postId) => {
     try {
       setDeleting(postId);
@@ -176,7 +142,7 @@ const PostHistory = () => {
       if (result.success) {
         setDeleteSuccess(`Post successfully deleted!`);
 
-        // Refresh the post history
+       
         const updatedResult = await getPostHistory(selectedAccount);
         if (updatedResult.success && updatedResult.data) {
           setPosts(updatedResult.data);
@@ -188,7 +154,6 @@ const PostHistory = () => {
     } finally {
       setDeleting(null);
 
-      // Clear success/error messages after 3 seconds
       setTimeout(() => {
         setDeleteSuccess(null);
         setDeleteError(null);
@@ -196,82 +161,6 @@ const PostHistory = () => {
     }
   };
 
-  // Handle update engagement metrics using real reply ID scraping
-  const handleUpdateEngagement = async (postId) => {
-    try {
-      setUpdating(postId);
-      setUpdateError(null);
-      setUpdateSuccess(null);
-
-      console.log(`Updating engagement metrics for post ID: ${postId}`);
-
-      // Find the post to get the reply_id
-      const post = posts.find(p => p.id === parseInt(postId));
-      if (!post) {
-        setUpdateError('Post not found');
-        return;
-      }
-
-      console.log('Found post:', post);
-
-      // Check if the post has a reply_id
-      if (!post.reply_id) {
-        setUpdateError('No reply ID found for this post. Only posts with reply IDs can have engagement scraped.');
-        return;
-      }
-
-      console.log(`Scraping engagement for reply ID: ${post.reply_id}`);
-
-      // Call the scraping service to get real engagement data
-      const scrapeResult = await scrapeReplyEngagement(post.reply_id,post.account_id);
-      
-      if (!scrapeResult.success) {
-        setUpdateError(`Failed to scrape engagement: ${scrapeResult.message || 'Unknown error'}`);
-        return;
-      }
-
-      console.log('Scraped engagement data:', scrapeResult.data);
-
-      // Extract metrics from scraped data
-      const metrics = {
-        likes_count: scrapeResult.data.likes || 0,
-        retweets_count: scrapeResult.data.retweets || 0,
-        replies_count: scrapeResult.data.replies || 0,
-        views_count: scrapeResult.data.views || 0
-      };
-
-      console.log("Metrics to update:", metrics);
-      
-      // Update the database with the scraped metrics
-      const updateResult = await updateEngagementMetrics(postId, metrics);
-      console.log("Update result:", updateResult);
-
-      if (updateResult.success) {
-        setUpdateSuccess(`Reply engagement metrics updated successfully! Scraped real data: ${metrics.likes_count} likes, ${metrics.retweets_count} retweets, ${metrics.replies_count} replies, ${metrics.views_count} views.`);
-
-        // Refresh the post history to show updated data
-        const updatedResult = await getPostHistory(selectedAccount);
-        if (updatedResult.success && updatedResult.data) {
-          setPosts(updatedResult.data);
-        }
-      } else {
-        setUpdateError(`Failed to update database: ${updateResult.message || "Unknown error"}`);
-      }
-    } catch (err) {
-      console.error("Error updating engagement metrics:", err);
-      setUpdateError(`Failed to update: ${err.message}`);
-    } finally {
-      setUpdating(null);
-
-      // Clear success/error messages after 5 seconds
-      setTimeout(() => {
-        setUpdateSuccess(null);
-        setUpdateError(null);
-      }, 5000);
-    }
-  };
-
-  // Get platform icon
   const getPlatformIcon = (platform) => {
     switch (platform?.toLowerCase()) {
       case "twitter":
@@ -288,58 +177,7 @@ const PostHistory = () => {
     return accounts.find((account) => account.id === selectedAccount) || {};
   };
 
-  // Handle engagement view popup with real-time scraping
-  const handleEngagementViewClick = async (event, postId) => {
-    setPopoverAnchorEl(event.currentTarget);
-    setSelectedPostId(postId);
-
-    // Find the post to get the reply_id
-    const post = posts.find(p => p.id === postId);
-    if (!post) {
-      console.error('Post not found');
-      return;
-    }
-
-    // Check if the post has a reply_id
-    if (!post.reply_id) {
-      console.log('No reply ID found for this post - showing existing data');
-      return;
-    }
-
-    console.log(`Fetching real-time engagement for reply ID: ${post.reply_id}`);
-    setLoadingEngagement(true);
-
-    try {
-      // Call the scraping service to get real engagement data
-      const scrapeResult = await scrapeReplyEngagement(post.reply_id,post.account_id);
-      
-      if (scrapeResult.success && scrapeResult.data) {
-        console.log('Scraped engagement data:', scrapeResult.data);
-        
-        // Update the post data in the local state with scraped metrics
-        const updatedPosts = posts.map(p => {
-          if (p.id === postId) {
-            return {
-              ...p,
-              likes_count: scrapeResult.data.likes || 0,
-              retweets_count: scrapeResult.data.retweets || 0,
-              replies_count: scrapeResult.data.replies || 0,
-              views_count: scrapeResult.data.views || 0
-            };
-          }
-          return p;
-        });
-        
-        setPosts(updatedPosts);
-      } else {
-        console.error('Failed to scrape engagement:', scrapeResult.message);
-      }
-    } catch (err) {
-      console.error('Error scraping engagement:', err);
-    } finally {
-      setLoadingEngagement(false);
-    }
-  };
+  
 
   const handlePopoverClose = () => {
     setPopoverAnchorEl(null);
@@ -355,9 +193,7 @@ const PostHistory = () => {
 
   return (
     <Box>
-      {/* Header */}
-
-      {/* Account Selection */}
+     
       <Paper
         elevation={0}
         variant="outlined"
@@ -405,7 +241,7 @@ const PostHistory = () => {
         </Box>
       </Paper>
 
-      {/* Status Messages */}
+    
       {repostSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {repostSuccess}
@@ -448,7 +284,7 @@ const PostHistory = () => {
         </Alert>
       )}
 
-      {/* Post History Table */}
+     
       <Paper
         elevation={0}
         variant="outlined"
@@ -493,8 +329,6 @@ const PostHistory = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((post) => {
                     const timeSinceMs = new Date() - new Date(post.created_at);
-                    const canRepost = isRepostAllowed(timeSinceMs);
-
                     return (
                       <TableRow key={post.id} hover>
                         <TableCell sx={{ maxWidth: 300 }}>
@@ -601,7 +435,7 @@ const PostHistory = () => {
         />
       </Paper>
 
-      {/* Engagement Popup */}
+      
       <Popover
         open={open}
         anchorEl={popoverAnchorEl}
@@ -648,7 +482,7 @@ const PostHistory = () => {
               </Box>
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {/* Likes */}
+                
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
@@ -674,7 +508,7 @@ const PostHistory = () => {
 
               <Divider />
 
-              {/* Retweets */}
+             
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
@@ -700,7 +534,7 @@ const PostHistory = () => {
 
               <Divider />
 
-              {/* Replies */}
+             
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
@@ -726,7 +560,7 @@ const PostHistory = () => {
 
               <Divider />
 
-              {/* Views */}
+              
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
@@ -752,7 +586,7 @@ const PostHistory = () => {
 
               <Divider />
 
-              {/* Total Engagement */}
+             
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
@@ -776,7 +610,7 @@ const PostHistory = () => {
                 </Box>
               </Box>
 
-              {/* Engagement Rate (if available) */}
+             
               {getSelectedPost().engagement_rate && (
                 <>
                   <Divider />
