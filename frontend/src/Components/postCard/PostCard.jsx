@@ -6,11 +6,18 @@ import {
   Card,
   CardContent,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from "@mui/material";
-import { Favorite as FavoriteIcon,
+import {
+  Favorite as FavoriteIcon,
   Replay as ReplyIcon,
   People as PeopleIcon,
   CalendarToday as CalendarIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import ViewIcon from "@mui/icons-material/Visibility";
 import CheckIcon from "@mui/icons-material/Check";
@@ -19,7 +26,8 @@ import { useState } from "react";
 import { useEffect } from "react";
 
 const PostCard = ({ tweet, postedTweets, dataSource, handlePost }) => {
-     const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
   const formatNumber = (num) => {
     if (num >= 1_000_000)
       return (num / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -112,33 +120,45 @@ const PostCard = ({ tweet, postedTweets, dataSource, handlePost }) => {
   };
 
 
+  const handleOpenDialog = (e) => {
+    // Prevent the default behavior (opening the Twitter link)
+    e.preventDefault();
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+
   return (
-    <Card
-      elevation={0}
-      sx={{
-        borderRadius: 4,
-        overflow: "hidden",
-        border: "1px solid #e5e7eb",
-        transition: "all 0.3s ease",
-        height: "100%",
-        width: "18.98vw",
-        backgroundColor: "#fafafa",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-        cursor: "pointer",
-        "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
-          borderColor: "#d1d5db",
-        },
-      }}
-    >
-      <CardContent sx={{ p: 0, height: "100%" }}>
-        <a
-          href={`https://x.com/i/web/status/${tweet.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ textDecoration: "none" }}
-        >
+    <>
+      <Card
+        elevation={0}
+        sx={{
+          borderRadius: 4,
+          overflow: "hidden",
+          border: "1px solid #e5e7eb",
+          transition: "all 0.3s ease",
+          height: "100%",
+          width: "18.98vw",
+          backgroundColor: "#fafafa",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+          cursor: "pointer",
+          "&:hover": {
+            transform: "translateY(-4px)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+            borderColor: "#d1d5db",
+          },
+        }}
+      >
+        <CardContent sx={{ p: 0, height: "100%" }}>
+          <a
+            href={`https://x.com/i/web/status/${tweet.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none" }}
+            onClick={handleOpenDialog}
+          >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, p: 3, pb: 2 }}>
             <Avatar
               src={tweet?.profile_image_url || ""}
@@ -332,8 +352,132 @@ const PostCard = ({ tweet, postedTweets, dataSource, handlePost }) => {
             {postedTweets.includes(tweet.id) ? "Posted" : "Post Reply"}
           </Button>
         </Box>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Dialog for displaying tweet content */}
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        
+        <DialogContent dividers sx={{ padding: "24px" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Avatar
+              src={tweet?.profile_image_url || ""}
+              sx={{
+                width: 48,
+                height: 48,
+                backgroundColor: "#E5EFEE",
+                fontSize: "1.2rem",
+                fontWeight: 600,
+                border: "2px solid #ffffff",
+                boxShadow: "0 2px 8px rgba(37, 99, 235, 0.2)",
+              }}
+            >
+              {tweet?.author_name?.charAt(0)?.toUpperCase() || "U"}
+            </Avatar>
+            
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: "1rem",
+                  color: "#1a1a1a",
+                  lineHeight: 1.3,
+                  mb: 0.5,
+                }}
+              >
+                {tweet?.author_name || "Unknown User"}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "#666666",
+                  fontSize: "0.875rem",
+                }}
+              >
+                @{tweet?.author_username || "username"}
+              </Typography>
+            </Box>
+             <IconButton
+            aria-label="close"
+            onClick={handleCloseDialog}
+            sx={{
+              color: "text.secondary",
+              bottom:"20px"
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          </Box>
+          
+          <Typography
+            variant="body1"
+            sx={{
+              fontSize: "1rem",
+              lineHeight: 1.6,
+              color: "#363535ff",
+              fontWeight: 400,
+              mb: 3,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {tweet.text}
+          </Typography>
+          
+         
+          
+          
+        </DialogContent>
+        <DialogActions sx={{ padding: "16px 24px", backgroundColor: "#f8f8f8" }}>
+          <Button
+            onClick={handleCloseDialog}
+            variant="outlined"
+            sx={{
+              borderColor: "#4d99a393",
+              color: "#4d99a3ff",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            component="a"
+            href={`https://x.com/i/web/status/${tweet.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          
+            sx={{
+              backgroundColor: "#4D99A3",
+              borderRadius: "8px",
+              fontWeight: 600,
+              padding: "6px 16px",
+              color:"white",
+               "&:hover": {
+      backgroundColor: "white", 
+      color: "black",   
+      border:"1px solid black"    
+    },
+            }}
+          >
+            View on Twitter
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

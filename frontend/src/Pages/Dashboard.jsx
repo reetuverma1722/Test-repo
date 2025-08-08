@@ -1169,7 +1169,7 @@ const Dashboard = () => {
           <List component="nav" disablePadding>
             {[
               {
-                label: "Dashboard",
+                label: "Twitter Manager",
                 path: "/dashboard",
                 icon: <DashboardIcon fontSize="small" />,
                 key: "dashboard",
@@ -1250,7 +1250,6 @@ const Dashboard = () => {
 
         <Toolbar />
         <Box sx={{ p: 3 }}>
-          {/* Always render content within Dashboard component */}
           {location.pathname.includes("/history") ? (
             <TweetReplyTable />
           ) : location.pathname.includes("/postmanager") ? (
@@ -1283,19 +1282,19 @@ const Dashboard = () => {
                       color: "#4896a1",
                     }}
                   >
-                    Social Media Dashboard
+                   Twitter Manager
                   </Typography>
                   <Typography
                     variant="body1"
                     color="text.secondary"
                     sx={{ fontSize: "0.9rem" }}
                   >
-                    Discover and engage with relevant social media content
+                     A central hub to post, track, and analyze tweets efficiently
                   </Typography>
                 </Box>
               </Box>
 
-              {/* Quick Actions Cards */}
+             
               <Grid spacing={3} sx={{ mb: 4, display: "flex", gap: 3 }}>
                 <Grid item xs={12} md={6}>
                   <Paper
